@@ -9,6 +9,7 @@ import org.sky.dto.notification.NotificationResponse;
 import org.sky.dto.notification.SendNotificationRequest;
 import org.sky.dto.notification.YapeNotificationRequest;
 import org.sky.dto.notification.YapeNotificationResponse;
+import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.model.Notification;
 import org.sky.model.YapeNotification;
 import org.sky.model.Transaction;
@@ -43,6 +44,9 @@ public class NotificationService {
     
     @Inject
     DeviceFingerprintService deviceFingerprintService;
+    
+    @Inject
+    PaymentNotificationService paymentNotificationService;
     
     private static final Logger log = Logger.getLogger(NotificationService.class);
     
@@ -278,6 +282,55 @@ public class NotificationService {
             
             throw ValidationException.invalidField("encryptedNotification", request.encryptedNotification(), 
                 "Error procesando notificación encriptada: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Procesa notificación de Yape y la convierte en notificación de pago para broadcast
+     */
+    @WithTransaction
+    public Uni<ApiResponse<YapeNotificationResponse>> processYapeNotificationAsPayment(YapeNotificationRequest request) {
+        log.info("💰 NotificationService.processYapeNotificationAsPayment() - Procesando como pago");
+        
+        try {
+            // Desencriptar notificación
+            YapeNotificationResponse decryptedResponse = yapeDecryptionService.decryptYapeNotification(
+                request.encryptedNotification(), 
+                request.deviceFingerprint()
+            );
+            
+            // Crear notificación de pago
+            PaymentNotificationRequest paymentRequest = new PaymentNotificationRequest(
+                request.adminId(),
+                decryptedResponse.amount(),
+                decryptedResponse.senderPhone(), // Usar como nombre por ahora
+                decryptedResponse.transactionId()
+            );
+            
+            // Procesar como notificación de pago
+            return paymentNotificationService.processPaymentNotification(paymentRequest)
+                    .map(paymentResponse -> {
+                        log.info("✅ Notificación de Yape procesada como pago");
+                        
+                        // Crear respuesta de Yape con información del pago
+                        YapeNotificationResponse yapeResponse = new YapeNotificationResponse(
+                            paymentResponse.paymentId(),
+                            decryptedResponse.transactionId(),
+                            decryptedResponse.amount(),
+                            decryptedResponse.senderPhone(),
+                            decryptedResponse.receiverPhone(),
+                            "PENDING_CONFIRMATION",
+                            paymentResponse.timestamp(),
+                            "Pago enviado a vendedores para confirmación"
+                        );
+                        
+                        return ApiResponse.success("Notificación de Yape procesada como pago", yapeResponse);
+                    });
+                    
+        } catch (Exception e) {
+            log.error("❌ Error procesando notificación de Yape como pago: " + e.getMessage());
+            throw ValidationException.invalidField("encryptedNotification", request.encryptedNotification(), 
+                "Error procesando notificación como pago: " + e.getMessage());
         }
     }
 }

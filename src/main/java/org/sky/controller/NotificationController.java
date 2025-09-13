@@ -121,4 +121,47 @@ public class NotificationController {
                     return securityService.handleSecurityException(throwable);
                 });
     }
+    
+    @POST
+    @Path("/yape-notifications-as-payment")
+    @Operation(summary = "Process Yape notification as payment", description = "Process encrypted Yape notification and broadcast to sellers")
+    public Uni<Response> processYapeNotificationAsPayment(@Valid YapeNotificationRequest request,
+                                                        @HeaderParam("Authorization") String authorization) {
+        log.info("💰 NotificationController.processYapeNotificationAsPayment() - Procesando como pago");
+        log.info("💰 AdminId: " + request.adminId());
+        log.info("💰 Device fingerprint: " + request.deviceFingerprint());
+        log.info("💰 Timestamp: " + request.timestamp());
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, request.adminId())
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + request.adminId());
+                    return notificationService.processYapeNotificationAsPayment(request);
+                })
+                .map(response -> {
+                    if (response.isSuccess()) {
+                        log.info("✅ Notificación de Yape procesada como pago exitosamente");
+                        return Response.ok(response).build();
+                    } else {
+                        log.warn("⚠️ Error al procesar notificación como pago: " + response.message());
+                        return Response.status(400).entity(response).build();
+                    }
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error en procesamiento de notificación como pago: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    // Para otros errores, usar el manejo de seguridad
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
 }
