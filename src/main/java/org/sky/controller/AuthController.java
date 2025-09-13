@@ -71,8 +71,14 @@ public class AuthController {
                     .map(response -> Response.ok(response).build());
         } catch (Exception e) {
             log.error("Error during logout: {}", e.getMessage());
+            org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                "Invalid token: " + e.getMessage(),
+                "INVALID_TOKEN",
+                java.util.Map.of("error", e.getMessage()),
+                java.time.Instant.now()
+            );
             return Uni.createFrom().item(Response.status(400)
-                    .entity(ApiResponse.error("Invalid token: " + e.getMessage()))
+                    .entity(errorResponse)
                     .build());
         }
     }
@@ -115,8 +121,14 @@ public class AuthController {
             // Parse our simple JWT manually
             String[] parts = token.split("\\.");
             if (parts.length != 3) {
+                org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                    "Invalid JWT format - expected 3 parts, got " + parts.length,
+                    "INVALID_JWT_FORMAT",
+                    java.util.Map.of("expectedParts", 3, "actualParts", parts.length),
+                    java.time.Instant.now()
+                );
                 return Response.status(400)
-                        .entity(ApiResponse.error("Invalid JWT format - expected 3 parts, got " + parts.length))
+                        .entity(errorResponse)
                         .build();
             }
             
@@ -134,15 +146,27 @@ public class AuthController {
                     java.util.Map.of("userId", userId, "payload", payload));
                 return Response.ok(response).build();
             } else {
+                org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                    "Subject not found in token payload: " + payload,
+                    "SUBJECT_NOT_FOUND",
+                    java.util.Map.of("payload", payload),
+                    java.time.Instant.now()
+                );
                 return Response.status(400)
-                        .entity(ApiResponse.error("Subject not found in token payload: " + payload))
+                        .entity(errorResponse)
                         .build();
             }
             
         } catch (Exception e) {
             log.error("Error extracting token: {}", e.getMessage());
+            org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                "Invalid token: " + e.getMessage(),
+                "TOKEN_EXTRACTION_ERROR",
+                java.util.Map.of("error", e.getMessage()),
+                java.time.Instant.now()
+            );
             return Response.status(400)
-                    .entity(ApiResponse.error("Invalid token: " + e.getMessage()))
+                    .entity(errorResponse)
                     .build();
         }
     }

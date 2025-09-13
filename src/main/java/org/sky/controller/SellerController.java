@@ -39,16 +39,19 @@ public class SellerController {
     @Path("/my-sellers")
     @PermitAll
     @WithTransaction
-    @Operation(summary = "Get my sellers", description = "Get all sellers affiliated to the current admin")
+    @Operation(summary = "Get my sellers", description = "Get all sellers affiliated to the current admin with pagination")
     public Uni<Response> getMySellers(@QueryParam("adminId") Long adminId, 
+                                     @QueryParam("page") @DefaultValue("1") int page,
+                                     @QueryParam("limit") @DefaultValue("20") int limit,
                                      @HeaderParam("Authorization") String authorization) {
         log.info("🚀 SellerController.getMySellers() - Endpoint llamado para adminId: " + adminId);
+        log.info("🚀 Parámetros de paginación - page: " + page + ", limit: " + limit);
         
         // Validar autorización de admin
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return sellerService.getSellersByAdmin(adminId);
+                    return sellerService.getSellersByAdmin(adminId, page, limit);
                 })
                 .map(response -> {
                     if (response.isSuccess()) {
@@ -61,6 +64,18 @@ public class SellerController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error de autorización: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    // Para otros errores, usar el manejo de seguridad
                     return securityService.handleSecurityException(throwable);
                 });
     }
@@ -83,36 +98,82 @@ public class SellerController {
     
     @PUT
     @Path("/{sellerId}")
+    @PermitAll
+    @WithTransaction
     @Operation(summary = "Update seller", description = "Update seller information")
     public Uni<Response> updateSeller(@QueryParam("adminId") Long adminId,
                                 @PathParam("sellerId") Long sellerId,
                                 @QueryParam("name") String name,
                                 @QueryParam("phone") String phone,
-                                @QueryParam("isActive") Boolean isActive) {
-        return sellerService.updateSeller(adminId, sellerId, name, phone, isActive)
+                                @QueryParam("isActive") Boolean isActive,
+                                @HeaderParam("Authorization") String authorization) {
+        log.info("🚀 SellerController.updateSeller() - Endpoint llamado para sellerId: " + sellerId + ", adminId: " + adminId);
+        
+        // Validar autorización de admin primero
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return sellerService.updateSeller(adminId, sellerId, name, phone, isActive);
+                })
                 .map(response -> {
-                    if (response.isSuccess()) {
-                        return Response.ok(response).build();
-                    } else {
-                        return Response.status(400).entity(response).build();
+                    log.info("✅ Vendedor actualizado exitosamente");
+                    return Response.ok(response).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error en actualización: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
                     }
+                    // Para otros errores, usar el manejo de seguridad
+                    return securityService.handleSecurityException(throwable);
                 });
     }
     
     @DELETE
     @Path("/{sellerId}")
-    @Operation(summary = "Delete/Pause seller", description = "Delete or pause a seller")
+    @PermitAll
+    @WithTransaction
+    @Operation(summary = "Delete/Pause seller", description = "Delete or pause a seller (soft delete by default)")
     public Uni<Response> deleteSeller(@QueryParam("adminId") Long adminId,
                                 @PathParam("sellerId") Long sellerId,
                                 @QueryParam("action") @DefaultValue("pause") String action,
-                                @QueryParam("reason") String reason) {
-        return sellerService.deleteSeller(adminId, sellerId, action, reason)
+                                @QueryParam("reason") String reason,
+                                @HeaderParam("Authorization") String authorization) {
+        log.info("🚀 SellerController.deleteSeller() - Endpoint llamado para sellerId: " + sellerId + ", adminId: " + adminId + ", action: " + action);
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return sellerService.deleteSeller(adminId, sellerId, action, reason);
+                })
                 .map(response -> {
-                    if (response.isSuccess()) {
-                        return Response.ok(response).build();
-                    } else {
-                        return Response.status(400).entity(response).build();
+                    log.info("✅ Vendedor procesado exitosamente");
+                    return Response.ok(response).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error en eliminación/pausa: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
                     }
+                    // Para otros errores, usar el manejo de seguridad
+                    return securityService.handleSecurityException(throwable);
                 });
     }
     

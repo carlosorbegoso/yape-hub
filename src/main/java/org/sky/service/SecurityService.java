@@ -46,6 +46,11 @@ public class SecurityService {
             
         } catch (Exception e) {
             log.error("❌ Error al validar token: " + e.getMessage(), e);
+            // Si es un error de constraint violation, propagarlo como tal
+            if (e.getMessage() != null && e.getMessage().contains("duplicate key value violates unique constraint")) {
+                log.error("❌ Error de duplicado detectado en validateJwtToken");
+                return Uni.createFrom().failure(e);
+            }
             return Uni.createFrom().failure(new SecurityException("Token inválido: " + e.getMessage()));
         }
     }
@@ -81,7 +86,12 @@ public class SecurityService {
      * @return Response con el error
      */
     public Response createSecurityErrorResponse(String message, int statusCode) {
-        ApiResponse<Object> errorResponse = ApiResponse.error(message);
+        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+            message,
+            "SECURITY_ERROR",
+            java.util.Map.of("timestamp", java.time.Instant.now()),
+            java.time.Instant.now()
+        );
         return Response.status(statusCode).entity(errorResponse).build();
     }
 
@@ -98,6 +108,12 @@ public class SecurityService {
         if (throwable instanceof SecurityException) {
             log.warn("❌ Retornando error 401 - SecurityException");
             return createSecurityErrorResponse(throwable.getMessage(), 401);
+        }
+        
+        // Si es un error de constraint violation (duplicado), crear ErrorResponse específico
+        if (throwable.getMessage() != null && throwable.getMessage().contains("duplicate key value violates unique constraint")) {
+            log.warn("❌ Error de duplicado detectado en SecurityService");
+            return createSecurityErrorResponse("Código de transacción duplicado. La notificación se guardó pero la transacción ya existe en el sistema", 400);
         }
         
         log.error("❌ Retornando error 500 - Excepción no controlada");

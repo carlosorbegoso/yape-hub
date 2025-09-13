@@ -17,6 +17,7 @@ import org.sky.repository.AffiliationCodeRepository;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
+import org.sky.exception.ValidationException;
 
 import java.util.List;
 import java.util.UUID;
@@ -161,8 +162,15 @@ public class SellerService {
     public Uni<ApiResponse<SellerResponse>> updateSeller(Long adminId, Long sellerId, String name, String phone, Boolean isActive) {
         return sellerRepository.findById(sellerId)
                 .chain(seller -> {
-                    if (seller == null || !seller.branch.admin.id.equals(adminId)) {
-                        return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Vendedor no encontrado"));
+                    if (seller == null) {
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("sellerId", sellerId.toString(), "Vendedor no encontrado")
+                        );
+                    }
+                    if (!seller.branch.admin.id.equals(adminId)) {
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("adminId", adminId.toString(), "No tienes permisos para actualizar este vendedor")
+                        );
                     }
                     
                     if (name != null) {
@@ -192,31 +200,65 @@ public class SellerService {
     public Uni<ApiResponse<String>> deleteSeller(Long adminId, Long sellerId, String action, String reason) {
         return sellerRepository.findById(sellerId)
                 .chain(seller -> {
-                    if (seller == null || !seller.branch.admin.id.equals(adminId)) {
-                        return Uni.createFrom().item(ApiResponse.<String>error("Vendedor no encontrado"));
+                    if (seller == null) {
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("sellerId", sellerId.toString(), "Vendedor no encontrado")
+                        );
+                    }
+                    if (!seller.branch.admin.id.equals(adminId)) {
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("adminId", adminId.toString(), "No tienes permisos para dar de baja este vendedor")
+                        );
                     }
                     
                     if ("pause".equals(action)) {
                         seller.isActive = false;
                         return sellerRepository.persist(seller)
-                                .map(persistedSeller -> ApiResponse.success("Vendedor pausado exitosamente"));
+                                .map(persistedSeller -> ApiResponse.success("Vendedor dado de baja exitosamente (soft delete)"));
                     } else if ("delete".equals(action)) {
-                        return sellerRepository.delete(seller)
-                                .chain(deletedSeller -> userRepository.delete(seller.user))
-                                .map(deletedUser -> ApiResponse.success("Vendedor eliminado exitosamente"));
+                        // Para hard delete, primero eliminamos el usuario asociado
+                        if (seller.user != null) {
+                            return userRepository.delete(seller.user)
+                                    .chain(deletedUser -> sellerRepository.delete(seller))
+                                    .map(deletedSeller -> ApiResponse.success("Vendedor eliminado permanentemente de la base de datos"));
+                        } else {
+                            return sellerRepository.delete(seller)
+                                    .map(deletedSeller -> ApiResponse.success("Vendedor eliminado permanentemente de la base de datos"));
+                        }
                     } else {
-                        return Uni.createFrom().item(ApiResponse.<String>error("Acción inválida"));
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("action", action, "Acción inválida. Valores permitidos: 'pause' o 'delete'")
+                        );
                     }
                 });
     }
     
     /**
-     * Obtiene todos los vendedores afiliados a un administrador específico
+     * Obtiene todos los vendedores afiliados a un administrador específico con paginación
      */
-    public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId) {
+    public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId, int page, int limit) {
+        // Validar parámetros de paginación
+        if (page < 1) page = 1;
+        if (limit < 1 || limit > 100) limit = 20; // Máximo 100 elementos por página
+        
+        // Hacer las variables finales para usar en lambda
+        final int finalPage = page;
+        final int finalLimit = limit;
+        final int offset = (finalPage - 1) * finalLimit;
+        
         return sellerRepository.findByAdminId(adminId)
-                .map(sellers -> {
-                    List<SellerResponse> sellerResponses = sellers.stream()
+                .chain(allSellers -> {
+                    // Calcular información de paginación
+                    int totalItems = allSellers.size();
+                    int totalPages = (int) Math.ceil((double) totalItems / finalLimit);
+                    
+                    // Aplicar paginación
+                    List<Seller> paginatedSellers = allSellers.stream()
+                            .skip(offset)
+                            .limit(finalLimit)
+                            .collect(Collectors.toList());
+                    
+                    List<SellerResponse> sellerResponses = paginatedSellers.stream()
                             .map(seller -> new SellerResponse(
                                     seller.id,
                                     seller.sellerName,
@@ -234,10 +276,10 @@ public class SellerService {
                             .collect(Collectors.toList());
                     
                     SellerListResponse.PaginationInfo pagination = new SellerListResponse.PaginationInfo(
-                            1, // currentPage
-                            1, // totalPages
-                            sellerResponses.size(), // totalItems
-                            sellerResponses.size() // itemsPerPage
+                            finalPage, // currentPage
+                            totalPages, // totalPages
+                            totalItems, // totalItems
+                            finalLimit // itemsPerPage
                     );
                     
                     SellerListResponse listResponse = new SellerListResponse(
@@ -245,7 +287,7 @@ public class SellerService {
                             pagination
                     );
                     
-                    return ApiResponse.success("Vendedores obtenidos exitosamente", listResponse);
+                    return Uni.createFrom().item(ApiResponse.success("Vendedores obtenidos exitosamente", listResponse));
                 });
     }
 }

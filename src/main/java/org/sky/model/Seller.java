@@ -31,7 +31,7 @@ public class Seller extends PanacheEntity {
     @Column(unique = true, nullable = false)
     public String phone;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "branch_id", nullable = false)
     public Branch branch;
     

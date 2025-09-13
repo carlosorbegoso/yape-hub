@@ -2,67 +2,54 @@ package org.sky.model;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transactions")
 public class Transaction extends PanacheEntity {
     
-    @NotBlank
-    @Column(name = "security_code", unique = true, nullable = false)
-    public String securityCode;
+    @Column(name = "transaction_id", unique = true, nullable = false)
+    public String transactionId;
     
-    @NotNull
-    @Column(precision = 10, scale = 2, nullable = false)
-    public BigDecimal amount;
+    @Column(name = "amount", nullable = false)
+    public Double amount;
+    
+    @Column(name = "sender_phone", nullable = false)
+    public String senderPhone;
+    
+    @Column(name = "receiver_phone", nullable = false)
+    public String receiverPhone;
+    
+    @Column(name = "status", nullable = false)
+    public String status;
+    
+    @Column(name = "payment_method", nullable = false)
+    public String paymentMethod = "YAPE";
+    
+    @Column(name = "security_code", nullable = false)
+    public String securityCode = "SEC123";
     
     @Column(name = "transaction_timestamp", nullable = false)
-    public LocalDateTime timestamp;
+    public LocalDateTime transactionTimestamp = LocalDateTime.now();
     
-    @Column(columnDefinition = "TEXT")
-    public String description;
+    @Column(name = "type", nullable = false)
+    public String type = "PAYMENT";
     
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    public TransactionType type;
+    @Column(name = "admin_id", nullable = false)
+    public Long adminId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @Column(name = "yape_notification_id")
+    public Long yapeNotificationId;
+    
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "branch_id", nullable = false)
     public Branch branch;
     
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "seller_id")
     public Seller seller;
-    
-    @Column(name = "is_processed")
-    public Boolean isProcessed = false;
-    
-    @Column(name = "is_confirmed")
-    public Boolean isConfirmed = false;
-    
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
-    public PaymentMethod paymentMethod;
-    
-    @Column(name = "customer_phone")
-    public String customerPhone;
-    
-    @Column(name = "processed_at")
-    public LocalDateTime processedAt;
-    
-    @Column(name = "confirmed_at")
-    public LocalDateTime confirmedAt;
-    
-    @Column(name = "notes", columnDefinition = "TEXT")
-    public String notes;
     
     @CreationTimestamp
     @Column(name = "created_at")
@@ -71,26 +58,4 @@ public class Transaction extends PanacheEntity {
     @UpdateTimestamp
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
-    
-    public enum TransactionType {
-        PAYMENT, REFUND, COMMISSION
-    }
-    
-    public enum PaymentMethod {
-        YAPE, PLIN, BIM, CASH, CARD
-    }
-    
-    // Constructors
-    public Transaction() {}
-    
-    public Transaction(String securityCode, BigDecimal amount, LocalDateTime timestamp, 
-                      String description, TransactionType type, Branch branch, PaymentMethod paymentMethod) {
-        this.securityCode = securityCode;
-        this.amount = amount;
-        this.timestamp = timestamp;
-        this.description = description;
-        this.type = type;
-        this.branch = branch;
-        this.paymentMethod = paymentMethod;
-    }
 }
