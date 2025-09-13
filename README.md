@@ -1,66 +1,232 @@
-# yape-hub
+# YapeChamo API Hub
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+A comprehensive payment management system built with Quarkus that allows businesses to manage Yape payments, sellers, and transactions through a robust REST API.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## 🚀 Features
 
-## Running the application in dev mode
+- **User Management**: Admin and seller registration with JWT authentication
+- **Business Management**: Multi-branch business support with admin controls
+- **Seller Management**: Seller affiliation, management, and performance tracking
+- **Transaction Processing**: Yape payment processing with confirmation workflows
+- **Dashboard & Analytics**: Real-time dashboards for admins and sellers
+- **Notification System**: Push notifications for transactions and system events
+- **QR Code Generation**: Dynamic QR codes for payments and affiliations
+- **Affiliation System**: Secure seller onboarding with unique codes
+- **Reporting**: Comprehensive transaction reports and analytics
+- **API Documentation**: Complete OpenAPI/Swagger documentation
 
-You can run your application in dev mode that enables live coding using:
+## 🛠 Technology Stack
 
-```shell script
+- **Framework**: Quarkus (Java 21)
+- **Database**: PostgreSQL with Hibernate ORM
+- **Authentication**: JWT (JSON Web Tokens)
+- **API Documentation**: OpenAPI/Swagger
+- **Validation**: Bean Validation
+- **Security**: SmallRye JWT
+- **QR Code Generation**: ZXing library
+- **Email**: Quarkus Mailer
+- **Build Tool**: Gradle
+
+## 📋 Prerequisites
+
+- Java 21
+- PostgreSQL database
+- Maven/Gradle
+
+## 🚀 Quick Start
+
+### 1. Database Setup
+
+Create a PostgreSQL database:
+
+```sql
+CREATE DATABASE yapechamo;
+CREATE USER yapechamo WITH PASSWORD 'yapechamo123';
+GRANT ALL PRIVILEGES ON DATABASE yapechamo TO yapechamo;
+```
+
+### 2. Configuration
+
+Update database credentials in `src/main/resources/application.properties`:
+
+```properties
+quarkus.datasource.username=yapechamo
+quarkus.datasource.password=yapechamo123
+quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/yapechamo
+```
+
+### 3. Run the Application
+
+```bash
 ./gradlew quarkusDev
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+The API will be available at `http://localhost:8080`
 
-## Packaging and running the application
+### 4. Access API Documentation
 
-The application can be packaged using:
+Swagger UI is available at: `http://localhost:8080/swagger-ui`
 
-```shell script
+## 📚 API Documentation
+
+Complete API documentation is available in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+
+### Key Endpoints
+
+- **Authentication**: `/api/auth/*`
+- **Admin Management**: `/api/admin/*`
+- **Seller Management**: `/api/admin/sellers/*`
+- **Transactions**: `/api/transactions/*`
+- **Dashboard**: `/api/admin/dashboard`, `/api/sellers/dashboard`
+- **Notifications**: `/api/notifications/*`
+- **QR Codes**: `/api/admin/qr/*`
+
+## 🏗 Project Structure
+
+```
+src/main/java/org/sky/
+├── controller/          # REST API controllers
+├── service/            # Business logic services
+├── model/              # JPA entities
+├── dto/                # Data transfer objects
+└── util/               # Utility classes
+```
+
+## 🔧 Development
+
+### Running in Development Mode
+
+```bash
+./gradlew quarkusDev
+```
+
+This enables live coding with automatic reloading.
+
+### Building the Application
+
+```bash
 ./gradlew build
 ```
 
-It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
+### Running Tests
 
-The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./gradlew build -Dquarkus.package.jar.type=uber-jar
+```bash
+./gradlew test
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar build/*-runner.jar`.
+### Building Native Executable
 
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
+```bash
 ./gradlew build -Dquarkus.native.enabled=true
 ```
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+## 🐳 Docker Support
 
-```shell script
-./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true
+Build Docker image:
+
+```bash
+./gradlew build -Dquarkus.native.enabled=true
+docker build -f src/main/docker/Dockerfile.native -t yapechamo-api .
 ```
 
-You can then execute your native executable with: `./build/yape-hub-1.0.0-SNAPSHOT-runner`
+## 🔐 Security Features
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/gradle-tooling>.
+- **Password Hashing**: BCrypt with salt
+- **JWT Authentication**: Secure token-based authentication
+- **Input Validation**: Bean Validation annotations
+- **SQL Injection Protection**: Hibernate ORM with parameterized queries
+- **CORS Configuration**: Configurable cross-origin resource sharing
+- **Rate Limiting**: Protection against abuse
 
-## Related Guides
+## 📊 Monitoring
 
-- REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it.
+### Health Checks
 
-## Provided Code
+- **Health Check**: `GET /q/health`
+- **Metrics**: `GET /q/metrics`
+- **Info**: `GET /q/info`
 
-### REST
+## 🚀 Deployment
 
-Easily start your REST Web Services
+### Environment Variables
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+```bash
+# Database
+QUARKUS_DATASOURCE_USERNAME=yapechamo
+QUARKUS_DATASOURCE_PASSWORD=yapechamo123
+QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://localhost:5432/yapechamo
+
+# Email
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+
+# JWT
+JWT_SECRET=your-jwt-secret-key
+```
+
+### Production Checklist
+
+1. Set up PostgreSQL database
+2. Configure environment variables
+3. Set up SSL certificates
+4. Configure reverse proxy (nginx)
+5. Set up monitoring and logging
+
+## 📝 API Examples
+
+### Register Admin
+
+```bash
+curl -X POST http://localhost:8080/api/auth/admin/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "businessName": "Mi Negocio SRL",
+    "businessType": "RESTAURANT",
+    "ruc": "20123456789",
+    "email": "admin@minegocio.com",
+    "password": "SecurePass123!",
+    "phone": "+51987654321",
+    "address": "Av. Principal 123, Lima",
+    "contactName": "Juan Pérez"
+  }'
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@minegocio.com",
+    "password": "SecurePass123!",
+    "deviceFingerprint": "device_unique_id_123",
+    "role": "ADMIN"
+  }'
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support and questions:
+
+- **Documentation**: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+- **Swagger UI**: `http://localhost:8080/swagger-ui`
+- **Issues**: Create GitHub issues
+- **Email**: support@yapechamo.com
+
+---
+
+**Version**: 1.0.0  
+**Last Updated**: January 2024  
+**Author**: YapeChamo Development Team

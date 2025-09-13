@@ -1,0 +1,53 @@
+package org.sky.model;
+
+import io.quarkus.hibernate.reactive.panache.PanacheEntity;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "affiliation_codes")
+public class AffiliationCode extends PanacheEntity {
+    
+    @NotBlank
+    @Column(name = "affiliation_code", unique = true, nullable = false)
+    public String affiliationCode;
+    
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "branch_id", nullable = false)
+    public Branch branch;
+    
+    @Column(name = "expires_at")
+    public LocalDateTime expiresAt;
+    
+    @Column(name = "max_uses")
+    public Integer maxUses;
+    
+    @Column(name = "remaining_uses")
+    public Integer remainingUses;
+    
+    @Column(name = "is_active")
+    public Boolean isActive = true;
+    
+    @Column(columnDefinition = "TEXT")
+    public String notes;
+    
+    @CreationTimestamp
+    @Column(name = "created_at")
+    public LocalDateTime createdAt;
+    
+    // Constructors
+    public AffiliationCode() {}
+    
+    public AffiliationCode(String affiliationCode, Branch branch, LocalDateTime expiresAt, Integer maxUses) {
+        this.affiliationCode = affiliationCode;
+        this.branch = branch;
+        this.expiresAt = expiresAt;
+        this.maxUses = maxUses;
+        this.remainingUses = maxUses;
+    }
+    
+}
