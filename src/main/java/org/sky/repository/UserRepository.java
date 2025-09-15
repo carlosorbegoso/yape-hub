@@ -18,11 +18,5 @@ public class UserRepository implements PanacheRepositoryBase<User, Long> {
         return find("email = ?1 and role = ?2", email, role).firstResult();
     }
     
-    public Uni<List<User>> findByRole(User.UserRole role) {
-        return find("role", role).list();
-    }
-    
-    public Uni<List<User>> findActiveByRole(User.UserRole role) {
-        return find("role = ?1 and isActive = true", role).list();
-    }
+
 }

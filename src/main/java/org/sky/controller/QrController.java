@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.PermitAll;
 import org.sky.dto.qr.*;
+import org.sky.dto.ErrorResponse;
 import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.service.QrService;
 import org.sky.service.SecurityService;
@@ -23,6 +24,8 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import io.smallrye.mutiny.Uni;
 import org.jboss.logging.Logger;
 
+import java.util.Map;
+
 @Path("/api")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -30,6 +33,18 @@ import org.jboss.logging.Logger;
 public class QrController {
     
     private static final Logger log = Logger.getLogger(QrController.class);
+    
+    /**
+     * Convierte un ApiResponse de error a ErrorResponse
+     */
+    private ErrorResponse convertToErrorResponse(org.sky.dto.ApiResponse<?> apiResponse) {
+        return new ErrorResponse(
+            apiResponse.message(),
+            "INVALID_FIELD",
+            Map.of("reason", apiResponse.message()),
+            java.time.Instant.now()
+        );
+    }
     
     @Inject
     QrService qrService;
@@ -150,7 +165,17 @@ public class QrController {
                 .chain(validationResponse -> {
                     if (!validationResponse.isSuccess()) {
                         log.warn("❌ Código de afiliación inválido: " + validationResponse.message());
-                        return Uni.createFrom().item(Response.status(400).entity(validationResponse).build());
+                        ErrorResponse errorResponse = new ErrorResponse(
+                            "Invalid affiliationCode: " + request.affiliationCode() + " - " + validationResponse.message(),
+                            "INVALID_FIELD",
+                            Map.of(
+                                "field", "affiliationCode",
+                                "value", request.affiliationCode(),
+                                "reason", validationResponse.message()
+                            ),
+                            java.time.Instant.now()
+                        );
+                        return Uni.createFrom().item(Response.status(400).entity(errorResponse).build());
                     }
                     
                                 log.info("✅ Código de afiliación válido, procediendo con el registro del vendedor");
@@ -169,7 +194,17 @@ public class QrController {
                                                 return Response.status(201).entity(sellerResponse).build();
                                             } else {
                                                 log.warn("⚠️ Error en el registro del vendedor (400)");
-                                                return Response.status(400).entity(sellerResponse).build();
+                                                ErrorResponse errorResponse = new ErrorResponse(
+                                                    sellerResponse.message(),
+                                                    "INVALID_FIELD",
+                                                    Map.of(
+                                                        "field", "sellerRegistration",
+                                                        "value", request.toString(),
+                                                        "reason", sellerResponse.message()
+                                                    ),
+                                                    java.time.Instant.now()
+                                                );
+                                                return Response.status(400).entity(errorResponse).build();
                                             }
                                         });
                 });

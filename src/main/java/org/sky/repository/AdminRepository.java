@@ -17,12 +17,5 @@ public class AdminRepository implements PanacheRepositoryBase<Admin, Long> {
     public Uni<Admin> findByRuc(String ruc) {
         return find("ruc", ruc).firstResult();
     }
-    
-    public Uni<List<Admin>> findByBusinessType(Admin.BusinessType businessType) {
-        return find("businessType", businessType).list();
-    }
-    
-    public Uni<List<Admin>> findActiveAdmins() {
-        return find("user.isActive = true").list();
-    }
+
 }

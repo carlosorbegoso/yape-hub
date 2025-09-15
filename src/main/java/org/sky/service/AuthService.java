@@ -100,7 +100,7 @@ public class AuthService {
                     
                     LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
                             branch.admin.user.id, branch.admin.user.email, branch.admin.user.role, 
-                            branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified
+                            branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
                     );
                     
                     LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
@@ -145,7 +145,7 @@ public class AuthService {
                                                 
                                                 LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
                                                         updatedUser.id, updatedUser.email, updatedUser.role, 
-                                                        businessId, businessName, updatedUser.isVerified
+                                                        businessId, businessName, updatedUser.isVerified, null
                                                 );
                                                 
                                                 LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
@@ -154,7 +154,7 @@ public class AuthService {
                                 } else {
                                     LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
                                             updatedUser.id, updatedUser.email, updatedUser.role, 
-                                            null, null, updatedUser.isVerified
+                                            null, null, updatedUser.isVerified, null
                                     );
                                     
                                     LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
@@ -189,7 +189,7 @@ public class AuthService {
                                     Long businessId = admin != null ? admin.id : null;
                                     
                                     LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                            user.id, user.email, user.role, businessId, businessName, user.isVerified
+                                            user.id, user.email, user.role, businessId, businessName, user.isVerified, null
                                     );
                                     
                                     LoginResponse response = new LoginResponse(newAccessToken, newRefreshToken, 3600L, userInfo);
@@ -197,7 +197,7 @@ public class AuthService {
                                 });
                     } else {
                         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                user.id, user.email, user.role, null, null, user.isVerified
+                                user.id, user.email, user.role, null, null, user.isVerified, null
                         );
                         
                         LoginResponse response = new LoginResponse(newAccessToken, newRefreshToken, 3600L, userInfo);
@@ -281,7 +281,8 @@ public class AuthService {
                                         accessToken, refreshToken, 3600L,
                                         new LoginResponse.UserInfo(
                                                 updatedUser.id, updatedUser.email, updatedUser.role,
-                                                seller.branch.id, seller.branch.name, updatedUser.isVerified
+                                                seller.branch.id, seller.branch.name, updatedUser.isVerified,
+                                                seller.id
                                         )
                                 );
                                 

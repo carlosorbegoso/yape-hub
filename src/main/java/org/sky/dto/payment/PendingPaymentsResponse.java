@@ -1,9 +1,9 @@
-package org.sky.dto.transaction;
+package org.sky.dto.payment;
 
 import java.util.List;
 
-public record TransactionListResponse(
-    List<TransactionResponse> transactions,
+public record PendingPaymentsResponse(
+    List<PaymentNotificationResponse> payments,
     PaginationInfo pagination
 ) {
     public record PaginationInfo(

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #status { font-weight: bold; padding: 10px; border-radius: 5px; }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        #messages { border: 1px solid #ccc; padding: 10px; min-height: 200px; overflow-y: scroll; }
+        .message { background-color: #f0f0f0; margin-bottom: 5px; padding: 5px; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .connect { background-color: #28a745; color: white; }
+        .disconnect { background-color: #dc3545; color: white; }
+        .test { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔌 Simple WebSocket Test</h1>
+    <p><strong>Vendedor ID:</strong> 101</p>
+    <p><strong>Estado:</strong> <span id="status" class="disconnected">Desconectado</span></p>
+    
+    <button id="connectBtn" class="connect">Conectar</button>
+    <button id="disconnectBtn" class="disconnect" disabled>Desconectar</button>
+    <button id="testBtn" class="test">Enviar Prueba</button>
+    
+    <hr>
+    <h2>Mensajes:</h2>
+    <div id="messages"></div>
+
+    <script>
+        const sellerId = 101;
+        let ws = null;
+        
+        const statusSpan = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const testBtn = document.getElementById('testBtn');
+
+        function addMessage(text) {
+            const msgElement = document.createElement('div');
+            msgElement.className = 'message';
+            msgElement.textContent = new Date().toLocaleTimeString() + ': ' + text;
+            messagesDiv.appendChild(msgElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('Ya está conectado');
+                return;
+            }
+
+            addMessage('Intentando conectar...');
+            ws = new WebSocket(`ws://localhost:8080/ws/payments/${sellerId}`);
+
+            ws.onopen = function() {
+                addMessage('✅ Conectado exitosamente');
+                statusSpan.textContent = 'Conectado';
+                statusSpan.className = 'connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            };
+
+            ws.onmessage = function(event) {
+                addMessage('📨 Recibido: ' + event.data);
+            };
+
+            ws.onclose = function() {
+                addMessage('🔌 Desconectado');
+                statusSpan.textContent = 'Desconectado';
+                statusSpan.className = 'disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            };
+
+            ws.onerror = function(error) {
+                addMessage('❌ Error: ' + error);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+
+        function sendTest() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addMessage('❌ No hay conexión WebSocket');
+                return;
+            }
+
+            fetch(`http://localhost:8080/api/payments/test-notification/${sellerId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                addMessage('🧪 Prueba enviada: ' + JSON.stringify(data));
+            })
+            .catch(error => {
+                addMessage('❌ Error enviando prueba: ' + error);
+            });
+        }
+
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        testBtn.addEventListener('click', sendTest);
+
+        // Auto-connect
+        connect();
+    </script>
+</body>
+</html>

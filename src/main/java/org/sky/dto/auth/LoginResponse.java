@@ -14,6 +14,7 @@ public record LoginResponse(
         User.UserRole role,
         Long businessId,
         String businessName,
-        Boolean isVerified
+        Boolean isVerified,
+        Long sellerId
     ) {}
 }

@@ -7,16 +7,17 @@ import org.jboss.logging.Logger;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentClaimRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.payment.PendingPaymentsResponse;
 import org.sky.model.PaymentNotification;
 import org.sky.model.Seller;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.exception.ValidationException;
+import org.sky.service.WebSocketNotificationService;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.vertx.core.Vertx;
 
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 
 @ApplicationScoped
@@ -28,14 +29,19 @@ public class PaymentNotificationService {
     @Inject
     SellerRepository sellerRepository;
     
+    @Inject
+    WebSocketNotificationService webSocketNotificationService;
+    
+    @Inject
+    Vertx vertx;
+    
     private static final Logger log = Logger.getLogger(PaymentNotificationService.class);
     
-    // Map para almacenar las conexiones SSE activas por sellerId
-    private final Map<Long, CopyOnWriteArrayList<PaymentNotificationResponse>> activeConnections = new ConcurrentHashMap<>();
     
     /**
      * Procesa una notificación de pago y la envía a todos los vendedores
      */
+    @WithTransaction
     public Uni<PaymentNotificationResponse> processPaymentNotification(PaymentNotificationRequest request) {
         log.info("💰 PaymentNotificationService.processPaymentNotification() - Procesando pago");
         log.info("💰 AdminId: " + request.adminId());
@@ -69,10 +75,9 @@ public class PaymentNotificationService {
                             "Pago pendiente de confirmación"
                         );
                         
-                        // Broadcast a todos los vendedores del admin
-                        broadcastToSellers(request.adminId(), response);
-                        
-                        return Uni.createFrom().item(response);
+                        // Broadcast a todos los vendedores del admin (reactivamente)
+                        return broadcastToSellersReactive(request.adminId(), response)
+                                .map(v -> response);
                     });
                     
         } catch (Exception e) {
@@ -80,6 +85,24 @@ public class PaymentNotificationService {
             throw ValidationException.invalidField("paymentNotification", request.toString(), 
                 "Error procesando notificación de pago: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Broadcast de notificación a todos los vendedores de un admin (reactivamente)
+     */
+    private Uni<Void> broadcastToSellersReactive(Long adminId, PaymentNotificationResponse notification) {
+        log.info("📡 Broadcast a vendedores del admin: " + adminId);
+        
+        return sellerRepository.find("branch.admin.id = ?1 and isActive = true", adminId).list()
+                .map(sellers -> {
+                    log.info("📡 Enviando a " + sellers.size() + " vendedores");
+                    
+                    for (Seller seller : sellers) {
+                        // Enviar a cada vendedor
+                        sendToSeller(seller.id, notification);
+                    }
+                    return null; // Retornar Void
+                });
     }
     
     /**
@@ -101,26 +124,46 @@ public class PaymentNotificationService {
     }
     
     /**
-     * Envía notificación a un vendedor específico
+     * Envía notificación a un vendedor específico via WebSocket
      */
     private void sendToSeller(Long sellerId, PaymentNotificationResponse notification) {
         log.info("📱 Enviando a vendedor " + sellerId + ": " + notification.message());
         
-        CopyOnWriteArrayList<PaymentNotificationResponse> connections = activeConnections.get(sellerId);
-        if (connections != null && !connections.isEmpty()) {
-            // Enviar a todas las conexiones activas del vendedor
-            connections.forEach(conn -> {
-                // En un sistema real, aquí enviarías el evento SSE
-                log.info("📱 SSE enviado a vendedor " + sellerId);
-            });
-        } else {
-            log.warn("⚠️ No hay conexiones activas para vendedor " + sellerId);
-        }
+        // Convertir notificación a JSON
+        String notificationJson = convertToJson(notification);
+        
+        // Enviar via WebSocket usando el servicio
+        webSocketNotificationService.sendNotification(sellerId, notificationJson);
+    }
+    
+    /**
+     * Convierte PaymentNotificationResponse a JSON
+     */
+    private String convertToJson(PaymentNotificationResponse notification) {
+        return String.format(
+            "{\"type\":\"PAYMENT_NOTIFICATION\",\"data\":{\"paymentId\":%d,\"amount\":%.2f,\"senderName\":\"%s\",\"yapeCode\":\"%s\",\"status\":\"%s\",\"timestamp\":\"%s\",\"message\":\"%s\"}}",
+            notification.paymentId(),
+            notification.amount(),
+            notification.senderName(),
+            notification.yapeCode(),
+            notification.status(),
+            notification.timestamp(),
+            notification.message()
+        );
+    }
+    
+    /**
+     * Envía notificación directamente a un vendedor (para pruebas)
+     */
+    public void sendToSellerDirectly(Long sellerId, PaymentNotificationResponse notification) {
+        log.info("🧪 Enviando notificación directa a vendedor " + sellerId);
+        sendToSeller(sellerId, notification);
     }
     
     /**
      * Permite que un vendedor reclame un pago
      */
+    @WithTransaction
     public Uni<PaymentNotificationResponse> claimPayment(PaymentClaimRequest request) {
         log.info("🎯 PaymentNotificationService.claimPayment() - Vendedor reclamando pago");
         log.info("🎯 SellerId: " + request.sellerId());
@@ -162,8 +205,8 @@ public class PaymentNotificationService {
                                     "Pago confirmado por vendedor " + request.sellerId()
                                 );
                                 
-                                // Notificar resultado a todos los vendedores
-                                notifyPaymentResult(payment.adminId, response);
+                                // Notificar resultado a todos los vendedores (reactivamente)
+                                notifyPaymentResultReactive(payment.adminId, response);
                                 
                                 return response;
                             });
@@ -171,46 +214,115 @@ public class PaymentNotificationService {
     }
     
     /**
-     * Notifica el resultado del pago a todos los vendedores
+     * Notifica el resultado del pago a todos los vendedores (reactivamente)
+     */
+    private void notifyPaymentResultReactive(Long adminId, PaymentNotificationResponse result) {
+        log.info("📢 Notificando resultado del pago a vendedores del admin: " + adminId);
+        
+        sellerRepository.find("branch.admin.id = ?1 and isActive = true", adminId).list()
+                .subscribe().with(sellers -> {
+                    log.info("📡 Encontrados " + sellers.size() + " vendedores para notificar");
+                    for (Seller seller : sellers) {
+                        sendToSeller(seller.id, result);
+                    }
+                }, failure -> {
+                    log.error("❌ Error al obtener vendedores para notificar: " + failure.getMessage());
+                });
+    }
+    
+    /**
+     * Notifica el resultado del pago a todos los vendedores (fuera de transacción)
      */
     private void notifyPaymentResult(Long adminId, PaymentNotificationResponse result) {
         log.info("📢 Notificando resultado del pago a vendedores del admin: " + adminId);
         
         sellerRepository.find("branch.admin.id = ?1 and isActive = true", adminId).list()
                 .subscribe().with(sellers -> {
+                    log.info("📡 Encontrados " + sellers.size() + " vendedores para notificar");
                     for (Seller seller : sellers) {
                         sendToSeller(seller.id, result);
                     }
+                }, failure -> {
+                    log.error("❌ Error al obtener vendedores para notificar: " + failure.getMessage());
                 });
     }
     
     /**
-     * Registra una conexión SSE para un vendedor
+     * Obtiene todos los pagos pendientes para un vendedor específico
      */
-    public void registerConnection(Long sellerId, PaymentNotificationResponse connection) {
-        activeConnections.computeIfAbsent(sellerId, k -> new CopyOnWriteArrayList<>()).add(connection);
-        log.info("🔗 Conexión SSE registrada para vendedor " + sellerId);
+    @WithTransaction
+    public Uni<List<PaymentNotificationResponse>> getPendingPaymentsForSeller(Long sellerId) {
+        log.info("📋 PaymentNotificationService.getPendingPaymentsForSeller() - Obteniendo pagos pendientes para vendedor: " + sellerId);
+        
+        return paymentNotificationRepository.find("status = ?1", "PENDING").list()
+                .map(payments -> {
+                    log.info("📋 Encontrados " + payments.size() + " pagos pendientes");
+                    
+                    return payments.stream()
+                            .map(payment -> new PaymentNotificationResponse(
+                                payment.id,
+                                payment.amount,
+                                payment.senderName,
+                                payment.yapeCode,
+                                payment.status,
+                                payment.createdAt,
+                                "Pago pendiente de confirmación"
+                            ))
+                            .collect(java.util.stream.Collectors.toList());
+                });
     }
     
     /**
-     * Desregistra una conexión SSE para un vendedor
+     * Obtiene los pagos pendientes para un vendedor específico con paginación
      */
-    public void unregisterConnection(Long sellerId, PaymentNotificationResponse connection) {
-        CopyOnWriteArrayList<PaymentNotificationResponse> connections = activeConnections.get(sellerId);
-        if (connections != null) {
-            connections.remove(connection);
-            if (connections.isEmpty()) {
-                activeConnections.remove(sellerId);
-            }
-            log.info("🔌 Conexión SSE desregistrada para vendedor " + sellerId);
-        }
+    @WithTransaction
+    public Uni<PendingPaymentsResponse> getPendingPaymentsForSellerPaginated(Long sellerId, int page, int size) {
+        log.info("📋 PaymentNotificationService.getPendingPaymentsForSellerPaginated() - Obteniendo pagos pendientes paginados para vendedor: " + sellerId);
+        log.info("📋 Página: " + page + ", Tamaño: " + size);
+        
+        // Validar parámetros de paginación
+        final int validatedPage = Math.max(0, page);
+        final int validatedSize = (size <= 0 || size > 100) ? 20 : size;
+        
+        // Obtener el total de pagos pendientes
+        return paymentNotificationRepository.count("status = ?1", "PENDING")
+                .chain(totalCount -> {
+                    log.info("📋 Total de pagos pendientes: " + totalCount);
+                    
+                    // Calcular información de paginación
+                    int totalPages = (int) Math.ceil((double) totalCount / validatedSize);
+                    int currentPage = Math.min(validatedPage, Math.max(0, totalPages - 1));
+                    
+                    // Obtener los pagos paginados
+                    return paymentNotificationRepository.find("status = ?1 order by createdAt desc", "PENDING")
+                            .page(currentPage, validatedSize)
+                            .list()
+                            .map(payments -> {
+                                log.info("📋 Encontrados " + payments.size() + " pagos en página " + currentPage);
+                                
+                                List<PaymentNotificationResponse> paymentResponses = payments.stream()
+                                        .map(payment -> new PaymentNotificationResponse(
+                                            payment.id,
+                                            payment.amount,
+                                            payment.senderName,
+                                            payment.yapeCode,
+                                            payment.status,
+                                            payment.createdAt,
+                                            "Pago pendiente de confirmación"
+                                        ))
+                                        .collect(java.util.stream.Collectors.toList());
+                                
+                                PendingPaymentsResponse.PaginationInfo paginationInfo = 
+                                    new PendingPaymentsResponse.PaginationInfo(
+                                        currentPage,
+                                        totalPages,
+                                        totalCount,
+                                        validatedSize
+                                    );
+                                
+                                return new PendingPaymentsResponse(paymentResponses, paginationInfo);
+                            });
+                });
     }
     
-    /**
-     * Obtiene las conexiones activas de un vendedor
-     */
-    public List<PaymentNotificationResponse> getActiveConnections(Long sellerId) {
-        CopyOnWriteArrayList<PaymentNotificationResponse> connections = activeConnections.get(sellerId);
-        return connections != null ? List.copyOf(connections) : List.of();
-    }
 }

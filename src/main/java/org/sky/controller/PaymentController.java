@@ -11,16 +11,19 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.dto.payment.PaymentClaimRequest;
+import org.sky.dto.payment.PendingPaymentsResponse;
 import org.sky.service.PaymentNotificationService;
 import org.sky.service.SecurityService;
+import org.sky.service.WebSocketNotificationService;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
-
-import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Path("/api/payments")
 @Produces(MediaType.APPLICATION_JSON)
@@ -31,9 +34,12 @@ public class PaymentController {
     
     @Inject
     PaymentNotificationService paymentNotificationService;
-    
+
     @Inject
     SecurityService securityService;
+    
+    @Inject
+    WebSocketNotificationService webSocketNotificationService;
     
     private static final Logger log = Logger.getLogger(PaymentController.class);
     
@@ -80,47 +86,40 @@ public class PaymentController {
     }
     
     @GET
-    @Path("/sse/{sellerId}")
-    @Produces(MediaType.SERVER_SENT_EVENTS)
-    @Operation(summary = "SSE for seller", description = "Server-Sent Events stream for payment notifications")
-    public Multi<PaymentNotificationResponse> getPaymentNotifications(@PathParam("sellerId") Long sellerId,
-                                                                    @HeaderParam("Authorization") String authorization) {
-        log.info("📡 PaymentController.getPaymentNotifications() - Iniciando SSE para vendedor: " + sellerId);
-        
-        // Validar autorización del vendedor
-        return Multi.createFrom().emitter(emitter -> {
-            // Crear un emisor SSE para este vendedor
-            Multi<PaymentNotificationResponse> sellerMulti = Multi.createFrom().emitter(sellerEmitter -> {
-                // Registrar la conexión
-                PaymentNotificationResponse connection = new PaymentNotificationResponse(
-                    null, null, null, null, "CONNECTED", 
-                    java.time.LocalDateTime.now(), "Conexión SSE establecida"
-                );
-                paymentNotificationService.registerConnection(sellerId, connection);
-                
-                // Mantener la conexión activa
-                sellerEmitter.onTermination(() -> {
-                    paymentNotificationService.unregisterConnection(sellerId, connection);
-                    log.info("🔌 SSE desconectado para vendedor: " + sellerId);
+    @Path("/status/{sellerId}")
+    @Operation(summary = "Check seller connection status", description = "Check if a seller is connected via WebSocket")
+    public Uni<Response> getSellerConnectionStatus(@PathParam("sellerId") Long sellerId,
+                                                   @HeaderParam("Authorization") String authorization) {
+        log.info("📡 PaymentController.getSellerConnectionStatus() - Verificando conexión para vendedor: " + sellerId);
+
+        return securityService.validateSellerAuthorization(authorization, sellerId)
+                .chain(userId -> {
+                    boolean isConnected = webSocketNotificationService.isSellerConnected(sellerId);
+                    int totalConnections = webSocketNotificationService.getConnectedSellersCount();
+                    
+                    Map<String, Object> status = Map.of(
+                        "sellerId", sellerId,
+                        "isConnected", isConnected,
+                        "totalConnectedSellers", totalConnections,
+                        "timestamp", java.time.LocalDateTime.now()
+                    );
+                    
+                    return Uni.createFrom().item(Response.ok(ApiResponse.success("Estado de conexión obtenido", status)).build());
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error verificando estado de conexión: " + throwable.getMessage());
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                                validationException.getMessage(),
+                                validationException.getErrorCode(),
+                                validationException.getDetails(),
+                                java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    return securityService.handleSecurityException(throwable);
                 });
-                
-                // Enviar heartbeat cada 30 segundos
-                sellerEmitter.emit(connection);
-            });
-            
-        // Almacenar el emisor para este vendedor
-        sseEmitters.put(sellerId, sellerMulti);
-        
-        // Emitir el stream
-        emitter.emit(sellerMulti);
-    })
-    .onFailure().recoverWithItem(throwable -> {
-        log.error("❌ Error en SSE para vendedor " + sellerId + ": " + throwable.getMessage());
-        return new PaymentNotificationResponse(
-            null, null, null, null, "ERROR",
-            java.time.LocalDateTime.now(), "Error en conexión SSE: " + throwable.getMessage()
-        );
-    });
     }
     
     @POST
@@ -147,6 +146,91 @@ public class PaymentController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error reclamando pago: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    // Para otros errores, usar el manejo de seguridad
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
+    
+    /**
+     * Endpoint de prueba para enviar notificación directa via WebSocket
+     */
+    @POST
+    @Path("/test-notification/{sellerId}")
+    @Operation(summary = "Enviar notificación de prueba via WebSocket", 
+               description = "Envía una notificación de prueba directamente a un vendedor específico")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Notificación enviada exitosamente"),
+        @APIResponse(responseCode = "404", description = "Vendedor no encontrado"),
+        @APIResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    public Response testNotification(@PathParam("sellerId") Long sellerId) {
+        try {
+            log.info("🧪 Enviando notificación de prueba a vendedor: " + sellerId);
+            
+            // Crear notificación de prueba
+            PaymentNotificationResponse testNotification = new PaymentNotificationResponse(
+                999L, // paymentId de prueba
+                50.0, // amount
+                "Test Sender", // senderName
+                "TEST123", // yapeCode
+                "PENDING", // status
+                LocalDateTime.now(), // timestamp
+                "Notificación de prueba - ¿Es tu cliente?" // message
+            );
+            
+            // Enviar via WebSocket
+            paymentNotificationService.sendToSellerDirectly(sellerId, testNotification);
+            
+            return Response.ok(ApiResponse.success("Notificación de prueba enviada", 
+                Map.of("sellerId", sellerId, "message", "Notificación enviada via WebSocket"))).build();
+                
+        } catch (Exception e) {
+            log.error("❌ Error enviando notificación de prueba: " + e.getMessage());
+            return Response.status(500).entity(ApiResponse.error("Error enviando notificación de prueba: " + e.getMessage())).build();
+        }
+    }
+    
+    @GET
+    @Path("/pending/{sellerId}")
+    @Operation(summary = "Get pending payments for seller", 
+               description = "Obtiene todos los pagos pendientes para un vendedor específico con paginación")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Pagos pendientes obtenidos exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "404", description = "Vendedor no encontrado")
+    })
+    public Uni<Response> getPendingPayments(@PathParam("sellerId") Long sellerId,
+                                           @QueryParam("page") @DefaultValue("0") int page,
+                                           @QueryParam("size") @DefaultValue("20") int size,
+                                           @HeaderParam("Authorization") String authorization) {
+        log.info("📋 PaymentController.getPendingPayments() - Obteniendo pagos pendientes para vendedor: " + sellerId);
+        log.info("📋 Página: " + page + ", Tamaño: " + size);
+        
+        // Validar autorización del vendedor
+        return securityService.validateSellerAuthorization(authorization, sellerId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para sellerId: " + sellerId);
+                    return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, size);
+                })
+                .map(pendingPaymentsResponse -> {
+                    log.info("✅ Pagos pendientes obtenidos: " + pendingPaymentsResponse.payments().size() + 
+                           " (Página " + pendingPaymentsResponse.pagination().currentPage() + 
+                           " de " + pendingPaymentsResponse.pagination().totalPages() + ")");
+                    return Response.ok(ApiResponse.success("Pagos pendientes obtenidos exitosamente", pendingPaymentsResponse)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo pagos pendientes: " + throwable.getMessage());
                     // Si es una ValidationException, crear ErrorResponse manualmente
                     if (throwable instanceof org.sky.exception.ValidationException) {
                         org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;

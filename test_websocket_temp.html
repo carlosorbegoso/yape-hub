@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test WebSocket Seller 101</title>
+</head>
+<body>
+    <h1>Test WebSocket para Vendedor 101</h1>
+    <div id="status">Desconectado</div>
+    <div id="messages"></div>
+    <button onclick="connect()">Conectar</button>
+    <button onclick="disconnect()">Desconectar</button>
+    
+    <script>
+        let ws = null;
+        
+        function connect() {
+            ws = new WebSocket('ws://localhost:8080/ws/payments/101');
+            
+            ws.onopen = function(event) {
+                document.getElementById('status').innerHTML = 'Conectado';
+                document.getElementById('status').style.color = 'green';
+            };
+            
+            ws.onmessage = function(event) {
+                const messages = document.getElementById('messages');
+                const message = document.createElement('div');
+                message.innerHTML = new Date().toLocaleTimeString() + ': ' + event.data;
+                messages.appendChild(message);
+            };
+            
+            ws.onclose = function(event) {
+                document.getElementById('status').innerHTML = 'Desconectado';
+                document.getElementById('status').style.color = 'red';
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('status').innerHTML = 'Error';
+                document.getElementById('status').style.color = 'red';
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+    </script>
+</body>
+</html>

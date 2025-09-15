@@ -50,6 +50,9 @@ dependencies {
     
     // Password Hashing
     implementation 'org.mindrot:jbcrypt:0.4'
+    
+    // WebSocket Support
+    implementation 'io.quarkus:quarkus-websockets'
 
     implementation 'io.quarkus:quarkus-rest'
     implementation 'io.quarkus:quarkus-arc'

@@ -6,7 +6,9 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.core.Response;
 import org.sky.util.JwtExtractor;
 import org.sky.dto.ApiResponse;
+import org.sky.repository.SellerRepository;
 import org.jboss.logging.Logger;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 @ApplicationScoped
 public class SecurityService {
@@ -15,6 +17,9 @@ public class SecurityService {
 
     @Inject
     JwtExtractor jwtExtractor;
+    
+    @Inject
+    SellerRepository sellerRepository;
 
     /**
      * Valida el token JWT y extrae el userId
@@ -93,6 +98,40 @@ public class SecurityService {
             java.time.Instant.now()
         );
         return Response.status(statusCode).entity(errorResponse).build();
+    }
+
+    /**
+     * Valida que el userId del token coincida con el sellerId proporcionado
+     * @param authorization Header de autorización
+     * @param sellerId ID del vendedor a validar
+     * @return Uni<Long> con el userId si es válido y autorizado
+     */
+    @WithTransaction
+    public Uni<Long> validateSellerAuthorization(String authorization, Long sellerId) {
+        log.info("🔐 SecurityService.validateSellerAuthorization() - Validando autorización de vendedor");
+        log.info("🔐 SellerId solicitado: " + sellerId);
+        
+        return validateJwtToken(authorization)
+                .chain(userId -> {
+                    log.info("🔐 Validando que el userId del token (" + userId + ") corresponde al sellerId (" + sellerId + ")");
+                    
+                    // Buscar el Seller por userId para verificar que corresponde al sellerId solicitado
+                    return sellerRepository.findByUserId(userId)
+                            .chain(seller -> {
+                                if (seller == null) {
+                                    log.warn("❌ No se encontró Seller para userId: " + userId);
+                                    return Uni.createFrom().failure(new SecurityException("Usuario no es un vendedor válido"));
+                                }
+                                
+                                if (!seller.id.equals(sellerId)) {
+                                    log.warn("❌ No autorizado - userId (" + userId + ") corresponde a sellerId (" + seller.id + ") pero se solicitó (" + sellerId + ")");
+                                    return Uni.createFrom().failure(new SecurityException("No autorizado para este sellerId"));
+                                }
+                                
+                                log.info("✅ Autorización exitosa - userId (" + userId + ") corresponde al sellerId (" + sellerId + ")");
+                                return Uni.createFrom().item(userId);
+                            });
+                });
     }
 
     /**
