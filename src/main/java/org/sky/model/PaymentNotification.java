@@ -31,6 +31,15 @@ public class PaymentNotification extends PanacheEntity {
     @Column(name = "confirmed_at")
     public LocalDateTime confirmedAt;
     
+    @Column(name = "rejected_by")
+    public Long rejectedBy;
+    
+    @Column(name = "rejected_at")
+    public LocalDateTime rejectedAt;
+    
+    @Column(name = "rejection_reason")
+    public String rejectionReason;
+    
     @CreationTimestamp
     @Column(name = "created_at")
     public LocalDateTime createdAt;

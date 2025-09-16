@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Yape Notifications Flow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .payment-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: white;
+        }
+        .payment-item.confirmed {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .payment-item.rejected {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .payment-item.pending {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+        }
+        .log-entry.info { color: #007bff; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.error { color: #dc3545; }
+        .log-entry.warning { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Test Yape Notifications Flow</h1>
+    
+    <div class="container">
+        <h2>🔌 Conexión WebSocket</h2>
+        <div id="connection-status" class="status connecting">Conectando...</div>
+        <div>
+            <label>Seller ID: </label>
+            <input type="number" id="sellerId" value="251" placeholder="ID del vendedor">
+            <button onclick="connectWebSocket()">Conectar</button>
+            <button onclick="disconnectWebSocket()">Desconectar</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>💰 Pagos Pendientes</h2>
+        <div id="pending-payments-list">
+            <p>Cargando pagos pendientes...</p>
+        </div>
+        <button onclick="refreshPendingPayments()">Actualizar Lista</button>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Simular Pago desde Yape</h2>
+        <div>
+            <label>Admin ID: </label>
+            <input type="number" id="adminId" value="605" placeholder="ID del admin">
+        </div>
+        <div>
+            <label>Monto: </label>
+            <input type="number" id="amount" value="50" placeholder="Monto del pago" step="0.01">
+        </div>
+        <div>
+            <label>Remitente: </label>
+            <input type="text" id="senderName" value="Cliente Test" placeholder="Nombre del remitente">
+        </div>
+        <div>
+            <label>Código Yape: </label>
+            <input type="text" id="yapeCode" value="YAPE_TEST_123456" placeholder="Código de Yape">
+        </div>
+        <button onclick="simulateYapePayment()">Simular Pago Yape</button>
+    </div>
+
+    <div class="container">
+        <h2>📋 Log de Eventos</h2>
+        <div id="log" class="log"></div>
+        <button onclick="clearLog()">Limpiar Log</button>
+    </div>
+
+    <script>
+        class YapeFlowTester {
+            constructor() {
+                this.ws = null;
+                this.sellerId = 251;
+                this.token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj05MDEsIHR5cGU9cmVmcmVzaCwgZXhwPTE3NTg0NDY5OTl9.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc';
+                this.pendingPayments = [];
+            }
+
+            log(message, type = 'info') {
+                const logDiv = document.getElementById('log');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logDiv.appendChild(entry);
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+
+            connectWebSocket() {
+                this.sellerId = parseInt(document.getElementById('sellerId').value);
+                this.log(`Conectando WebSocket para sellerId: ${this.sellerId}`, 'info');
+                
+                try {
+                    this.ws = new WebSocket(`ws://localhost:8080/ws/payments/${this.sellerId}`);
+                    
+                    this.ws.onopen = (event) => {
+                        this.log('WebSocket conectado exitosamente', 'success');
+                        this.updateConnectionStatus('connected', 'Conectado');
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        this.log(`Mensaje recibido: ${event.data}`, 'info');
+                        this.handleWebSocketMessage(event.data);
+                    };
+
+                    this.ws.onclose = (event) => {
+                        this.log('WebSocket desconectado', 'warning');
+                        this.updateConnectionStatus('disconnected', 'Desconectado');
+                    };
+
+                    this.ws.onerror = (error) => {
+                        this.log(`Error WebSocket: ${error}`, 'error');
+                        this.updateConnectionStatus('disconnected', 'Error de conexión');
+                    };
+
+                } catch (error) {
+                    this.log(`Error conectando WebSocket: ${error}`, 'error');
+                }
+            }
+
+            disconnectWebSocket() {
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                    this.log('WebSocket desconectado manualmente', 'info');
+                }
+            }
+
+            updateConnectionStatus(status, message) {
+                const statusDiv = document.getElementById('connection-status');
+                statusDiv.className = `status ${status}`;
+                statusDiv.textContent = message;
+            }
+
+            handleWebSocketMessage(data) {
+                try {
+                    const message = JSON.parse(data);
+                    
+                    switch (message.type) {
+                        case 'CONNECTED':
+                            this.log(`Conexión confirmada: ${message.message}`, 'success');
+                            break;
+                            
+                        case 'PAYMENT_NOTIFICATION':
+                            this.log(`Nuevo pago recibido: S/ ${message.data.amount}`, 'success');
+                            this.showPaymentNotification(message.data);
+                            this.refreshPendingPayments();
+                            break;
+                            
+                        case 'PAYMENT_RESULT':
+                            this.log(`Resultado de pago: ${message.data.status}`, 'info');
+                            this.updatePaymentStatus(message.data);
+                            break;
+                            
+                        default:
+                            this.log(`Mensaje no reconocido: ${message.type}`, 'warning');
+                    }
+                } catch (error) {
+                    this.log(`Error procesando mensaje: ${error}`, 'error');
+                }
+            }
+
+            showPaymentNotification(paymentData) {
+                const toast = document.createElement('div');
+                toast.className = 'notification-toast';
+                toast.innerHTML = `
+                    <h4>💰 Nuevo Pago Recibido</h4>
+                    <p>S/ ${paymentData.amount} de ${paymentData.senderName}</p>
+                    <p>Código: ${paymentData.yapeCode}</p>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+
+            async refreshPendingPayments() {
+                try {
+                    this.log('Actualizando lista de pagos pendientes...', 'info');
+                    
+                    const response = await fetch(`http://localhost:8080/api/payments/pending?sellerId=${this.sellerId}&page=0&size=10`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.pendingPayments = data.data.payments;
+                        this.log(`Pagos pendientes cargados: ${this.pendingPayments.length}`, 'success');
+                        this.updatePendingPaymentsList();
+                    } else {
+                        this.log(`Error cargando pagos: ${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error actualizando pagos: ${error}`, 'error');
+                }
+            }
+
+            updatePendingPaymentsList() {
+                const listDiv = document.getElementById('pending-payments-list');
+                
+                if (this.pendingPayments.length === 0) {
+                    listDiv.innerHTML = '<p>No hay pagos pendientes</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = this.pendingPayments.map(payment => `
+                    <div class="payment-item ${payment.status.toLowerCase()}" data-payment-id="${payment.paymentId}">
+                        <div class="payment-info">
+                            <strong>S/ ${payment.amount}</strong> - ${payment.senderName}
+                            <br>
+                            <small>Código: ${payment.yapeCode}</small>
+                            <br>
+                            <small>Estado: ${payment.status}</small>
+                            <br>
+                            <small>Fecha: ${new Date(payment.timestamp).toLocaleString()}</small>
+                        </div>
+                        <div class="payment-actions">
+                            ${payment.status === 'PENDING' ? `
+                                <button onclick="tester.claimPayment(${payment.paymentId})">Reclamar</button>
+                                <button onclick="tester.rejectPayment(${payment.paymentId})">Rechazar</button>
+                            ` : `
+                                <span class="status">${payment.status}</span>
+                            `}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async claimPayment(paymentId) {
+                try {
+                    this.log(`Reclamando pago ${paymentId}...`, 'info');
+                    
+                    const response = await fetch('http://localhost:8080/api/payments/claim', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify({
+                            sellerId: this.sellerId,
+                            paymentId: paymentId
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.log(`Pago ${paymentId} reclamado exitosamente`, 'success');
+                        this.showToast('Pago reclamado exitosamente', 'success');
+                        this.refreshPendingPayments();
+                    } else {
+                        this.log(`Error reclamando pago: ${result.message}`, 'error');
+                        this.showToast(`Error: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error reclamando pago: ${error}`, 'error');
+                    this.showToast('Error de conexión', 'error');
+                }
+            }
+
+            async rejectPayment(paymentId) {
+                const reason = prompt('¿Por qué rechazas este pago?');
+                if (!reason) return;
+
+                try {
+                    this.log(`Rechazando pago ${paymentId}...`, 'info');
+                    
+                    const response = await fetch('http://localhost:8080/api/payments/reject', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify({
+                            sellerId: this.sellerId,
+                            paymentId: paymentId,
+                            reason: reason
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.log(`Pago ${paymentId} rechazado exitosamente`, 'success');
+                        this.showToast('Pago rechazado exitosamente', 'success');
+                        this.refreshPendingPayments();
+                    } else {
+                        this.log(`Error rechazando pago: ${result.message}`, 'error');
+                        this.showToast(`Error: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error rechazando pago: ${error}`, 'error');
+                    this.showToast('Error de conexión', 'error');
+                }
+            }
+
+            async simulateYapePayment() {
+                const adminId = parseInt(document.getElementById('adminId').value);
+                const amount = parseFloat(document.getElementById('amount').value);
+                const senderName = document.getElementById('senderName').value;
+                const yapeCode = document.getElementById('yapeCode').value;
+
+                try {
+                    this.log(`Simulando pago Yape: S/ ${amount} de ${senderName}`, 'info');
+                    
+                    const response = await fetch('http://localhost:8080/api/notifications/yape-notifications', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj02MDUsIGlzcz1odHRwOi8vbG9jYWxob3N0OjgwODAsIGdyb3Vwcz1BRE1JTiwgZXhwPTE3NTc4MTI0NzAsIGlhdD0xNzU3ODA4ODcwfQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc'
+                        },
+                        body: JSON.stringify({
+                            adminId: adminId,
+                            encryptedNotification: "KVAREhFWB10HXAJZF2sWQVIBTAJTEwBRRWEDRUMYeg4TQwdVClcLGkV2wpVSXl9WW0EAVANbBlU=",
+                            deviceFingerprint: "a1b2c3d4e5f6789a",
+                            timestamp: Date.now()
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.log(`Pago Yape simulado exitosamente: ${result.data.paymentId}`, 'success');
+                        this.showToast('Pago Yape simulado exitosamente', 'success');
+                    } else {
+                        this.log(`Error simulando pago: ${result.message}`, 'error');
+                        this.showToast(`Error: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error simulando pago: ${error}`, 'error');
+                    this.showToast('Error de conexión', 'error');
+                }
+            }
+
+            updatePaymentStatus(resultData) {
+                const paymentElement = document.querySelector(`[data-payment-id="${resultData.paymentId}"]`);
+                if (paymentElement) {
+                    paymentElement.classList.add(resultData.status.toLowerCase());
+                    paymentElement.querySelector('.payment-actions').innerHTML = `
+                        <span class="status">${resultData.status}</span>
+                    `;
+                }
+            }
+
+            showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `notification-toast`;
+                toast.style.backgroundColor = type === 'success' ? '#28a745' : '#dc3545';
+                toast.textContent = message;
+                
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 3000);
+            }
+
+            clearLog() {
+                document.getElementById('log').innerHTML = '';
+            }
+        }
+
+        // Inicializar tester
+        const tester = new YapeFlowTester();
+
+        // Funciones globales para los botones
+        function connectWebSocket() {
+            tester.connectWebSocket();
+        }
+
+        function disconnectWebSocket() {
+            tester.disconnectWebSocket();
+        }
+
+        function refreshPendingPayments() {
+            tester.refreshPendingPayments();
+        }
+
+        function simulateYapePayment() {
+            tester.simulateYapePayment();
+        }
+
+        function clearLog() {
+            tester.clearLog();
+        }
+
+        // Cargar pagos pendientes al inicio
+        window.addEventListener('load', () => {
+            tester.refreshPendingPayments();
+        });
+    </script>
+</body>
+</html>

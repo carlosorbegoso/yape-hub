@@ -1,6 +1,5 @@
 package org.sky.controller;
 
-import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -8,10 +7,8 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.sky.dto.ApiResponse;
-import org.sky.dto.payment.PaymentNotificationRequest;
-import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.dto.payment.PaymentClaimRequest;
-import org.sky.dto.payment.PendingPaymentsResponse;
+import org.sky.dto.payment.PaymentRejectRequest;
 import org.sky.service.PaymentNotificationService;
 import org.sky.service.SecurityService;
 import org.sky.service.WebSocketNotificationService;
@@ -21,9 +18,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Path("/api/payments")
 @Produces(MediaType.APPLICATION_JSON)
@@ -43,47 +38,7 @@ public class PaymentController {
     
     private static final Logger log = Logger.getLogger(PaymentController.class);
     
-    // Map para almacenar los emisores SSE por sellerId
-    private final Map<Long, Multi<PaymentNotificationResponse>> sseEmitters = new ConcurrentHashMap<>();
     
-    @POST
-    @Path("/notify")
-    @Operation(summary = "Notify payment", description = "Process payment notification and broadcast to sellers")
-    public Uni<Response> notifyPayment(@Valid PaymentNotificationRequest request,
-                                     @HeaderParam("Authorization") String authorization) {
-        log.info("💰 PaymentController.notifyPayment() - Procesando notificación de pago");
-        log.info("💰 AdminId: " + request.adminId());
-        log.info("💰 Monto: " + request.amount());
-        log.info("💰 Remitente: " + request.senderName());
-        log.info("💰 Código: " + request.yapeCode());
-        
-        // Validar autorización de admin
-        return securityService.validateAdminAuthorization(authorization, request.adminId())
-                .chain(userId -> {
-                    log.info("✅ Autorización exitosa para adminId: " + request.adminId());
-                    return paymentNotificationService.processPaymentNotification(request);
-                })
-                .map(response -> {
-                    log.info("✅ Notificación de pago procesada exitosamente");
-                    return Response.ok(ApiResponse.success("Notificación de pago enviada a vendedores", response)).build();
-                })
-                .onFailure().recoverWithItem(throwable -> {
-                    log.warn("❌ Error en notificación de pago: " + throwable.getMessage());
-                    // Si es una ValidationException, crear ErrorResponse manualmente
-                    if (throwable instanceof org.sky.exception.ValidationException) {
-                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                            validationException.getMessage(),
-                            validationException.getErrorCode(),
-                            validationException.getDetails(),
-                            java.time.Instant.now()
-                        );
-                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
-                    }
-                    // Para otros errores, usar el manejo de seguridad
-                    return securityService.handleSecurityException(throwable);
-                });
-    }
     
     @GET
     @Path("/status/{sellerId}")
@@ -132,11 +87,8 @@ public class PaymentController {
         log.info("🎯 PaymentId: " + request.paymentId());
         
         // Validar autorización del vendedor
-        return securityService.validateJwtToken(authorization)
+        return securityService.validateSellerAuthorization(authorization, request.sellerId())
                 .chain(userId -> {
-                    if (!userId.equals(request.sellerId())) {
-                        return Uni.createFrom().failure(new SecurityException("No autorizado para este vendedor"));
-                    }
                     log.info("✅ Autorización exitosa para sellerId: " + request.sellerId());
                     return paymentNotificationService.claimPayment(request);
                 })
@@ -162,47 +114,47 @@ public class PaymentController {
                 });
     }
     
-    /**
-     * Endpoint de prueba para enviar notificación directa via WebSocket
-     */
     @POST
-    @Path("/test-notification/{sellerId}")
-    @Operation(summary = "Enviar notificación de prueba via WebSocket", 
-               description = "Envía una notificación de prueba directamente a un vendedor específico")
-    @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Notificación enviada exitosamente"),
-        @APIResponse(responseCode = "404", description = "Vendedor no encontrado"),
-        @APIResponse(responseCode = "500", description = "Error interno del servidor")
-    })
-    public Response testNotification(@PathParam("sellerId") Long sellerId) {
-        try {
-            log.info("🧪 Enviando notificación de prueba a vendedor: " + sellerId);
-            
-            // Crear notificación de prueba
-            PaymentNotificationResponse testNotification = new PaymentNotificationResponse(
-                999L, // paymentId de prueba
-                50.0, // amount
-                "Test Sender", // senderName
-                "TEST123", // yapeCode
-                "PENDING", // status
-                LocalDateTime.now(), // timestamp
-                "Notificación de prueba - ¿Es tu cliente?" // message
-            );
-            
-            // Enviar via WebSocket
-            paymentNotificationService.sendToSellerDirectly(sellerId, testNotification);
-            
-            return Response.ok(ApiResponse.success("Notificación de prueba enviada", 
-                Map.of("sellerId", sellerId, "message", "Notificación enviada via WebSocket"))).build();
-                
-        } catch (Exception e) {
-            log.error("❌ Error enviando notificación de prueba: " + e.getMessage());
-            return Response.status(500).entity(ApiResponse.error("Error enviando notificación de prueba: " + e.getMessage())).build();
-        }
+    @Path("/reject")
+    @Operation(summary = "Reject payment", description = "Allow seller to reject a payment")
+    public Uni<Response> rejectPayment(@Valid PaymentRejectRequest request,
+                                      @HeaderParam("Authorization") String authorization) {
+        log.info("❌ PaymentController.rejectPayment() - Vendedor rechazando pago");
+        log.info("❌ SellerId: " + request.sellerId());
+        log.info("❌ PaymentId: " + request.paymentId());
+        log.info("❌ Reason: " + request.reason());
+        
+        // Validar autorización del vendedor
+        return securityService.validateSellerAuthorization(authorization, request.sellerId())
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para sellerId: " + request.sellerId());
+                    return paymentNotificationService.rejectPayment(request);
+                })
+                .map(response -> {
+                    log.info("❌ Pago rechazado exitosamente");
+                    return Response.ok(ApiResponse.success("Pago rechazado exitosamente", response)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error rechazando pago: " + throwable.getMessage());
+                    // Si es una ValidationException, crear ErrorResponse manualmente
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    // Para otros errores, usar el manejo de seguridad
+                    return securityService.handleSecurityException(throwable);
+                });
     }
     
+    
     @GET
-    @Path("/pending/{sellerId}")
+    @Path("/pending")
     @Operation(summary = "Get pending payments for seller", 
                description = "Obtiene todos los pagos pendientes para un vendedor específico con paginación")
     @APIResponses(value = {
@@ -210,18 +162,33 @@ public class PaymentController {
         @APIResponse(responseCode = "401", description = "No autorizado"),
         @APIResponse(responseCode = "404", description = "Vendedor no encontrado")
     })
-    public Uni<Response> getPendingPayments(@PathParam("sellerId") Long sellerId,
+    public Uni<Response> getPendingPayments(@QueryParam("sellerId") Long sellerId,
                                            @QueryParam("page") @DefaultValue("0") int page,
                                            @QueryParam("size") @DefaultValue("20") int size,
                                            @HeaderParam("Authorization") String authorization) {
         log.info("📋 PaymentController.getPendingPayments() - Obteniendo pagos pendientes para vendedor: " + sellerId);
         log.info("📋 Página: " + page + ", Tamaño: " + size);
         
-        // Validar autorización del vendedor
-        return securityService.validateSellerAuthorization(authorization, sellerId)
+        // Validar token JWT primero
+        return securityService.validateJwtToken(authorization)
                 .chain(userId -> {
-                    log.info("✅ Autorización exitosa para sellerId: " + sellerId);
-                    return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, size);
+                    log.info("✅ Token válido para userId: " + userId);
+                    
+                    // Si sellerId es null, solo permitir para ADMINs
+                    if (sellerId == null) {
+                        return securityService.validateAdminAuthorization(authorization, userId)
+                                .chain(adminUserId -> {
+                                    log.info("✅ Usuario ADMIN autorizado para ver todos los pagos");
+                                    return paymentNotificationService.getAllPendingPaymentsPaginated(page, size);
+                                });
+                    }
+                    
+                    // Si sellerId está presente, validar autorización del vendedor
+                    return securityService.validateSellerAuthorization(authorization, sellerId)
+                            .chain(sellerUserId -> {
+                                log.info("✅ Autorización exitosa para sellerId: " + sellerId);
+                                return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, size);
+                            });
                 })
                 .map(pendingPaymentsResponse -> {
                     log.info("✅ Pagos pendientes obtenidos: " + pendingPaymentsResponse.payments().size() + 
@@ -246,4 +213,38 @@ public class PaymentController {
                     return securityService.handleSecurityException(throwable);
                 });
     }
+    
+    @GET
+    @Path("/admin/management")
+    @Operation(summary = "Get admin payment management", 
+               description = "Obtiene todos los pagos para gestión de administrador con información detallada")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Gestión de pagos obtenida exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
+    })
+    public Uni<Response> getAdminPaymentManagement(@QueryParam("adminId") Long adminId,
+                                                  @QueryParam("page") @DefaultValue("0") int page,
+                                                  @QueryParam("size") @DefaultValue("20") int size,
+                                                  @QueryParam("status") String status,
+                                                  @HeaderParam("Authorization") String authorization) {
+        log.info("👑 PaymentController.getAdminPaymentManagement() - AdminId: " + adminId);
+        log.info("👑 Página: " + page + ", Tamaño: " + size + ", Status: " + status);
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return paymentNotificationService.getAdminPaymentManagement(adminId, page, size, status);
+                })
+                .map(managementResponse -> {
+                    log.info("✅ Gestión de pagos obtenida exitosamente");
+                    return Response.ok(ApiResponse.success("Gestión de pagos obtenida exitosamente", managementResponse)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo gestión de pagos: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
+    
 }
