@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.sky.dto.payment.PaymentClaimRequest;
+import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.dto.payment.PaymentRejectRequest;
 import org.sky.dto.payment.PendingPaymentsResponse;
@@ -44,7 +45,66 @@ public class PaymentNotificationService {
     /**
      * Procesa una notificación de pago y la envía a todos los vendedores
      */
+    @WithTransaction
+    public Uni<PaymentNotificationResponse> processPaymentNotification(PaymentNotificationRequest request) {
+        log.info("💰 PaymentNotificationService.processPaymentNotification() - Procesando nuevo pago");
+        log.info("💰 AdminId: " + request.adminId());
+        log.info("💰 Amount: " + request.amount());
+        log.info("💰 SenderName: " + request.senderName());
+        log.info("💰 YapeCode: " + request.yapeCode());
+
+        // Crear nueva notificación de pago
+        PaymentNotification payment = new PaymentNotification();
+        payment.adminId = request.adminId();
+        payment.amount = request.amount();
+        payment.senderName = request.senderName();
+        payment.yapeCode = request.yapeCode();
+        payment.status = "PENDING";
+        payment.createdAt = LocalDateTime.now();
+
+        return paymentNotificationRepository.persist(payment)
+                .chain(savedPayment -> {
+                    log.info("✅ Pago guardado en BD con ID: " + savedPayment.id);
+
+                    // Crear respuesta
+                    PaymentNotificationResponse response = new PaymentNotificationResponse(
+                        savedPayment.id,
+                        savedPayment.amount,
+                        savedPayment.senderName,
+                        savedPayment.yapeCode,
+                        savedPayment.status,
+                        savedPayment.createdAt,
+                        "Pago pendiente de confirmación"
+                    );
+                    
+                    // Enviar notificación WebSocket a todos los vendedores del admin
+                    return broadcastToSellersReactive(request.adminId(), response)
+                            .map(v -> response);
+                });
+    }
     
+    /**
+     * Envía notificación a todos los vendedores de un admin via WebSocket (reactivo)
+     */
+    public Uni<Void> broadcastToSellersReactive(Long adminId, PaymentNotificationResponse notification) {
+        log.info("📡 PaymentNotificationService.broadcastToSellersReactive() - AdminId: " + adminId);
+
+        return sellerRepository.find("branch.admin.id = ?1", adminId)
+                .list()
+                .map(sellers -> {
+                    log.info("📡 Encontrados " + sellers.size() + " vendedores para admin " + adminId);
+
+                    for (Seller seller : sellers) {
+                        log.info("📡 Enviando a vendedor " + seller.id + " (" + seller.sellerName + ")");
+                        sendToSeller(seller.id, notification);
+                    }
+                    return null; // Retorna null para Uni<Void>
+                })
+                .replaceWithVoid()
+                .onFailure().invoke(error -> {
+                    log.error("❌ Error obteniendo vendedores para admin " + adminId + ": " + error.getMessage());
+                });
+    }
     
     /**
      * Envía notificación a un vendedor específico via WebSocket
