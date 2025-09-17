@@ -269,4 +269,47 @@ public class StatsController {
                     return securityService.handleSecurityException(throwable);
                 });
     }
+    
+    @GET
+    @Path("/seller/analytics")
+    @Operation(summary = "Get seller analytics summary", 
+               description = "Obtiene resumen completo de analytics para un vendedor específico")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Analytics de vendedor obtenidos exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
+    })
+    public Uni<Response> getSellerAnalyticsSummary(@QueryParam("sellerId") Long sellerId,
+                                                   @QueryParam("startDate") String startDateStr,
+                                                   @QueryParam("endDate") String endDateStr,
+                                                   @HeaderParam("Authorization") String authorization) {
+        log.info("📊 StatsController.getSellerAnalyticsSummary() - SellerId: " + sellerId);
+        log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        LocalDate startDate, endDate;
+        try {
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(7);
+            endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
+        
+        // Validar autorización del vendedor
+        return securityService.validateSellerAuthorization(authorization, sellerId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para sellerId: " + sellerId);
+                    return statsService.getSellerAnalyticsSummary(sellerId, startDate, endDate);
+                })
+                .map(analytics -> {
+                    log.info("✅ Analytics de vendedor obtenidos exitosamente");
+                    return Response.ok(ApiResponse.success("Analytics de vendedor obtenidos exitosamente", analytics)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo analytics de vendedor: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
 }

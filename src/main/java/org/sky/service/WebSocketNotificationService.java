@@ -68,4 +68,20 @@ public class WebSocketNotificationService {
     public int getConnectedSellersCount() {
         return webSocketSessions.size();
     }
+    
+    /**
+     * Obtiene todos los IDs de vendedores conectados
+     */
+    public java.util.Set<Long> getConnectedSellerIds() {
+        return webSocketSessions.keySet();
+    }
+    
+    /**
+     * Verifica si hay vendedores conectados para un admin específico
+     */
+    public boolean hasConnectedSellersForAdmin(Long adminId) {
+        // Esta implementación básica solo verifica si hay conexiones
+        // En una implementación más completa, necesitaríamos acceso al SellerRepository
+        return !webSocketSessions.isEmpty();
+    }
 }

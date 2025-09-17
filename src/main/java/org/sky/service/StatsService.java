@@ -453,4 +453,78 @@ public class StatsService {
             pendingPayments, confirmedPayments, rejectedPayments
         );
     }
+    
+    /**
+     * Obtiene analytics completos para un vendedor específico
+     */
+    @WithTransaction
+    public Uni<AnalyticsSummaryResponse> getSellerAnalyticsSummary(Long sellerId, LocalDate startDate, LocalDate endDate) {
+        log.info("📊 StatsService.getSellerAnalyticsSummary() - SellerId: " + sellerId + 
+                ", Desde: " + startDate + ", Hasta: " + endDate);
+        
+        return sellerRepository.findById(sellerId)
+                .chain(seller -> {
+                    // Obtener todos los pagos del admin del vendedor
+                    return paymentNotificationRepository.find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3", 
+                            seller.branch.admin.id, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                            .list()
+                            .map(payments -> {
+                                log.info("📊 Procesando analytics para vendedor " + seller.sellerName + " con " + payments.size() + " pagos del admin");
+                                
+                                // Filtrar solo los pagos relacionados con este vendedor
+                                List<PaymentNotification> sellerPayments = payments.stream()
+                                        .filter(p -> sellerId.equals(p.confirmedBy) || sellerId.equals(p.rejectedBy))
+                                        .collect(Collectors.toList());
+                                
+                                // Calcular métricas de resumen específicas del vendedor
+                                AnalyticsSummaryResponse.OverviewMetrics overview = calculateSellerOverviewMetrics(sellerPayments, startDate, endDate);
+                                
+                                // Calcular ventas diarias del vendedor
+                                List<AnalyticsSummaryResponse.DailySalesData> dailySales = calculateDailySalesData(sellerPayments, startDate, endDate);
+                                
+                                // Para un vendedor individual, el "top seller" es él mismo
+                                List<AnalyticsSummaryResponse.TopSellerData> topSellers = List.of(
+                                    new AnalyticsSummaryResponse.TopSellerData(
+                                        1, // rank
+                                        seller.id, // sellerId
+                                        seller.sellerName, // sellerName
+                                        seller.branch != null ? seller.branch.name : "Sin sucursal", // branchName
+                                        sellerPayments.stream().filter(p -> "CONFIRMED".equals(p.status)).mapToDouble(p -> p.amount).sum(), // totalSales
+                                        sellerPayments.stream().filter(p -> "CONFIRMED".equals(p.status)).count() // transactionCount
+                                    )
+                                );
+                                
+                                // Calcular métricas de rendimiento del vendedor
+                                AnalyticsSummaryResponse.PerformanceMetrics performance = calculatePerformanceMetrics(sellerPayments);
+                                
+                                return new AnalyticsSummaryResponse(overview, dailySales, topSellers, performance);
+                            });
+                });
+    }
+    
+    /**
+     * Calcula métricas de resumen específicas para un vendedor
+     */
+    private AnalyticsSummaryResponse.OverviewMetrics calculateSellerOverviewMetrics(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate) {
+        long totalPayments = payments.size();
+        long confirmedPayments = payments.stream().filter(p -> "CONFIRMED".equals(p.status)).count();
+        long pendingPayments = payments.stream().filter(p -> "PENDING".equals(p.status)).count();
+        long rejectedPayments = payments.stream().filter(p -> p.status.startsWith("REJECTED")).count();
+        
+        double totalSales = payments.stream()
+                .filter(p -> "CONFIRMED".equals(p.status))
+                .mapToDouble(p -> p.amount)
+                .sum();
+        
+        double averageTransactionValue = confirmedPayments > 0 ? totalSales / confirmedPayments : 0.0;
+        
+        return new AnalyticsSummaryResponse.OverviewMetrics(
+            totalSales, // totalSales
+            (long) totalPayments, // totalTransactions
+            averageTransactionValue, // averageTransactionValue
+            0.0, // salesGrowth (no calculado para vendedor individual)
+            0.0, // transactionGrowth (no calculado para vendedor individual)
+            0.0 // averageGrowth (no calculado para vendedor individual)
+        );
+    }
 }

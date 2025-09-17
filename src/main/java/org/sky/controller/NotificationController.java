@@ -8,7 +8,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.notification.NotificationResponse;
-import org.sky.dto.notification.SendNotificationRequest;
 import org.sky.dto.notification.YapeNotificationRequest;
 import org.sky.dto.notification.YapeNotificationResponse;
 import org.sky.service.NotificationService;
@@ -35,19 +34,6 @@ public class NotificationController {
     
     private static final Logger log = Logger.getLogger(NotificationController.class);
     
-    @POST
-    @Path("/send")
-    @Operation(summary = "Send notification", description = "Send push notification to users")
-    public Uni<Response> sendNotification(@Valid SendNotificationRequest request) {
-        return notificationService.sendNotification(request)
-                .map(response -> {
-                    if (response.isSuccess()) {
-                        return Response.ok(response).build();
-                    } else {
-                        return Response.status(400).entity(response).build();
-                    }
-                });
-    }
     
     @GET
     @Operation(summary = "Get notifications", description = "Get user notifications with pagination")
@@ -122,46 +108,4 @@ public class NotificationController {
                 });
     }
     
-    @POST
-    @Path("/yape-notifications-as-payment")
-    @Operation(summary = "Process Yape notification as payment", description = "Process encrypted Yape notification and broadcast to sellers")
-    public Uni<Response> processYapeNotificationAsPayment(@Valid YapeNotificationRequest request,
-                                                        @HeaderParam("Authorization") String authorization) {
-        log.info("💰 NotificationController.processYapeNotificationAsPayment() - Procesando como pago");
-        log.info("💰 AdminId: " + request.adminId());
-        log.info("💰 Device fingerprint: " + request.deviceFingerprint());
-        log.info("💰 Timestamp: " + request.timestamp());
-        
-        // Validar autorización de admin
-        return securityService.validateAdminAuthorization(authorization, request.adminId())
-                .chain(userId -> {
-                    log.info("✅ Autorización exitosa para adminId: " + request.adminId());
-                    return notificationService.processYapeNotificationAsPayment(request);
-                })
-                .map(response -> {
-                    if (response.isSuccess()) {
-                        log.info("✅ Notificación de Yape procesada como pago exitosamente");
-                        return Response.ok(response).build();
-                    } else {
-                        log.warn("⚠️ Error al procesar notificación como pago: " + response.message());
-                        return Response.status(400).entity(response).build();
-                    }
-                })
-                .onFailure().recoverWithItem(throwable -> {
-                    log.warn("❌ Error en procesamiento de notificación como pago: " + throwable.getMessage());
-                    // Si es una ValidationException, crear ErrorResponse manualmente
-                    if (throwable instanceof org.sky.exception.ValidationException) {
-                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                            validationException.getMessage(),
-                            validationException.getErrorCode(),
-                            validationException.getDetails(),
-                            java.time.Instant.now()
-                        );
-                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
-                    }
-                    // Para otros errores, usar el manejo de seguridad
-                    return securityService.handleSecurityException(throwable);
-                });
-    }
 }

@@ -116,14 +116,15 @@ public class QrController {
     }
     
     @POST
-    @Path("/auth/validate-affiliation-code")
+    @Path("/validate-affiliation-code")
     @PermitAll
+    @WithTransaction
     @Operation(summary = "Validate affiliation code", description = "Validate an affiliation code (public endpoint for sellers)")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Affiliation code validated successfully"),
         @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code")
     })
-    public Uni<Response> validateAffiliationCode(@Valid ValidateAffiliationCodeRequest request) {
+    public Uni<Response> validateAffiliationCode(ValidateAffiliationCodeRequest request) {
         
         log.info("🚀 QrController.validateAffiliationCode() - Endpoint llamado");
         log.info("🚀 Parámetros recibidos:");
@@ -139,6 +140,25 @@ public class QrController {
                         log.warn("⚠️ Retornando respuesta de error (400)");
                         return Response.status(400).entity(response).build();
                     }
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.error("❌ Error en validateAffiliationCode: " + throwable.getMessage());
+                    if (throwable instanceof org.sky.exception.ValidationException) {
+                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                            validationException.getMessage(),
+                            validationException.getErrorCode(),
+                            validationException.getDetails(),
+                            java.time.Instant.now()
+                        );
+                        return Response.status(validationException.getStatus()).entity(errorResponse).build();
+                    }
+                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                        "Error interno del servidor",
+                        "INTERNAL_ERROR",
+                        java.util.Map.of("error", throwable.getMessage()),
+                        java.time.Instant.now()
+                    )).build();
                 });
     }
     
@@ -207,6 +227,65 @@ public class QrController {
                                                 return Response.status(400).entity(errorResponse).build();
                                             }
                                         });
+                });
+    }
+
+    @POST
+    @Path("/generate-qr-base64")
+    @PermitAll
+    @Operation(summary = "Generate QR code with Base64", description = "Generates a QR code containing affiliation code encoded in Base64")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "QR generated successfully"),
+        @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code")
+    })
+    public Uni<Response> generateQrBase64(@Valid ValidateAffiliationCodeRequest request) {
+        log.info("🚀 QrController.generateQrBase64() - Endpoint llamado");
+        log.info("🚀 Parámetros recibidos:");
+        log.info("🚀   - affiliationCode: " + request.affiliationCode());
+        
+        return qrService.generateQrBase64(request.affiliationCode())
+                .map(result -> {
+                    log.info("🚀 QR Base64 generado exitosamente");
+                    return Response.ok(result).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.error("❌ Error generando QR Base64: " + throwable.getMessage());
+                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                        "Error generando QR: " + throwable.getMessage(),
+                        "QR_GENERATION_ERROR",
+                        java.util.Map.of("error", throwable.getMessage()),
+                        java.time.Instant.now()
+                    )).build();
+                });
+    }
+
+    @POST
+    @Path("/login-with-qr")
+    @PermitAll
+    @Operation(summary = "Login with QR code", description = "Login seller using QR code containing Base64 encoded affiliation code")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Login successful"),
+        @APIResponse(responseCode = "400", description = "Bad request - invalid QR data or phone")
+    })
+    public Uni<Response> loginWithQr(@Valid QrLoginRequest request) {
+        log.info("🚀 QrController.loginWithQr() - Endpoint llamado");
+        log.info("🚀 Parámetros recibidos:");
+        log.info("🚀   - qrData: " + (request.qrData() != null ? request.qrData().substring(0, Math.min(50, request.qrData().length())) + "..." : "null"));
+        log.info("🚀   - phone: " + request.phone());
+        
+        return qrService.loginWithQr(request.qrData(), request.phone())
+                .map(result -> {
+                    log.info("🚀 Login con QR exitoso");
+                    return Response.ok(result).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.error("❌ Error en login con QR: " + throwable.getMessage());
+                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                        "Error en login: " + throwable.getMessage(),
+                        "QR_LOGIN_ERROR",
+                        java.util.Map.of("error", throwable.getMessage()),
+                        java.time.Instant.now()
+                    )).build();
                 });
     }
 }

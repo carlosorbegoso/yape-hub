@@ -9,12 +9,13 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.AdminRegisterRequest;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
+import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
 import org.sky.exception.ValidationException;
 import org.sky.model.Admin;
 import org.sky.model.Branch;
-import org.sky.model.Seller;
 import org.sky.model.User;
 import org.sky.repository.AdminRepository;
+import org.sky.repository.AffiliationCodeRepository;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
@@ -22,6 +23,7 @@ import org.sky.util.JwtUtil;
 import org.jboss.logging.Logger;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -43,6 +45,9 @@ public class AuthService {
     
     @Inject
     SellerRepository sellerRepository;
+    
+    @Inject
+    AffiliationCodeRepository affiliationCodeRepository;
     
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> registerAdmin(AdminRegisterRequest request) {
@@ -219,75 +224,107 @@ public class AuthService {
                 });
     }
     
+
+    
     @WithTransaction
-    public Uni<ApiResponse<LoginResponse>> loginByPhone(String phone) {
-        log.info("🔐 AuthService.loginByPhone() - Intentando login con teléfono: " + phone);
+    public Uni<ApiResponse<SellerLoginWithAffiliationResponse>> loginByPhoneWithAffiliation(String phone, String affiliationCode) {
         
         return sellerRepository.findByPhone(phone)
                 .chain(seller -> {
                     if (seller == null) {
-                        log.warn("❌ Vendedor no encontrado con teléfono: " + phone);
-                        throw ValidationException.invalidField("phone", phone, "Vendedor no encontrado con este número de teléfono");
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("phone", phone, "Vendedor no encontrado con este número de teléfono")
+                        );
                     }
-                    
-                    log.info("✅ Vendedor encontrado: " + seller.sellerName + " (ID: " + seller.id + ")");
                     
                     // Validar estado del vendedor
                     if (!seller.isActive) {
-                        log.warn("❌ Vendedor inactivo: " + seller.sellerName);
-                        throw ValidationException.invalidField("seller", phone, "Vendedor inactivo - contacte al administrador");
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("seller", phone, "Vendedor inactivo - contacte al administrador")
+                        );
                     }
                     
-                    // Validar afiliación
-                    if (seller.affiliationCode == null || seller.affiliationCode.trim().isEmpty()) {
-                        log.warn("❌ Vendedor sin código de afiliación: " + seller.sellerName);
-                        throw ValidationException.invalidField("affiliation", phone, "Vendedor no está afiliado correctamente");
-                    }
-                    
-                    // Validar branch (debe estar afiliado a una sucursal)
+                    // Validar que el vendedor tenga sucursal asignada
                     if (seller.branch == null) {
-                        log.warn("❌ Vendedor sin sucursal asignada: " + seller.sellerName);
-                        throw ValidationException.invalidField("branch", phone, "Vendedor no tiene sucursal asignada");
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("branch", phone, "Vendedor no tiene sucursal asignada")
+                        );
                     }
                     
-                    User user = seller.user;
-                    if (user == null) {
-                        log.warn("❌ Usuario asociado no encontrado para vendedor: " + seller.sellerName);
-                        throw ValidationException.invalidField("user", phone, "Usuario asociado no encontrado");
+                    // Validar que la sucursal esté activa
+                    if (!seller.branch.isActive) {
+                        return Uni.createFrom().failure(
+                            ValidationException.invalidField("branch", seller.branch.id.toString(), "La sucursal está inactiva")
+                        );
                     }
                     
-                    if (!user.isActive) {
-                        log.warn("❌ Usuario inactivo: " + user.email);
-                        throw ValidationException.invalidField("user", phone, "Usuario inactivo - contacte al administrador");
-                    }
-                    
-                    if (!user.isVerified) {
-                        log.warn("❌ Usuario no verificado: " + user.email);
-                        throw ValidationException.invalidField("user", phone, "Usuario no verificado - contacte al administrador");
-                    }
-                    
-                    log.info("✅ Todas las validaciones pasaron para: " + seller.sellerName);
-                    
-                    // Update last login
-                    user.lastLogin = LocalDateTime.now();
-                    
-                    return userRepository.persist(user)
-                            .chain(updatedUser -> {
-                                // Generate tokens
-                                String accessToken = jwtUtil.generateAccessToken(updatedUser.id, updatedUser.role);
-                                String refreshToken = jwtUtil.generateRefreshToken(updatedUser.id);
+                    // Validar código de afiliación
+                    return affiliationCodeRepository.findByAffiliationCode(affiliationCode)
+                            .chain(code -> {
+                                if (code == null || !code.isActive) {
+                                    return Uni.createFrom().failure(
+                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación inválido")
+                                    );
+                                }
+
+                                // Verificar que el código no haya expirado
+                                if (code.expiresAt != null && code.expiresAt.isBefore(LocalDateTime.now())) {
+                                    return Uni.createFrom().failure(
+                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación expirado")
+                                    );
+                                }
+
+                                // Verificar que el código tenga usos restantes
+                                if (code.remainingUses <= 0) {
+                                    return Uni.createFrom().failure(
+                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación agotado")
+                                    );
+                                }
+
+                                // Verificar que el vendedor esté afiliado a la sucursal del código
+                                if (!seller.branch.id.equals(code.branch.id)) {
+                                    return Uni.createFrom().failure(
+                                        ValidationException.invalidField("affiliationCode", affiliationCode,
+                                            "El vendedor no está afiliado a esta sucursal")
+                                    );
+                                }
                                 
-                                LoginResponse loginResponse = new LoginResponse(
-                                        accessToken, refreshToken, 3600L,
-                                        new LoginResponse.UserInfo(
-                                                updatedUser.id, updatedUser.email, updatedUser.role,
-                                                seller.branch.id, seller.branch.name, updatedUser.isVerified,
-                                                seller.id
-                                        )
-                                );
+                                // Reducir usos del código
+                                code.remainingUses--;
                                 
-                                log.info("✅ Login exitoso para vendedor: " + seller.sellerName + " (ID: " + seller.id + ")");
-                                return Uni.createFrom().item(ApiResponse.success("Login exitoso", loginResponse));
+                                return affiliationCodeRepository.persist(code)
+                                        .chain(updatedCode -> {
+                                            // Generar token JWT
+                                            User user = seller.user;
+                                            if (user == null) {
+                                                return Uni.createFrom().failure(
+                                                    ValidationException.invalidField("user", phone, "Usuario no encontrado")
+                                                );
+                                            }
+                                            
+                                            // Actualizar último login
+                                            user.lastLogin = LocalDateTime.now();
+                                            
+                                            return userRepository.persist(user)
+                                                    .chain(updatedUser -> {
+                                                        // Generar token de acceso con sellerId
+                                                        String accessToken = jwtUtil.generateAccessToken(user.id, user.role, seller.id);
+                                                        
+                                                        SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(
+                                                            seller.id,
+                                                            seller.sellerName,
+                                                            user.email,
+                                                            seller.phone,
+                                                            seller.branch.id,
+                                                            seller.branch.name,
+                                                            seller.branch.code,
+                                                            affiliationCode,
+                                                            accessToken
+                                                        );
+                                                        
+                                                        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
+                                                    });
+                                        });
                             });
                 });
     }

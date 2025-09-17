@@ -47,6 +47,38 @@ public class JwtExtractor {
         }
     }
     
+    public Long extractSellerIdFromToken(String token) {
+        try {
+            // Remove "Bearer " prefix if present
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            
+            // Parse our simple JWT manually
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                return null; // Token inválido
+            }
+            
+            // Decode the payload (second part)
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Extract sellerId using regex
+            Pattern pattern = Pattern.compile("sellerId=?(\\d+)");
+            Matcher matcher = pattern.matcher(payload);
+            
+            if (matcher.find()) {
+                String sellerId = matcher.group(1);
+                return Long.parseLong(sellerId);
+            } else {
+                return null; // sellerId no encontrado
+            }
+            
+        } catch (Exception e) {
+            return null; // Error al procesar token
+        }
+    }
+    
     public Long extractUserIdFromSecurityContext(SecurityContext securityContext) {
         if (securityContext.getUserPrincipal() instanceof JsonWebToken jwt) {
             String subject = jwt.getSubject();

@@ -11,6 +11,7 @@ import org.sky.service.AdminService;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 @Path("/api/admin")
 @Produces(MediaType.APPLICATION_JSON)
@@ -24,6 +25,7 @@ public class AdminController {
     
     @GET
     @Path("/profile")
+    @WithTransaction
     @Operation(summary = "Get admin profile", description = "Retrieve administrator profile information")
     public Uni<Response> getAdminProfile(@QueryParam("userId") Long userId) {
         return adminService.getAdminProfile(userId)
@@ -38,6 +40,7 @@ public class AdminController {
     
     @PUT
     @Path("/profile")
+    @WithTransaction
     @Operation(summary = "Update admin profile", description = "Update administrator profile information")
     public Uni<Response> updateAdminProfile(@QueryParam("userId") Long userId, 
                                       @Valid UpdateAdminProfileRequest request) {

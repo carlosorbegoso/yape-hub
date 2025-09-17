@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -12,10 +13,14 @@ import org.sky.dto.auth.AdminRegisterRequest;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.service.AuthService;
 import org.sky.util.JwtExtractor;
+import org.sky.util.JwtUtil;
+import org.sky.model.User;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -26,6 +31,9 @@ public class AuthController {
   private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     @Inject
     AuthService authService;
+    
+    @Inject
+    JwtUtil jwtUtil;
     
     @Inject
     JwtExtractor jwtExtractor;
@@ -95,9 +103,11 @@ public class AuthController {
     @POST
     @Path("/seller/login-by-phone")
     @PermitAll
-    @Operation(summary = "Seller login by phone", description = "Login for sellers using only their phone number (no password required)")
-    public Uni<Response> sellerLoginByPhone(@QueryParam("phone") String phone) {
-        return authService.loginByPhone(phone)
+    @Operation(summary = "Seller login by phone with affiliation code", description = "Login for sellers using phone number and affiliation code for enhanced security")
+    public Uni<Response> sellerLoginByPhone(
+            @QueryParam("phone") @NotBlank(message = "El número de teléfono es requerido") String phone,
+            @QueryParam("affiliationCode") @NotBlank(message = "El código de afiliación es requerido") String affiliationCode) {
+        return authService.loginByPhoneWithAffiliation(phone, affiliationCode)
                 .map(response -> {
                     if (response.isSuccess()) {
                         return Response.ok(response).build();
@@ -107,69 +117,6 @@ public class AuthController {
                 });
     }
     
-    @POST
-    @Path("/test-token")
-    @PermitAll
-    @Operation(summary = "Test token extraction", description = "Test JWT token extraction")
-    public Response testToken(@HeaderParam("X-Auth-Token") String token) {
-        try {
-            // Remove "Bearer " prefix if present
-            if (token.startsWith("Bearer ")) {
-                token = token.substring(7);
-            }
-            
-            // Parse our simple JWT manually
-            String[] parts = token.split("\\.");
-            if (parts.length != 3) {
-                org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                    "Invalid JWT format - expected 3 parts, got " + parts.length,
-                    "INVALID_JWT_FORMAT",
-                    java.util.Map.of("expectedParts", 3, "actualParts", parts.length),
-                    java.time.Instant.now()
-                );
-                return Response.status(400)
-                        .entity(errorResponse)
-                        .build();
-            }
-            
-            // Decode the payload (second part)
-            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-            
-            // Extract subject using regex (works with both JSON and Map formats)
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("sub=?(\\d+)");
-            java.util.regex.Matcher matcher = pattern.matcher(payload);
-            
-            if (matcher.find()) {
-                String subject = matcher.group(1);
-                Long userId = Long.parseLong(subject);
-                ApiResponse<Object> response = ApiResponse.success("Token extracted successfully", 
-                    java.util.Map.of("userId", userId, "payload", payload));
-                return Response.ok(response).build();
-            } else {
-                org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                    "Subject not found in token payload: " + payload,
-                    "SUBJECT_NOT_FOUND",
-                    java.util.Map.of("payload", payload),
-                    java.time.Instant.now()
-                );
-                return Response.status(400)
-                        .entity(errorResponse)
-                        .build();
-            }
-            
-        } catch (Exception e) {
-            log.error("Error extracting token: {}", e.getMessage());
-            org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                "Invalid token: " + e.getMessage(),
-                "TOKEN_EXTRACTION_ERROR",
-                java.util.Map.of("error", e.getMessage()),
-                java.time.Instant.now()
-            );
-            return Response.status(400)
-                    .entity(errorResponse)
-                    .build();
-        }
-    }
     
     @POST
     @Path("/change-password")
@@ -181,5 +128,6 @@ public class AuthController {
         ApiResponse<String> response = ApiResponse.success("Password changed successfully");
         return Response.ok(response).build();
     }
+    
     
 }

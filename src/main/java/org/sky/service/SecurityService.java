@@ -101,34 +101,75 @@ public class SecurityService {
     }
 
     /**
-     * Valida que el userId del token coincida con el sellerId proporcionado
+     * Valida que el sellerId del token coincida con el sellerId proporcionado
      * @param authorization Header de autorización
      * @param sellerId ID del vendedor a validar
      * @return Uni<Long> con el userId si es válido y autorizado
      */
-    @WithTransaction
     public Uni<Long> validateSellerAuthorization(String authorization, Long sellerId) {
         log.info("🔐 SecurityService.validateSellerAuthorization() - Validando autorización de vendedor");
         log.info("🔐 SellerId solicitado: " + sellerId);
         
-        return validateJwtToken(authorization)
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            log.warn("❌ Token de autorización requerido o formato incorrecto");
+            return Uni.createFrom().failure(new SecurityException("Token de autorización requerido"));
+        }
+
+        try {
+            String token = authorization.substring(7); // Remover "Bearer "
+            
+            // Extraer userId y sellerId del token
+            Long userId = jwtExtractor.extractUserIdFromToken(token);
+            Long tokenSellerId = jwtExtractor.extractSellerIdFromToken(token);
+            
+            if (userId == null) {
+                log.warn("❌ Token inválido - userId es null");
+                return Uni.createFrom().failure(new SecurityException("Token inválido"));
+            }
+            
+            if (tokenSellerId == null) {
+                log.warn("❌ Token inválido - sellerId es null");
+                return Uni.createFrom().failure(new SecurityException("Token inválido - falta sellerId"));
+            }
+            
+            // Verificar que el sellerId del token coincide con el solicitado
+            if (!tokenSellerId.equals(sellerId)) {
+                log.warn("❌ No autorizado - sellerId del token (" + tokenSellerId + ") no coincide con el solicitado (" + sellerId + ")");
+                return Uni.createFrom().failure(new SecurityException("No autorizado para este sellerId"));
+            }
+            
+            log.info("✅ Autorización exitosa - sellerId del token (" + tokenSellerId + ") coincide con el solicitado (" + sellerId + ")");
+            return Uni.createFrom().item(userId);
+            
+        } catch (Exception e) {
+            log.error("❌ Error al validar token de vendedor: " + e.getMessage(), e);
+            return Uni.createFrom().failure(new SecurityException("Token inválido: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Valida que un admin puede acceder a los datos de un seller específico
+     * @param authorization Header de autorización
+     * @param adminId ID del administrador
+     * @param sellerId ID del vendedor
+     * @return Uni<Long> con el userId si es válido y autorizado
+     */
+    @WithTransaction
+    public Uni<Long> validateAdminCanAccessSeller(String authorization, Long adminId, Long sellerId) {
+        log.info("🔐 SecurityService.validateAdminCanAccessSeller() - Validando acceso de admin a seller");
+        log.info("🔐 AdminId: " + adminId + ", SellerId: " + sellerId);
+        
+        return validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
-                    log.info("🔐 Validando que el userId del token (" + userId + ") corresponde al sellerId (" + sellerId + ")");
-                    
-                    // Buscar el Seller por userId para verificar que corresponde al sellerId solicitado
-                    return sellerRepository.findByUserId(userId)
+                    // Verificar que el seller pertenece al admin
+                    return sellerRepository.findBySellerIdAndAdminId(sellerId, adminId)
                             .chain(seller -> {
                                 if (seller == null) {
-                                    log.warn("❌ No se encontró Seller para userId: " + userId);
-                                    return Uni.createFrom().failure(new SecurityException("Usuario no es un vendedor válido"));
+                                    log.warn("❌ Seller " + sellerId + " no pertenece al admin " + adminId);
+                                    return Uni.createFrom().failure(new SecurityException("No autorizado para acceder a este vendedor"));
                                 }
                                 
-                                if (!seller.id.equals(sellerId)) {
-                                    log.warn("❌ No autorizado - userId (" + userId + ") corresponde a sellerId (" + seller.id + ") pero se solicitó (" + sellerId + ")");
-                                    return Uni.createFrom().failure(new SecurityException("No autorizado para este sellerId"));
-                                }
-                                
-                                log.info("✅ Autorización exitosa - userId (" + userId + ") corresponde al sellerId (" + sellerId + ")");
+                                log.info("✅ Admin " + adminId + " autorizado para acceder a seller " + sellerId);
                                 return Uni.createFrom().item(userId);
                             });
                 });

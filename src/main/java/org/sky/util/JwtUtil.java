@@ -5,7 +5,6 @@ import org.sky.model.User;
 
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -19,6 +18,10 @@ public class JwtUtil {
     private static final Duration REFRESH_TOKEN_DURATION = Duration.ofDays(7);
     
     public String generateAccessToken(Long userId, User.UserRole role) {
+        return generateAccessToken(userId, role, null);
+    }
+    
+    public String generateAccessToken(Long userId, User.UserRole role, Long sellerId) {
         try {
             // Create a simple JWT-like token for now
             Map<String, Object> claims = new HashMap<>();
@@ -27,6 +30,11 @@ public class JwtUtil {
             claims.put("groups", role.name());
             claims.put("exp", System.currentTimeMillis() / 1000 + ACCESS_TOKEN_DURATION.getSeconds());
             claims.put("iat", System.currentTimeMillis() / 1000);
+            
+            // Agregar sellerId si es un seller
+            if (role == User.UserRole.SELLER && sellerId != null) {
+                claims.put("sellerId", sellerId.toString());
+            }
             
             // Create a simple base64 encoded token
             String header = Base64.getUrlEncoder().withoutPadding().encodeToString("{\"alg\":\"HS256\",\"typ\":\"JWT\"}".getBytes());
@@ -86,9 +94,51 @@ public class JwtUtil {
     
     public Long getUserIdFromToken(String token) {
         try {
-            // In a real implementation, you would extract the user ID from the JWT token
-            // For now, we'll return a mock user ID
-            return 1L;
+            // Parse our simple JWT manually
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                return null;
+            }
+            
+            // Decode the payload (second part)
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Extract subject using regex (works with both JSON and Map formats)
+            Pattern pattern = Pattern.compile("sub=?(\\d+)");
+            Matcher matcher = pattern.matcher(payload);
+            
+            if (matcher.find()) {
+                return Long.parseLong(matcher.group(1));
+            } else {
+                return null;
+            }
+            
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    public Long getSellerIdFromToken(String token) {
+        try {
+            // Parse our simple JWT manually
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                return null;
+            }
+            
+            // Decode the payload (second part)
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Extract sellerId using regex
+            Pattern pattern = Pattern.compile("sellerId=?(\\d+)");
+            Matcher matcher = pattern.matcher(payload);
+            
+            if (matcher.find()) {
+                return Long.parseLong(matcher.group(1));
+            } else {
+                return null;
+            }
+            
         } catch (Exception e) {
             return null;
         }

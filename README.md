@@ -1,19 +1,21 @@
-# YapeChamo API Hub
+# Yape Hub API
 
-A comprehensive payment management system built with Quarkus that allows businesses to manage Yape payments, sellers, and transactions through a robust REST API.
+Un sistema completo de gestión de pagos construido con Quarkus que permite a las empresas gestionar pagos Yape, vendedores y transacciones a través de una API REST robusta.
 
-## 🚀 Features
+## 🚀 Características
 
-- **User Management**: Admin and seller registration with JWT authentication
-- **Business Management**: Multi-branch business support with admin controls
-- **Seller Management**: Seller affiliation, management, and performance tracking
-- **Transaction Processing**: Yape payment processing with confirmation workflows
-- **Dashboard & Analytics**: Real-time dashboards for admins and sellers
-- **Notification System**: Push notifications for transactions and system events
-- **QR Code Generation**: Dynamic QR codes for payments and affiliations
-- **Affiliation System**: Secure seller onboarding with unique codes
-- **Reporting**: Comprehensive transaction reports and analytics
-- **API Documentation**: Complete OpenAPI/Swagger documentation
+- **Gestión de Usuarios**: Registro de administradores y vendedores con autenticación JWT
+- **Gestión de Negocios**: Soporte multi-sucursal con controles administrativos
+- **Gestión de Vendedores**: Afiliación, gestión y seguimiento de rendimiento de vendedores
+- **Procesamiento de Transacciones**: Procesamiento de pagos Yape con flujos de confirmación
+- **Dashboard y Analytics**: Dashboards en tiempo real para administradores y vendedores
+- **Sistema de Notificaciones**: Notificaciones push para transacciones y eventos del sistema
+- **Generación de Códigos QR**: Códigos QR dinámicos para pagos y afiliaciones
+- **Sistema de Afiliación**: Onboarding seguro de vendedores con códigos únicos
+- **Reportes**: Reportes completos de transacciones y analytics
+- **Documentación API**: Documentación completa OpenAPI/Swagger
+- **WebSocket**: Notificaciones en tiempo real para vendedores
+- **Gestión de Sucursales**: Administración completa de sucursales por administrador
 
 ## 🛠 Technology Stack
 
@@ -63,23 +65,44 @@ quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/yapechamo
 
 The API will be available at `http://localhost:8080`
 
-### 4. Access API Documentation
+### 4. Acceder a la Documentación de la API
 
-Swagger UI is available at: `http://localhost:8080/swagger-ui`
+- **Swagger UI**: `http://localhost:8080/swagger-ui`
+- **OpenAPI JSON**: `http://localhost:8080/openapi`
+- **Documentación Completa**: [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
 
-## 📚 API Documentation
+## 📚 Documentación de la API
 
-Complete API documentation is available in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+La documentación completa de la API está disponible en [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
 
-### Key Endpoints
+### Endpoints Principales
 
-- **Authentication**: `/api/auth/*`
-- **Admin Management**: `/api/admin/*`
-- **Seller Management**: `/api/admin/sellers/*`
-- **Transactions**: `/api/transactions/*`
-- **Dashboard**: `/api/admin/dashboard`, `/api/sellers/dashboard`
-- **Notifications**: `/api/notifications/*`
-- **QR Codes**: `/api/admin/qr/*`
+#### **Autenticación**
+- `POST /api/auth/admin/register` - Registro de administrador
+- `POST /api/auth/login` - Login general (admin/seller)
+- `POST /api/auth/seller/login-by-phone` - Login de vendedor con código de afiliación
+- `POST /api/login-with-qr` - Login de vendedor usando QR
+
+#### **Administradores**
+- `GET /api/admin/profile` - Gestión de perfil
+- `GET /api/admin/sellers/my-sellers` - Listar vendedores
+- `GET /api/admin/branches` - Gestión de sucursales
+- `POST /api/generate-affiliation-code-protected` - Generar códigos de afiliación
+- `GET /api/stats/admin` - Estadísticas y analytics
+
+#### **Vendedores**
+- `GET /api/payments/pending` - Pagos pendientes
+- `POST /api/payments/claim` - Reclamar pago
+- `POST /api/payments/reject` - Rechazar pago
+- `GET /api/stats/seller` - Estadísticas del vendedor
+
+#### **Públicos**
+- `POST /api/validate-affiliation-code` - Validar código de afiliación
+- `POST /api/generate-qr-base64` - Generar QR con Base64
+- `POST /api/seller/register` - Registro de vendedor
+
+#### **WebSocket**
+- `ws://localhost:8080/ws/payments/{sellerId}?token={jwt_token}` - Notificaciones en tiempo real
 
 ## 🏗 Project Structure
 
@@ -172,17 +195,15 @@ JWT_SECRET=your-jwt-secret-key
 4. Configure reverse proxy (nginx)
 5. Set up monitoring and logging
 
-## 📝 API Examples
+## 📝 Ejemplos de la API
 
-### Register Admin
+### Registro de Administrador
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/admin/register \
   -H "Content-Type: application/json" \
   -d '{
     "businessName": "Mi Negocio SRL",
-    "businessType": "RESTAURANT",
-    "ruc": "20123456789",
     "email": "admin@minegocio.com",
     "password": "SecurePass123!",
     "phone": "+51987654321",
@@ -191,7 +212,7 @@ curl -X POST http://localhost:8080/api/auth/admin/register \
   }'
 ```
 
-### Login
+### Login de Administrador
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
@@ -201,6 +222,34 @@ curl -X POST http://localhost:8080/api/auth/login \
     "password": "SecurePass123!",
     "deviceFingerprint": "device_unique_id_123",
     "role": "ADMIN"
+  }'
+```
+
+### Login de Vendedor con Código de Afiliación
+
+```bash
+curl -X POST "http://localhost:8080/api/auth/seller/login-by-phone?phone=987654321&affiliationCode=AFF646424" \
+  -H "accept: application/json"
+```
+
+### Generar Código QR
+
+```bash
+curl -X POST http://localhost:8080/api/generate-qr-base64 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "affiliationCode": "AFF646424"
+  }'
+```
+
+### Login con QR
+
+```bash
+curl -X POST http://localhost:8080/api/login-with-qr \
+  -H "Content-Type: application/json" \
+  -d '{
+    "qrData": "eyJhZmZpbGlhdGlvbkNvZGUiOiJBRkY2NDY0MjQiLCJicmFuY2hJZCI6NjA1LCJhZG1pbklkIjo2MDUsImV4cGlyZXNBdCI6IjIwMjUtMDktMTZUMjI6MzY6MjEuMDU3ODQxIiwibWF4VXNlcyI6MX0=",
+    "phone": "987654321"
   }'
 ```
 
@@ -216,17 +265,18 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 This project is licensed under the MIT License.
 
-## 🆘 Support
+## 🆘 Soporte
 
-For support and questions:
+Para soporte y preguntas:
 
-- **Documentation**: [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
+- **Documentación Completa**: [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
 - **Swagger UI**: `http://localhost:8080/swagger-ui`
-- **Issues**: Create GitHub issues
+- **OpenAPI JSON**: `http://localhost:8080/openapi`
+- **Issues**: Crear issues en GitHub
 - **Email**: support@yapechamo.com
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: January 2024  
-**Author**: YapeChamo Development Team
+**Versión**: 1.0.0  
+**Última Actualización**: Enero 2025  
+**Autor**: Yape Hub Development Team

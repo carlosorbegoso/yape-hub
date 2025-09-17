@@ -27,4 +27,8 @@ public class SellerRepository implements PanacheRepositoryBase<Seller, Long> {
     return find("branch.admin.id", adminId).list();
   }
 
+  public Uni<Seller> findBySellerIdAndAdminId(Long sellerId, Long adminId) {
+    return find("id = ?1 and branch.admin.id = ?2", sellerId, adminId).firstResult();
+  }
+
 }
