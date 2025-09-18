@@ -96,33 +96,33 @@ public class PaymentNotificationService {
                         "Pago pendiente de confirmación"
                     );
                     
-                    // Enviar notificación WebSocket a todos los vendedores del admin (asíncrono)
-                    broadcastToSellersReactiveAsync(request.adminId(), response);
-                    return Uni.createFrom().item(response);
+                    // Enviar notificación WebSocket a todos los vendedores del admin (reactivo)
+                    return broadcastToSellersReactive(request.adminId(), response)
+                            .map(v -> response);
                 });
     }
     
     /**
-     * Envía notificación a todos los vendedores de un admin via WebSocket (asíncrono)
+     * Envía notificación a todos los vendedores de un admin via WebSocket (reactivo)
      */
-    private void broadcastToSellersReactiveAsync(Long adminId, PaymentNotificationResponse notification) {
-        log.info("📡 PaymentNotificationService.broadcastToSellersReactiveAsync() - AdminId: " + adminId);
+    private Uni<Void> broadcastToSellersReactive(Long adminId, PaymentNotificationResponse notification) {
+        log.info("📡 PaymentNotificationService.broadcastToSellersReactive() - AdminId: " + adminId);
 
-        // Ejecutar de forma asíncrona para evitar problemas de contexto
-        vertx.runOnContext(v -> {
-            sellerRepository.find("branch.admin.id = ?1", adminId)
-                    .list()
-                    .subscribe().with(sellers -> {
-                        log.info("📡 Encontrados " + sellers.size() + " vendedores para admin " + adminId);
+        return sellerRepository.find("branch.admin.id = ?1", adminId)
+                .list()
+                .map(sellers -> {
+                    log.info("📡 Encontrados " + sellers.size() + " vendedores para admin " + adminId);
 
-                        for (Seller seller : sellers) {
-                            log.info("📡 Enviando a vendedor " + seller.id + " (" + seller.sellerName + ")");
-                            sendToSeller(seller.id, notification);
-                        }
-                    }, failure -> {
-                        log.error("❌ Error obteniendo vendedores para admin " + adminId + ": " + failure.getMessage());
-                    });
-        });
+                    for (Seller seller : sellers) {
+                        log.info("📡 Enviando a vendedor " + seller.id + " (" + seller.sellerName + ")");
+                        sendToSeller(seller.id, notification);
+                    }
+                    return null;
+                })
+                .replaceWithVoid()
+                .onFailure().invoke(failure -> {
+                    log.error("❌ Error obteniendo vendedores para admin " + adminId + ": " + failure.getMessage());
+                });
     }
     
     /**

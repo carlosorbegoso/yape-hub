@@ -176,14 +176,15 @@ public class NotificationService {
       log.info("✅ Notificación desencriptada exitosamente");
       log.info("✅ Transaction ID: " + decryptedResponse.transactionId());
       log.info("✅ Amount: " + decryptedResponse.amount());
-      log.info("✅ Sender: " + decryptedResponse.senderPhone());
+      log.info("✅ Sender Phone: " + decryptedResponse.senderPhone());
+      log.info("✅ Sender Name: " + decryptedResponse.senderName());
       log.info("✅ Receiver: " + decryptedResponse.receiverPhone());
 
       // Crear notificación de pago (usando la lógica que funciona)
       PaymentNotificationRequest paymentRequest = new PaymentNotificationRequest(
           request.adminId(),
           decryptedResponse.amount(),
-          decryptedResponse.senderPhone(), // Usar como nombre por ahora
+          decryptedResponse.senderName(), // Usar el nombre real del remitente
           decryptedResponse.transactionId()
       );
 
@@ -198,6 +199,7 @@ public class NotificationService {
                 decryptedResponse.transactionId(),
                 decryptedResponse.amount(),
                 decryptedResponse.senderPhone(),
+                decryptedResponse.senderName(),
                 decryptedResponse.receiverPhone(),
                 "PENDING_CONFIRMATION",
                 paymentResponse.timestamp(),
@@ -247,6 +249,7 @@ public class NotificationService {
                 decryptedResponse.transactionId(),
                 decryptedResponse.amount(),
                 decryptedResponse.senderPhone(),
+                decryptedResponse.senderName(),
                 decryptedResponse.receiverPhone(),
                 "PENDING_CONFIRMATION",
                 paymentResponse.timestamp(),

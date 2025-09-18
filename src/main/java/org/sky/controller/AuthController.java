@@ -82,7 +82,7 @@ public class AuthController {
             org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
                 "Invalid token: " + e.getMessage(),
                 "INVALID_TOKEN",
-                java.util.Map.of("error", e.getMessage()),
+                java.util.Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"),
                 java.time.Instant.now()
             );
             return Uni.createFrom().item(Response.status(400)

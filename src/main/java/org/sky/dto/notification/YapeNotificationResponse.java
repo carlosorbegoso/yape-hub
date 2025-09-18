@@ -16,6 +16,9 @@ public record YapeNotificationResponse(
     @JsonProperty("senderPhone")
     String senderPhone,
     
+    @JsonProperty("senderName")
+    String senderName,
+    
     @JsonProperty("receiverPhone")
     String receiverPhone,
     

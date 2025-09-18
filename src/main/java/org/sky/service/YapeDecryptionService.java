@@ -14,9 +14,9 @@ public class YapeDecryptionService {
     private static final Logger log = Logger.getLogger(YapeDecryptionService.class);
     
     // Patrones para extraer información de la notificación de Yape
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile("S/\\s*(\\d+(?:\\.\\d{2})?)");
-    private static final Pattern YAPE_CODE_PATTERN = Pattern.compile("Código:\\s*(\\d+)");
-    private static final Pattern SENDER_NAME_PATTERN = Pattern.compile("de\\s+([^.]+)\\.");
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("S/\\s*(\\d+(?:\\.\\d+)?)");
+    private static final Pattern YAPE_CODE_PATTERN = Pattern.compile("cód\\.\\s*de\\s*seguridad\\s*es:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SENDER_NAME_PATTERN = Pattern.compile("([^\\s]+\\s+[^\\s]+\\s+[^\\s]+)\\s+te\\s+envió");
     
     /**
      * Desencripta la notificación de Yape y extrae los datos de la transacción
@@ -48,6 +48,7 @@ public class YapeDecryptionService {
                 transactionData.transactionId,
                 transactionData.amount,
                 transactionData.senderPhone,
+                transactionData.senderName,
                 transactionData.receiverPhone,
                 transactionData.status,
                 java.time.LocalDateTime.now(),
@@ -129,15 +130,21 @@ public class YapeDecryptionService {
         
         log.info("🔍 Extrayendo datos de: " + decryptedData);
         
-        // Extraer monto (formato: "S/ 50.00")
-        var amountMatcher = AMOUNT_PATTERN.matcher(decryptedData);
+        // Extraer el texto del mensaje desde el JSON
+        String messageText = extractTextFromJson(decryptedData);
+        log.info("📝 Texto extraído del JSON: " + messageText);
+        
+        // Extraer monto (formato: "S/ 0.1")
+        var amountMatcher = AMOUNT_PATTERN.matcher(messageText);
         if (amountMatcher.find()) {
             data.amount = Double.parseDouble(amountMatcher.group(1));
             log.info("💰 Monto extraído: " + data.amount);
+        } else {
+            log.warn("⚠️ No se pudo extraer el monto del texto: " + messageText);
         }
         
-        // Extraer código de Yape (formato: "Código: 789123")
-        var yapeCodeMatcher = YAPE_CODE_PATTERN.matcher(decryptedData);
+        // Extraer código de Yape (formato: "El cód. de seguridad es: 148")
+        var yapeCodeMatcher = YAPE_CODE_PATTERN.matcher(messageText);
         if (yapeCodeMatcher.find()) {
             String yapeCode = yapeCodeMatcher.group(1);
             log.info("🔑 Código de Yape extraído: " + yapeCode);
@@ -147,13 +154,17 @@ public class YapeDecryptionService {
             int randomSuffix = (int) (Math.random() * 1000); // 3 dígitos aleatorios
             data.transactionId = "YAPE_" + timestamp + "_" + yapeCode + "_" + randomSuffix;
             log.info("🆔 Transaction ID generado: " + data.transactionId);
+        } else {
+            log.warn("⚠️ No se pudo extraer el código de Yape del texto: " + messageText);
         }
         
-        // Extraer nombre del remitente (formato: "de María González.")
-        var senderNameMatcher = SENDER_NAME_PATTERN.matcher(decryptedData);
+        // Extraer nombre del remitente (formato: "Carlos Orbegoso L. te envió")
+        var senderNameMatcher = SENDER_NAME_PATTERN.matcher(messageText);
         if (senderNameMatcher.find()) {
             data.senderName = senderNameMatcher.group(1).trim();
             log.info("👤 Remitente extraído: " + data.senderName);
+        } else {
+            log.warn("⚠️ No se pudo extraer el nombre del remitente del texto: " + messageText);
         }
         
         // Para teléfonos, usar valores por defecto ya que no están en el mensaje
@@ -166,6 +177,31 @@ public class YapeDecryptionService {
         log.info("✅ Datos extraídos - Monto: " + data.amount + ", Transaction ID: " + data.transactionId);
         
         return data;
+    }
+    
+    /**
+     * Extrae el texto del mensaje desde el JSON desencriptado
+     */
+    private String extractTextFromJson(String jsonData) {
+        try {
+            // Buscar el campo "text" en el JSON
+            var textMatcher = Pattern.compile("\"text\"\\s*:\\s*\"([^\"]+)\"").matcher(jsonData);
+            if (textMatcher.find()) {
+                return textMatcher.group(1);
+            }
+            
+            // Si no encuentra "text", buscar "fullText"
+            var fullTextMatcher = Pattern.compile("\"fullText\"\\s*:\\s*\"([^\"]+)\"").matcher(jsonData);
+            if (fullTextMatcher.find()) {
+                return fullTextMatcher.group(1);
+            }
+            
+            // Si no encuentra ninguno, usar el texto completo
+            return jsonData;
+        } catch (Exception e) {
+            log.warn("⚠️ Error extrayendo texto del JSON: " + e.getMessage());
+            return jsonData;
+        }
     }
     
     /**
