@@ -496,6 +496,16 @@ public class StatsService {
         
         return sellerRepository.findById(sellerId)
                 .chain(seller -> {
+                    if (seller == null) {
+                        log.warn("❌ Vendedor no encontrado con ID: " + sellerId);
+                        return Uni.createFrom().failure(org.sky.exception.ResourceNotFoundException.byField("Vendedor", "id", sellerId));
+                    }
+                    
+                    if (seller.branch == null || seller.branch.admin == null) {
+                        log.warn("❌ Vendedor sin sucursal o admin válido: " + sellerId);
+                        return Uni.createFrom().failure(org.sky.exception.ResourceNotFoundException.byField("Vendedor", "configuración", sellerId));
+                    }
+                    
                     // Obtener todos los pagos del admin del vendedor
                     return paymentNotificationRepository.find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3", 
                             seller.branch.admin.id, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
