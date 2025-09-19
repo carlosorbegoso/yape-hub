@@ -9,14 +9,17 @@ import org.sky.dto.notification.NotificationResponse;
 import org.sky.dto.notification.SendNotificationRequest;
 import org.sky.dto.notification.YapeNotificationRequest;
 import org.sky.dto.notification.YapeNotificationResponse;
+import org.sky.dto.notification.YapeAuditResponse;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.model.Notification;
 import org.sky.model.YapeNotification;
 import org.sky.model.Transaction;
+import org.sky.model.YapeNotificationAudit;
 import org.sky.repository.NotificationRepository;
 import org.sky.repository.YapeNotificationRepository;
 import org.sky.repository.TransactionRepository;
 import org.sky.repository.BranchRepository;
+import org.sky.repository.YapeNotificationAuditRepository;
 import org.sky.exception.ValidationException;
 import org.sky.service.PaymentNotificationService;
 import org.sky.controller.PaymentWebSocketController;
@@ -40,6 +43,9 @@ public class NotificationService {
 
   @Inject
   BranchRepository branchRepository;
+
+  @Inject
+  YapeNotificationAuditRepository yapeNotificationAuditRepository;
 
   @Inject
   YapeDecryptionService yapeDecryptionService;
@@ -151,70 +157,112 @@ public class NotificationService {
     log.info("🔐 AdminId: " + request.adminId());
     log.info("🔐 Device fingerprint: " + request.deviceFingerprint());
     log.info("🔐 Timestamp: " + request.timestamp());
+    log.info("🔐 Deduplication Hash: " + request.deduplicationHash());
 
-    try {
-      // Validar timestamp (no debe ser muy antiguo)
-      long currentTime = System.currentTimeMillis();
-      long timeDiff = Math.abs(currentTime - request.timestamp());
-      long maxTimeDiff = 5 * 60 * 1000; // 5 minutos en milisegundos
+    // Crear registro de auditoría ANTES de procesar
+    YapeNotificationAudit auditRecord = new YapeNotificationAudit();
+    auditRecord.adminId = request.adminId();
+    auditRecord.encryptedNotification = request.encryptedNotification();
+    auditRecord.deviceFingerprint = request.deviceFingerprint();
+    auditRecord.timestamp = request.timestamp();
+    auditRecord.deduplicationHash = request.deduplicationHash();
+    auditRecord.decryptionStatus = "PENDING";
 
-      if (timeDiff > maxTimeDiff) {
-        log.warn("❌ Timestamp muy antiguo: " + timeDiff + "ms");
-        throw ValidationException.invalidField("timestamp", request.timestamp().toString(),
-            "Timestamp muy antiguo. Diferencia: " + timeDiff + "ms");
-      }
+    return yapeNotificationAuditRepository.persist(auditRecord)
+        .chain(savedAudit -> {
+          log.info("📋 Registro de auditoría creado con ID: " + savedAudit.id);
+          
+          try {
+            // Validar timestamp (no debe ser muy antiguo)
+            long currentTime = System.currentTimeMillis();
+            long timeDiff = Math.abs(currentTime - request.timestamp());
+            long maxTimeDiff = 5 * 60 * 1000; // 5 minutos en milisegundos
 
-      // Validar device fingerprint
-      deviceFingerprintService.validateDeviceFingerprint(request.deviceFingerprint());
+            if (timeDiff > maxTimeDiff) {
+              log.warn("❌ Timestamp muy antiguo: " + timeDiff + "ms");
+              // Actualizar auditoría con error
+              savedAudit.decryptionStatus = "FAILED";
+              savedAudit.decryptionError = "Timestamp muy antiguo. Diferencia: " + timeDiff + "ms";
+              return yapeNotificationAuditRepository.persist(savedAudit)
+                  .replaceWith(Uni.createFrom().failure(
+                      ValidationException.invalidField("timestamp", request.timestamp().toString(),
+                          "Timestamp muy antiguo. Diferencia: " + timeDiff + "ms")
+                  ));
+            }
 
-      // Desencriptar notificación
-      YapeNotificationResponse decryptedResponse = yapeDecryptionService.decryptYapeNotification(
-          request.encryptedNotification(),
-          request.deviceFingerprint()
-      );
+            // Validar device fingerprint
+            deviceFingerprintService.validateDeviceFingerprint(request.deviceFingerprint());
 
-      log.info("✅ Notificación desencriptada exitosamente");
-      log.info("✅ Transaction ID: " + decryptedResponse.transactionId());
-      log.info("✅ Amount: " + decryptedResponse.amount());
-      log.info("✅ Sender Phone: " + decryptedResponse.senderPhone());
-      log.info("✅ Sender Name: " + decryptedResponse.senderName());
-      log.info("✅ Receiver: " + decryptedResponse.receiverPhone());
-
-      // Crear notificación de pago (usando la lógica que funciona)
-      PaymentNotificationRequest paymentRequest = new PaymentNotificationRequest(
-          request.adminId(),
-          decryptedResponse.amount(),
-          decryptedResponse.senderName(), // Usar el nombre real del remitente
-          decryptedResponse.transactionId(),
-          request.deduplicationHash() // Pasar el hash de deduplicación
-      );
-
-      // Procesar como notificación de pago
-      return paymentNotificationService.processPaymentNotification(paymentRequest)
-          .map(paymentResponse -> {
-            log.info("✅ Notificación de Yape procesada exitosamente");
-
-            // Crear respuesta de Yape con información del pago
-            YapeNotificationResponse yapeResponse = new YapeNotificationResponse(
-                paymentResponse.paymentId(),
-                decryptedResponse.transactionId(),
-                decryptedResponse.amount(),
-                decryptedResponse.senderPhone(),
-                decryptedResponse.senderName(),
-                decryptedResponse.receiverPhone(),
-                "PENDING_CONFIRMATION",
-                paymentResponse.timestamp(),
-                "Transacción procesada y enviada a vendedores para confirmación"
+            // Desencriptar notificación
+            YapeNotificationResponse decryptedResponse = yapeDecryptionService.decryptYapeNotification(
+                request.encryptedNotification(),
+                request.deviceFingerprint()
             );
 
-            return ApiResponse.success("Notificación de Yape procesada exitosamente", yapeResponse);
-          });
+            log.info("✅ Notificación desencriptada exitosamente");
+            log.info("✅ Transaction ID: " + decryptedResponse.transactionId());
+            log.info("✅ Amount: " + decryptedResponse.amount());
+            log.info("✅ Sender Phone: " + decryptedResponse.senderPhone());
+            log.info("✅ Sender Name: " + decryptedResponse.senderName());
+            log.info("✅ Receiver: " + decryptedResponse.receiverPhone());
 
-    } catch (Exception e) {
-      log.error("❌ Error procesando notificación de Yape: " + e.getMessage());
-      throw ValidationException.invalidField("encryptedNotification", request.encryptedNotification(),
-          "Error procesando notificación encriptada: " + e.getMessage());
-    }
+            // Actualizar auditoría con datos extraídos
+            savedAudit.decryptionStatus = "SUCCESS";
+            savedAudit.extractedAmount = decryptedResponse.amount();
+            savedAudit.extractedSenderName = decryptedResponse.senderName();
+            savedAudit.extractedYapeCode = decryptedResponse.transactionId().replace("YAPE_", "");
+            savedAudit.transactionId = decryptedResponse.transactionId();
+
+            // Crear notificación de pago (usando la lógica que funciona)
+            PaymentNotificationRequest paymentRequest = new PaymentNotificationRequest(
+                request.adminId(),
+                decryptedResponse.amount(),
+                decryptedResponse.senderName(), // Usar el nombre real del remitente
+                decryptedResponse.transactionId(),
+                request.deduplicationHash() // Pasar el hash de deduplicación
+            );
+
+            // Procesar como notificación de pago
+            return paymentNotificationService.processPaymentNotification(paymentRequest)
+                .chain(paymentResponse -> {
+                  log.info("✅ Notificación de Yape procesada exitosamente");
+
+                  // Actualizar auditoría con ID del pago
+                  savedAudit.paymentNotificationId = paymentResponse.paymentId();
+                  return yapeNotificationAuditRepository.persist(savedAudit)
+                      .map(updatedAudit -> {
+                        log.info("📋 Auditoría actualizada con Payment ID: " + paymentResponse.paymentId());
+
+                        // Crear respuesta de Yape con información del pago
+                        YapeNotificationResponse yapeResponse = new YapeNotificationResponse(
+                            paymentResponse.paymentId(),
+                            decryptedResponse.transactionId(),
+                            decryptedResponse.amount(),
+                            decryptedResponse.senderPhone(),
+                            decryptedResponse.senderName(),
+                            decryptedResponse.receiverPhone(),
+                            "PENDING_CONFIRMATION",
+                            paymentResponse.timestamp(),
+                            "Transacción procesada y enviada a vendedores para confirmación"
+                        );
+
+                        return ApiResponse.success("Notificación de Yape procesada exitosamente", yapeResponse);
+                      });
+                });
+
+          } catch (Exception e) {
+            log.error("❌ Error procesando notificación de Yape: " + e.getMessage());
+            
+            // Actualizar auditoría con error
+            savedAudit.decryptionStatus = "FAILED";
+            savedAudit.decryptionError = e.getMessage();
+            return yapeNotificationAuditRepository.persist(savedAudit)
+                .replaceWith(Uni.createFrom().failure(
+                    ValidationException.invalidField("encryptedNotification", request.encryptedNotification(),
+                        "Error procesando notificación encriptada: " + e.getMessage())
+                ));
+          }
+        });
   }
 
   /**
@@ -266,6 +314,52 @@ public class NotificationService {
       throw ValidationException.invalidField("encryptedNotification", request.encryptedNotification(),
           "Error procesando notificación como pago: " + e.getMessage());
     }
+  }
+
+  /**
+   * Obtiene el historial de auditoría de notificaciones de Yape para un admin
+   */
+  @WithTransaction
+  public Uni<ApiResponse<java.util.List<YapeAuditResponse>>> getYapeNotificationAudit(Long adminId, int page, int size) {
+    log.info("📋 NotificationService.getYapeNotificationAudit() - AdminId: " + adminId + ", Página: " + page + ", Tamaño: " + size);
+    
+    // Validar parámetros de paginación
+    final int validatedPage = Math.max(0, page);
+    final int validatedSize = (size <= 0 || size > 100) ? 20 : size;
+    
+    return yapeNotificationAuditRepository.findByAdminId(adminId)
+        .map(auditRecords -> {
+          // Aplicar paginación
+          int totalCount = auditRecords.size();
+          int startIndex = validatedPage * validatedSize;
+          int endIndex = Math.min(startIndex + validatedSize, totalCount);
+          
+          List<YapeNotificationAudit> paginatedRecords = auditRecords.subList(startIndex, endIndex);
+          
+          // Convertir a DTOs
+          List<YapeAuditResponse> auditResponses = paginatedRecords.stream()
+              .map(audit -> new YapeAuditResponse(
+                  audit.id,
+                  audit.adminId,
+                  audit.encryptedNotification,
+                  audit.deviceFingerprint,
+                  audit.timestamp,
+                  audit.deduplicationHash,
+                  audit.decryptionStatus,
+                  audit.decryptionError,
+                  audit.extractedAmount,
+                  audit.extractedSenderName,
+                  audit.extractedYapeCode,
+                  audit.transactionId,
+                  audit.paymentNotificationId,
+                  audit.createdAt,
+                  audit.updatedAt
+              ))
+              .collect(Collectors.toList());
+          
+          log.info("📋 Encontrados " + auditResponses.size() + " registros de auditoría para admin " + adminId);
+          return ApiResponse.success("Auditoría de Yape obtenida exitosamente", auditResponses);
+        });
   }
 
 }

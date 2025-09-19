@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 import org.sky.dto.ApiResponse;
+import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.service.SecurityService;
 import org.sky.service.StatsService;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -305,7 +306,7 @@ public class StatsController {
                 })
                 .map(analytics -> {
                     log.info("✅ Analytics de vendedor obtenidos exitosamente");
-                    return Response.ok(ApiResponse.success("Analytics de vendedor obtenidos exitosamente", analytics)).build();
+                    return Response.ok(ApiResponse.<SellerAnalyticsResponse>success("Analytics de vendedor obtenidos exitosamente", analytics)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo analytics de vendedor: " + throwable.getMessage());
