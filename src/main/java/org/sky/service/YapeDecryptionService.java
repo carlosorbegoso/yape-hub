@@ -149,10 +149,9 @@ public class YapeDecryptionService {
             String yapeCode = yapeCodeMatcher.group(1);
             log.info("🔑 Código de Yape extraído: " + yapeCode);
             
-            // Generar Transaction ID único: YAPE_timestamp_codigoYape_random
-            long timestamp = System.currentTimeMillis();
-            int randomSuffix = (int) (Math.random() * 1000); // 3 dígitos aleatorios
-            data.transactionId = "YAPE_" + timestamp + "_" + yapeCode + "_" + randomSuffix;
+            // Generar Transaction ID único: YAPE_codigoYape
+            // El deduplicationHash del frontend maneja la prevención de duplicados
+            data.transactionId = "YAPE_" + yapeCode;
             log.info("🆔 Transaction ID generado: " + data.transactionId);
         } else {
             log.warn("⚠️ No se pudo extraer el código de Yape del texto: " + messageText);

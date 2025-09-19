@@ -19,6 +19,10 @@ public record YapeNotificationRequest(
     
     @NotNull(message = "Timestamp es requerido")
     @JsonProperty("timestamp")
-    Long timestamp
+    Long timestamp,
+    
+    @NotBlank(message = "Deduplication hash es requerido")
+    @JsonProperty("deduplicationHash")
+    String deduplicationHash
 ) {
 }

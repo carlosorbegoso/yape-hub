@@ -21,5 +21,9 @@ public record PaymentNotificationRequest(
     
     @NotBlank(message = "Código de Yape es requerido")
     @JsonProperty("yapeCode")
-    String yapeCode
+    String yapeCode,
+    
+    @NotBlank(message = "Deduplication hash es requerido")
+    @JsonProperty("deduplicationHash")
+    String deduplicationHash
 ) {}

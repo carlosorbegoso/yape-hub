@@ -9,4 +9,11 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     
     // Métodos específicos para notificaciones de pago
     // Los métodos básicos de PanacheRepository ya están disponibles
+    
+    /**
+     * Busca una notificación de pago por código de seguridad Yape
+     */
+    public io.smallrye.mutiny.Uni<PaymentNotification> findByYapeCode(String yapeCode) {
+        return find("yapeCode = ?1", yapeCode).firstResult();
+    }
 }

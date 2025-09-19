@@ -185,7 +185,8 @@ public class NotificationService {
           request.adminId(),
           decryptedResponse.amount(),
           decryptedResponse.senderName(), // Usar el nombre real del remitente
-          decryptedResponse.transactionId()
+          decryptedResponse.transactionId(),
+          request.deduplicationHash() // Pasar el hash de deduplicación
       );
 
       // Procesar como notificación de pago
@@ -235,7 +236,8 @@ public class NotificationService {
           request.adminId(),
           decryptedResponse.amount(),
           decryptedResponse.senderPhone(), // Usar como nombre por ahora
-          decryptedResponse.transactionId()
+          decryptedResponse.transactionId(),
+          request.deduplicationHash() // Pasar el hash de deduplicación
       );
 
       // Procesar como notificación de pago

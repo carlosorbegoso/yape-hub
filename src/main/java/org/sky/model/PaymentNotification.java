@@ -22,6 +22,9 @@ public class PaymentNotification extends PanacheEntity {
     @Column(name = "yape_code", nullable = false)
     public String yapeCode;
     
+    @Column(name = "deduplication_hash", nullable = false, unique = true)
+    public String deduplicationHash;
+    
     @Column(name = "status", nullable = false)
     public String status = "PENDING";
     

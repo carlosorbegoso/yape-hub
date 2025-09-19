@@ -72,33 +72,59 @@ public class PaymentNotificationService {
         log.info("💰 SenderName: " + request.senderName());
         log.info("💰 YapeCode: " + request.yapeCode());
 
-        // Crear nueva notificación de pago
-        PaymentNotification payment = new PaymentNotification();
-        payment.adminId = request.adminId();
-        payment.amount = request.amount();
-        payment.senderName = request.senderName();
-        payment.yapeCode = request.yapeCode();
-        payment.status = "PENDING";
-        payment.createdAt = LocalDateTime.now();
-
-        return paymentNotificationRepository.persist(payment)
-                .chain(savedPayment -> {
-                    log.info("✅ Pago guardado en BD con ID: " + savedPayment.id);
-
-                    // Crear respuesta
-                    PaymentNotificationResponse response = new PaymentNotificationResponse(
-                        savedPayment.id,
-                        savedPayment.amount,
-                        savedPayment.senderName,
-                        savedPayment.yapeCode,
-                        savedPayment.status,
-                        savedPayment.createdAt,
-                        "Pago pendiente de confirmación"
-                    );
+        // Verificar duplicados usando el deduplicationHash del frontend
+        log.info("🔍 Verificando duplicados para hash: " + request.deduplicationHash());
+        
+        return paymentNotificationRepository.find("deduplicationHash = ?1", request.deduplicationHash())
+                .firstResult()
+                .chain(existingPayment -> {
+                    if (existingPayment != null) {
+                        log.warn("⚠️ Transacción duplicada detectada para hash: " + request.deduplicationHash());
+                        log.warn("⚠️ ID de transacción existente: " + existingPayment.id);
+                        
+                        // Crear respuesta con la transacción existente
+                        PaymentNotificationResponse response = new PaymentNotificationResponse(
+                            existingPayment.id,
+                            existingPayment.amount,
+                            existingPayment.senderName,
+                            existingPayment.yapeCode,
+                            existingPayment.status,
+                            existingPayment.createdAt,
+                            "Transacción ya procesada anteriormente"
+                        );
+                        
+                        return Uni.createFrom().item(response);
+                    }
                     
-                    // Enviar notificación WebSocket a todos los vendedores del admin (reactivo)
-                    return broadcastToSellersReactive(request.adminId(), response)
-                            .map(v -> response);
+                    // Crear nueva notificación de pago solo si no existe
+                    PaymentNotification payment = new PaymentNotification();
+                    payment.adminId = request.adminId();
+                    payment.amount = request.amount();
+                    payment.senderName = request.senderName();
+                    payment.yapeCode = request.yapeCode();
+                    payment.deduplicationHash = request.deduplicationHash();
+                    payment.status = "PENDING";
+                    payment.createdAt = LocalDateTime.now();
+
+                    return paymentNotificationRepository.persist(payment)
+                            .chain(savedPayment -> {
+                                log.info("✅ Pago guardado en BD con ID: " + savedPayment.id);
+
+                                // Crear respuesta
+                                PaymentNotificationResponse response = new PaymentNotificationResponse(
+                                    savedPayment.id,
+                                    savedPayment.amount,
+                                    savedPayment.senderName,
+                                    savedPayment.yapeCode,
+                                    savedPayment.status,
+                                    savedPayment.createdAt,
+                                    "Pago pendiente de confirmación"
+                                );
+                                
+                                // Enviar notificación WebSocket a todos los vendedores del admin (reactivo)
+                                return broadcastToSellersReactive(request.adminId(), response)
+                                        .replaceWith(response);
+                            });
                 });
     }
     
