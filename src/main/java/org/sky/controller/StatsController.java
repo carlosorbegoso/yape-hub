@@ -158,7 +158,7 @@ public class StatsController {
     @GET
     @Path("/admin/analytics")
     @Operation(summary = "Get complete admin analytics", 
-               description = "Obtiene analytics completos con ventas diarias, top vendedores, métricas avanzadas y insights administrativos")
+               description = "Obtiene analytics completos con ventas diarias, top vendedores, métricas avanzadas y insights administrativos. Parámetros opcionales para análisis específicos.")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Analytics completos obtenidos exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado"),
@@ -167,9 +167,17 @@ public class StatsController {
     public Uni<Response> getAdminAnalytics(@QueryParam("adminId") Long adminId,
                                           @QueryParam("startDate") String startDateStr,
                                           @QueryParam("endDate") String endDateStr,
+                                          @QueryParam("include") String include,
+                                          @QueryParam("period") String period,
+                                          @QueryParam("metric") String metric,
+                                          @QueryParam("granularity") String granularity,
+                                          @QueryParam("confidence") Double confidence,
+                                          @QueryParam("days") Integer days,
                                           @HeaderParam("Authorization") String authorization) {
         log.info("📊 StatsController.getAdminAnalytics() - AdminId: " + adminId);
         log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        log.info("📊 Include: " + include + ", Period: " + period + ", Metric: " + metric);
+        log.info("📊 Granularity: " + granularity + ", Confidence: " + confidence + ", Days: " + days);
         
         // Validar parámetros de fecha
         LocalDate startDate, endDate;
@@ -186,7 +194,7 @@ public class StatsController {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return statsService.getAnalyticsSummary(adminId, startDate, endDate);
+                    return statsService.getAnalyticsSummary(adminId, startDate, endDate, include, period, metric, granularity, confidence, days);
                 })
                 .map(analytics -> {
                     log.info("✅ Analytics completos obtenidos exitosamente");
@@ -202,7 +210,7 @@ public class StatsController {
     @GET
     @Path("/seller/analytics")
     @Operation(summary = "Get seller analytics summary", 
-               description = "Obtiene resumen completo de analytics para un vendedor específico")
+               description = "Obtiene resumen completo de analytics para un vendedor específico. Parámetros opcionales para análisis específicos.")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Analytics de vendedor obtenidos exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado"),
@@ -211,9 +219,17 @@ public class StatsController {
     public Uni<Response> getSellerAnalyticsSummary(@QueryParam("sellerId") Long sellerId,
                                                    @QueryParam("startDate") String startDateStr,
                                                    @QueryParam("endDate") String endDateStr,
+                                                   @QueryParam("include") String include,
+                                                   @QueryParam("period") String period,
+                                                   @QueryParam("metric") String metric,
+                                                   @QueryParam("granularity") String granularity,
+                                                   @QueryParam("confidence") Double confidence,
+                                                   @QueryParam("days") Integer days,
                                                    @HeaderParam("Authorization") String authorization) {
         log.info("📊 StatsController.getSellerAnalyticsSummary() - SellerId: " + sellerId);
         log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        log.info("📊 Include: " + include + ", Period: " + period + ", Metric: " + metric);
+        log.info("📊 Granularity: " + granularity + ", Confidence: " + confidence + ", Days: " + days);
         
         // Validar parámetros de fecha
         LocalDate startDate, endDate;
@@ -230,7 +246,7 @@ public class StatsController {
         return securityService.validateSellerAuthorization(authorization, sellerId)
                 .chain(userId -> {
                     log.info("✅ Autorización exitosa para sellerId: " + sellerId);
-                    return statsService.getSellerAnalyticsSummary(sellerId, startDate, endDate);
+                    return statsService.getSellerAnalyticsSummary(sellerId, startDate, endDate, include, period, metric, granularity, confidence, days);
                 })
                 .map(analytics -> {
                     log.info("✅ Analytics de vendedor obtenidos exitosamente");
@@ -238,6 +254,149 @@ public class StatsController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo analytics de vendedor: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
+    
+    // ===== FINANCIAL & PAYMENT APIs - Para transparencia financiera =====
+    
+    @GET
+    @Path("/admin/financial")
+    @Operation(summary = "Get detailed financial analytics", 
+               description = "Obtiene análisis financiero detallado con transparencia completa para administradores")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Análisis financiero obtenido exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
+    })
+    public Uni<Response> getAdminFinancialAnalytics(@QueryParam("adminId") Long adminId,
+                                                   @QueryParam("startDate") String startDateStr,
+                                                   @QueryParam("endDate") String endDateStr,
+                                                   @QueryParam("include") String include,
+                                                   @QueryParam("currency") String currency,
+                                                   @QueryParam("taxRate") Double taxRate,
+                                                   @HeaderParam("Authorization") String authorization) {
+        log.info("💰 StatsController.getAdminFinancialAnalytics() - AdminId: " + adminId);
+        log.info("💰 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        log.info("💰 Include: " + include + ", Currency: " + currency + ", TaxRate: " + taxRate);
+        
+        // Validar parámetros de fecha
+        LocalDate startDate, endDate;
+        try {
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
+            endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return statsService.getFinancialAnalytics(adminId, startDate, endDate, include, currency, taxRate);
+                })
+                .map(financial -> {
+                    log.info("✅ Análisis financiero obtenido exitosamente");
+                    return Response.ok(ApiResponse.success("Análisis financiero obtenido exitosamente", financial)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo análisis financiero: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
+    
+    @GET
+    @Path("/seller/financial")
+    @Operation(summary = "Get seller financial analytics", 
+               description = "Obtiene análisis financiero específico para vendedores con transparencia de comisiones")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Análisis financiero de vendedor obtenido exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
+    })
+    public Uni<Response> getSellerFinancialAnalytics(@QueryParam("sellerId") Long sellerId,
+                                                     @QueryParam("startDate") String startDateStr,
+                                                     @QueryParam("endDate") String endDateStr,
+                                                     @QueryParam("include") String include,
+                                                     @QueryParam("currency") String currency,
+                                                     @QueryParam("commissionRate") Double commissionRate,
+                                                     @HeaderParam("Authorization") String authorization) {
+        log.info("💰 StatsController.getSellerFinancialAnalytics() - SellerId: " + sellerId);
+        log.info("💰 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        log.info("💰 Include: " + include + ", Currency: " + currency + ", CommissionRate: " + commissionRate);
+        
+        // Validar parámetros de fecha
+        LocalDate startDate, endDate;
+        try {
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
+            endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
+        
+        // Validar autorización del vendedor
+        return securityService.validateSellerAuthorization(authorization, sellerId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para sellerId: " + sellerId);
+                    return statsService.getSellerFinancialAnalytics(sellerId, startDate, endDate, include, currency, commissionRate);
+                })
+                .map(financial -> {
+                    log.info("✅ Análisis financiero de vendedor obtenido exitosamente");
+                    return Response.ok(ApiResponse.success("Análisis financiero de vendedor obtenido exitosamente", financial)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo análisis financiero de vendedor: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
+    
+    @GET
+    @Path("/admin/payment-transparency")
+    @Operation(summary = "Get payment transparency report", 
+               description = "Obtiene reporte de transparencia de pagos con detalles de comisiones, impuestos y fees")
+    @APIResponses(value = {
+        @APIResponse(responseCode = "200", description = "Reporte de transparencia obtenido exitosamente"),
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
+    })
+    public Uni<Response> getPaymentTransparencyReport(@QueryParam("adminId") Long adminId,
+                                                      @QueryParam("startDate") String startDateStr,
+                                                      @QueryParam("endDate") String endDateStr,
+                                                      @QueryParam("includeFees") Boolean includeFees,
+                                                      @QueryParam("includeTaxes") Boolean includeTaxes,
+                                                      @QueryParam("includeCommissions") Boolean includeCommissions,
+                                                      @HeaderParam("Authorization") String authorization) {
+        log.info("🔍 StatsController.getPaymentTransparencyReport() - AdminId: " + adminId);
+        log.info("🔍 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        log.info("🔍 IncludeFees: " + includeFees + ", IncludeTaxes: " + includeTaxes + ", IncludeCommissions: " + includeCommissions);
+        
+        // Validar parámetros de fecha
+        LocalDate startDate, endDate;
+        try {
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
+            endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return statsService.getPaymentTransparencyReport(adminId, startDate, endDate, includeFees, includeTaxes, includeCommissions);
+                })
+                .map(report -> {
+                    log.info("✅ Reporte de transparencia obtenido exitosamente");
+                    return Response.ok(ApiResponse.success("Reporte de transparencia obtenido exitosamente", report)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error obteniendo reporte de transparencia: " + throwable.getMessage());
                     return securityService.handleSecurityException(throwable);
                 });
     }
