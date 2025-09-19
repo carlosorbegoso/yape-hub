@@ -37,10 +37,9 @@
 - `POST /api/generate-affiliation-code-protected?adminId={id}` - Generar código de afiliación
 
 #### **Estadísticas y Analytics**
-- `GET /api/stats/admin?adminId={id}` - Estadísticas generales
-- `GET /api/stats/admin/summary?adminId={id}` - Resumen de admin
-- `GET /api/stats/analytics?adminId={id}` - Analytics completos
-- `GET /api/stats/quick-summary?adminId={id}` - Resumen rápido
+- `GET /api/stats/admin/summary?adminId={id}&startDate={date}&endDate={date}` - Estadísticas básicas de admin
+- `GET /api/stats/admin/analytics?adminId={id}&startDate={date}&endDate={date}` - Analytics completos con insights avanzados
+- `GET /api/stats/admin/dashboard?adminId={id}` - Resumen rápido para dashboard (últimos 7 días)
 
 #### **Gestión de Pagos**
 - `GET /api/payments/admin/management?adminId={id}` - Gestión de pagos
@@ -72,9 +71,8 @@
 - `GET /api/payments/status/{sellerId}` - Estado de conexión
 
 #### **Estadísticas y Analytics**
-- `GET /api/stats/seller?sellerId={id}` - Estadísticas del vendedor
-- `GET /api/stats/seller/summary?sellerId={id}` - Resumen del vendedor
-- `GET /api/stats/seller/analytics?sellerId={id}` - Analytics del vendedor
+- `GET /api/stats/seller/summary?sellerId={id}&startDate={date}&endDate={date}` - Estadísticas básicas del vendedor
+- `GET /api/stats/seller/analytics?sellerId={id}&startDate={date}&endDate={date}` - Analytics completos del vendedor
 
 #### **Notificaciones**
 - `GET /api/notifications` - Listar notificaciones (requiere autenticación)
@@ -277,23 +275,18 @@ curl --location 'http://localhost:8080/api/admin/branches/605/sellers?adminId=60
 
 #### **Estadísticas y Analytics**
 ```bash
-# Estadísticas generales de admin
-curl --location 'http://localhost:8080/api/stats/admin?adminId=605&startDate=2025-09-01&endDate=2025-09-16' \
+# Estadísticas básicas de admin
+curl --location 'http://localhost:8080/api/stats/admin/summary?adminId=605&startDate=2025-09-01&endDate=2025-09-16' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj02MDUsIGlzcz1odHRwOi8vbG9jYWxob3N0OjgwODAsIGdyb3Vwcz1BRE1JTiwgZXhwPTE3NTc3MzcyOTEsIGlhdD0xNzU3NzMzNjkxfQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
 --header 'accept: application/json'
 
-# Resumen de admin
-curl --location 'http://localhost:8080/api/stats/admin/summary?adminId=605' \
+# Analytics completos con insights avanzados
+curl --location 'http://localhost:8080/api/stats/admin/analytics?adminId=605&startDate=2025-09-01&endDate=2025-09-16' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj02MDUsIGlzcz1odHRwOi8vbG9jYWxob3N0OjgwODAsIGdyb3Vwcz1BRE1JTiwgZXhwPTE3NTc3MzcyOTEsIGlhdD0xNzU3NzMzNjkxfQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
 --header 'accept: application/json'
 
-# Analytics completos
-curl --location 'http://localhost:8080/api/stats/analytics?adminId=605&startDate=2025-09-01&endDate=2025-09-16' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj02MDUsIGlzcz1odHRwOi8vbG9jYWxob3N0OjgwODAsIGdyb3Vwcz1BRE1JTiwgZXhwPTE3NTc3MzcyOTEsIGlhdD0xNzU3NzMzNjkxfQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
---header 'accept: application/json'
-
-# Resumen rápido
-curl --location 'http://localhost:8080/api/stats/quick-summary?adminId=605&startDate=2025-09-01&endDate=2025-09-16' \
+# Resumen rápido para dashboard (últimos 7 días)
+curl --location 'http://localhost:8080/api/stats/admin/dashboard?adminId=605' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj02MDUsIGlzcz1odHRwOi8vbG9jYWxob3N0OjgwODAsIGdyb3Vwcz1BRE1JTiwgZXhwPTE3NTc3MzcyOTEsIGlhdD0xNzU3NzMzNjkxfQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
 --header 'accept: application/json'
 ```
@@ -397,17 +390,12 @@ curl --location 'http://localhost:8080/api/payments/confirmed?sellerId=251&page=
 
 #### **Estadísticas y Analytics**
 ```bash
-# Estadísticas del vendedor
-curl --location 'http://localhost:8080/api/stats/seller?sellerId=251&startDate=2025-09-01&endDate=2025-09-16' \
+# Estadísticas básicas del vendedor
+curl --location 'http://localhost:8080/api/stats/seller/summary?sellerId=251&startDate=2025-09-01&endDate=2025-09-16' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj05MDEsIHNlbGxlcklkPTI1MSwgaXNzPWh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCwgZ3JvdXBzPVNFTExFUiwgZXhwPTE3NTgwNzUxMTUsIGlhdD0xNzU4MDcxNTE1fQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
 --header 'accept: application/json'
 
-# Resumen del vendedor
-curl --location 'http://localhost:8080/api/stats/seller/summary?sellerId=251' \
---header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj05MDEsIHNlbGxlcklkPTI1MSwgaXNzPWh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCwgZ3JvdXBzPVNFTExFUiwgZXhwPTE3NTgwNzUxMTUsIGlhdD0xNzU4MDcxNTE1fQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
---header 'accept: application/json'
-
-# Analytics del vendedor
+# Analytics completos del vendedor
 curl --location 'http://localhost:8080/api/stats/seller/analytics?sellerId=251&startDate=2025-09-01&endDate=2025-09-16' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e3N1Yj05MDEsIHNlbGxlcklkPTI1MSwgaXNzPWh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCwgZ3JvdXBzPVNFTExFUiwgZXhwPTE3NTgwNzUxMTUsIGlhdD0xNzU4MDcxNTE1fQ.eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc' \
 --header 'accept: application/json'

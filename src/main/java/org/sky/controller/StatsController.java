@@ -37,19 +37,19 @@ public class StatsController {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     @GET
-    @Path("/admin")
-    @Operation(summary = "Get admin sales statistics", 
-               description = "Obtiene estadísticas generales de ventas para un administrador")
+    @Path("/admin/summary")
+    @Operation(summary = "Get admin basic statistics", 
+               description = "Obtiene estadísticas básicas de ventas para un administrador")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Estadísticas obtenidas exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado"),
         @APIResponse(responseCode = "400", description = "Parámetros inválidos")
     })
-    public Uni<Response> getAdminStats(@QueryParam("adminId") Long adminId,
-                                       @QueryParam("startDate") String startDateStr,
-                                       @QueryParam("endDate") String endDateStr,
-                                       @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getAdminStats() - AdminId: " + adminId);
+    public Uni<Response> getAdminSummary(@QueryParam("adminId") Long adminId,
+                                         @QueryParam("startDate") String startDateStr,
+                                         @QueryParam("endDate") String endDateStr,
+                                         @HeaderParam("Authorization") String authorization) {
+        log.info("📊 StatsController.getAdminSummary() - AdminId: " + adminId);
         log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
         
         // Validar parámetros de fecha
@@ -70,8 +70,8 @@ public class StatsController {
                     return statsService.getAdminStats(adminId, startDate, endDate);
                 })
                 .map(stats -> {
-                    log.info("✅ Estadísticas de admin obtenidas exitosamente");
-                    return Response.ok(ApiResponse.success("Estadísticas de admin obtenidas exitosamente", stats)).build();
+                    log.info("✅ Estadísticas básicas de admin obtenidas exitosamente");
+                    return Response.ok(ApiResponse.success("Estadísticas básicas de admin obtenidas exitosamente", stats)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo estadísticas de admin: " + throwable.getMessage());
@@ -80,20 +80,20 @@ public class StatsController {
     }
     
     @GET
-    @Path("/seller")
-    @Operation(summary = "Get seller sales statistics", 
-               description = "Obtiene estadísticas específicas de ventas para un vendedor")
+    @Path("/seller/summary")
+    @Operation(summary = "Get seller basic statistics", 
+               description = "Obtiene estadísticas básicas de ventas para un vendedor")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Estadísticas obtenidas exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado"),
         @APIResponse(responseCode = "400", description = "Parámetros inválidos"),
         @APIResponse(responseCode = "404", description = "Vendedor no encontrado")
     })
-    public Uni<Response> getSellerStats(@QueryParam("sellerId") Long sellerId,
-                                        @QueryParam("startDate") String startDateStr,
-                                        @QueryParam("endDate") String endDateStr,
-                                        @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getSellerStats() - SellerId: " + sellerId);
+    public Uni<Response> getSellerSummary(@QueryParam("sellerId") Long sellerId,
+                                          @QueryParam("startDate") String startDateStr,
+                                          @QueryParam("endDate") String endDateStr,
+                                          @HeaderParam("Authorization") String authorization) {
+        log.info("📊 StatsController.getSellerSummary() - SellerId: " + sellerId);
         log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
         
         // Validar parámetros de fecha
@@ -114,8 +114,8 @@ public class StatsController {
                     return statsService.getSellerStats(sellerId, startDate, endDate);
                 })
                 .map(stats -> {
-                    log.info("✅ Estadísticas de vendedor obtenidas exitosamente");
-                    return Response.ok(ApiResponse.success("Estadísticas de vendedor obtenidas exitosamente", stats)).build();
+                    log.info("✅ Estadísticas básicas de vendedor obtenidas exitosamente");
+                    return Response.ok(ApiResponse.success("Estadísticas básicas de vendedor obtenidas exitosamente", stats)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo estadísticas de vendedor: " + throwable.getMessage());
@@ -124,16 +124,16 @@ public class StatsController {
     }
     
     @GET
-    @Path("/admin/summary")
-    @Operation(summary = "Get admin summary statistics", 
-               description = "Obtiene un resumen rápido de estadísticas para el dashboard del admin")
+    @Path("/admin/dashboard")
+    @Operation(summary = "Get admin dashboard summary", 
+               description = "Obtiene un resumen rápido de estadísticas para el dashboard del admin (últimos 7 días)")
     @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Resumen obtenido exitosamente"),
+        @APIResponse(responseCode = "200", description = "Resumen de dashboard obtenido exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado")
     })
-    public Uni<Response> getAdminSummary(@QueryParam("adminId") Long adminId,
-                                         @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getAdminSummary() - AdminId: " + adminId);
+    public Uni<Response> getAdminDashboard(@QueryParam("adminId") Long adminId,
+                                           @HeaderParam("Authorization") String authorization) {
+        log.info("📊 StatsController.getAdminDashboard() - AdminId: " + adminId);
         
         // Obtener estadísticas de los últimos 7 días
         LocalDate endDate = LocalDate.now();
@@ -142,63 +142,33 @@ public class StatsController {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return statsService.getAdminStats(adminId, startDate, endDate);
+                    return statsService.getQuickSummary(adminId, startDate, endDate);
                 })
-                .map(stats -> {
-                    log.info("✅ Resumen de admin obtenido exitosamente");
-                    return Response.ok(ApiResponse.success("Resumen de admin obtenido exitosamente", stats)).build();
+                .map(summary -> {
+                    log.info("✅ Resumen de dashboard obtenido exitosamente");
+                    return Response.ok(ApiResponse.success("Resumen de dashboard obtenido exitosamente", summary)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
-                    log.warn("❌ Error obteniendo resumen de admin: " + throwable.getMessage());
+                    log.warn("❌ Error obteniendo resumen de dashboard: " + throwable.getMessage());
                     return securityService.handleSecurityException(throwable);
                 });
     }
     
-    @GET
-    @Path("/seller/summary")
-    @Operation(summary = "Get seller summary statistics", 
-               description = "Obtiene un resumen rápido de estadísticas para el dashboard del vendedor")
-    @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Resumen obtenido exitosamente"),
-        @APIResponse(responseCode = "401", description = "No autorizado")
-    })
-    public Uni<Response> getSellerSummary(@QueryParam("sellerId") Long sellerId,
-                                          @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getSellerSummary() - SellerId: " + sellerId);
-        
-        // Obtener estadísticas de los últimos 7 días
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(7);
-        
-        return securityService.validateSellerAuthorization(authorization, sellerId)
-                .chain(userId -> {
-                    log.info("✅ Autorización exitosa para sellerId: " + sellerId);
-                    return statsService.getSellerStats(sellerId, startDate, endDate);
-                })
-                .map(stats -> {
-                    log.info("✅ Resumen de vendedor obtenido exitosamente");
-                    return Response.ok(ApiResponse.success("Resumen de vendedor obtenido exitosamente", stats)).build();
-                })
-                .onFailure().recoverWithItem(throwable -> {
-                    log.warn("❌ Error obteniendo resumen de vendedor: " + throwable.getMessage());
-                    return securityService.handleSecurityException(throwable);
-                });
-    }
     
     @GET
-    @Path("/analytics")
-    @Operation(summary = "Get complete analytics summary", 
-               description = "Obtiene resumen completo de analytics con ventas diarias, top vendedores y métricas de rendimiento")
+    @Path("/admin/analytics")
+    @Operation(summary = "Get complete admin analytics", 
+               description = "Obtiene analytics completos con ventas diarias, top vendedores, métricas avanzadas y insights administrativos")
     @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Analytics obtenidos exitosamente"),
+        @APIResponse(responseCode = "200", description = "Analytics completos obtenidos exitosamente"),
         @APIResponse(responseCode = "401", description = "No autorizado"),
         @APIResponse(responseCode = "400", description = "Parámetros inválidos")
     })
-    public Uni<Response> getAnalyticsSummary(@QueryParam("adminId") Long adminId,
-                                            @QueryParam("startDate") String startDateStr,
-                                            @QueryParam("endDate") String endDateStr,
-                                            @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getAnalyticsSummary() - AdminId: " + adminId);
+    public Uni<Response> getAdminAnalytics(@QueryParam("adminId") Long adminId,
+                                          @QueryParam("startDate") String startDateStr,
+                                          @QueryParam("endDate") String endDateStr,
+                                          @HeaderParam("Authorization") String authorization) {
+        log.info("📊 StatsController.getAdminAnalytics() - AdminId: " + adminId);
         log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
         
         // Validar parámetros de fecha
@@ -228,48 +198,6 @@ public class StatsController {
                 });
     }
     
-    @GET
-    @Path("/quick-summary")
-    @Operation(summary = "Get quick summary for dashboard", 
-               description = "Obtiene resumen rápido con métricas clave para el dashboard principal")
-    @APIResponses(value = {
-        @APIResponse(responseCode = "200", description = "Resumen rápido obtenido exitosamente"),
-        @APIResponse(responseCode = "401", description = "No autorizado"),
-        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
-    })
-    public Uni<Response> getQuickSummary(@QueryParam("adminId") Long adminId,
-                                         @QueryParam("startDate") String startDateStr,
-                                         @QueryParam("endDate") String endDateStr,
-                                         @HeaderParam("Authorization") String authorization) {
-        log.info("📊 StatsController.getQuickSummary() - AdminId: " + adminId);
-        log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
-        
-        // Validar parámetros de fecha
-        LocalDate startDate, endDate;
-        try {
-            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(7);
-            endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
-        } catch (DateTimeParseException e) {
-            log.warn("❌ Fechas inválidas: " + e.getMessage());
-            return Uni.createFrom().item(Response.status(400)
-                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
-        }
-        
-        // Validar autorización de admin
-        return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> {
-                    log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return statsService.getQuickSummary(adminId, startDate, endDate);
-                })
-                .map(summary -> {
-                    log.info("✅ Resumen rápido obtenido exitosamente");
-                    return Response.ok(ApiResponse.success("Resumen rápido obtenido exitosamente", summary)).build();
-                })
-                .onFailure().recoverWithItem(throwable -> {
-                    log.warn("❌ Error obteniendo resumen rápido: " + throwable.getMessage());
-                    return securityService.handleSecurityException(throwable);
-                });
-    }
     
     @GET
     @Path("/seller/analytics")

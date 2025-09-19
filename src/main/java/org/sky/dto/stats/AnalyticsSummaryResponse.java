@@ -47,7 +47,25 @@ public record AnalyticsSummaryResponse(
     SellerForecasting sellerForecasting,
     
     @JsonProperty("sellerAnalytics")
-    SellerAnalytics sellerAnalytics
+    SellerAnalytics sellerAnalytics,
+    
+    @JsonProperty("branchAnalytics")
+    BranchAnalytics branchAnalytics,
+    
+    @JsonProperty("sellerManagement")
+    SellerManagement sellerManagement,
+    
+    @JsonProperty("systemMetrics")
+    SystemMetrics systemMetrics,
+    
+    @JsonProperty("administrativeInsights")
+    AdministrativeInsights administrativeInsights,
+    
+    @JsonProperty("financialOverview")
+    FinancialOverview financialOverview,
+    
+    @JsonProperty("complianceAndSecurity")
+    ComplianceAndSecurity complianceAndSecurity
 ) {
     public record OverviewMetrics(
         @JsonProperty("totalSales")
@@ -420,5 +438,382 @@ public record AnalyticsSummaryResponse(
         
         @JsonProperty("consistencyIndex")
         Double consistencyIndex
+    ) {}
+    
+    // Branch Analytics
+    public record BranchAnalytics(
+        @JsonProperty("branchPerformance")
+        List<BranchPerformanceData> branchPerformance,
+        
+        @JsonProperty("branchComparison")
+        BranchComparison branchComparison
+    ) {}
+    
+    public record BranchPerformanceData(
+        @JsonProperty("branchId")
+        Long branchId,
+        
+        @JsonProperty("branchName")
+        String branchName,
+        
+        @JsonProperty("branchCode")
+        String branchCode,
+        
+        @JsonProperty("totalSales")
+        Double totalSales,
+        
+        @JsonProperty("totalTransactions")
+        Long totalTransactions,
+        
+        @JsonProperty("activeSellers")
+        Long activeSellers,
+        
+        @JsonProperty("inactiveSellers")
+        Long inactiveSellers,
+        
+        @JsonProperty("averageSalesPerSeller")
+        Double averageSalesPerSeller,
+        
+        @JsonProperty("performanceScore")
+        Double performanceScore,
+        
+        @JsonProperty("growthRate")
+        Double growthRate,
+        
+        @JsonProperty("lastActivity")
+        String lastActivity
+    ) {}
+    
+    public record BranchComparison(
+        @JsonProperty("topPerformingBranch")
+        BranchSummary topPerformingBranch,
+        
+        @JsonProperty("lowestPerformingBranch")
+        BranchSummary lowestPerformingBranch,
+        
+        @JsonProperty("averageBranchPerformance")
+        AverageBranchPerformance averageBranchPerformance
+    ) {}
+    
+    public record BranchSummary(
+        @JsonProperty("branchId")
+        Long branchId,
+        
+        @JsonProperty("branchName")
+        String branchName,
+        
+        @JsonProperty("sales")
+        Double sales,
+        
+        @JsonProperty("growth")
+        Double growth
+    ) {}
+    
+    public record AverageBranchPerformance(
+        @JsonProperty("sales")
+        Double sales,
+        
+        @JsonProperty("transactions")
+        Long transactions,
+        
+        @JsonProperty("sellers")
+        Long sellers
+    ) {}
+    
+    // Seller Management
+    public record SellerManagement(
+        @JsonProperty("sellerOverview")
+        SellerOverview sellerOverview,
+        
+        @JsonProperty("sellerPerformanceDistribution")
+        SellerPerformanceDistribution sellerPerformanceDistribution,
+        
+        @JsonProperty("sellerActivity")
+        SellerActivity sellerActivity
+    ) {}
+    
+    public record SellerOverview(
+        @JsonProperty("totalSellers")
+        Long totalSellers,
+        
+        @JsonProperty("activeSellers")
+        Long activeSellers,
+        
+        @JsonProperty("inactiveSellers")
+        Long inactiveSellers,
+        
+        @JsonProperty("newSellersThisMonth")
+        Long newSellersThisMonth,
+        
+        @JsonProperty("sellersWithZeroSales")
+        Long sellersWithZeroSales,
+        
+        @JsonProperty("topPerformers")
+        Long topPerformers,
+        
+        @JsonProperty("underPerformers")
+        Long underPerformers
+    ) {}
+    
+    public record SellerPerformanceDistribution(
+        @JsonProperty("excellent")
+        Long excellent,
+        
+        @JsonProperty("good")
+        Long good,
+        
+        @JsonProperty("average")
+        Long average,
+        
+        @JsonProperty("poor")
+        Long poor
+    ) {}
+    
+    public record SellerActivity(
+        @JsonProperty("dailyActiveSellers")
+        Long dailyActiveSellers,
+        
+        @JsonProperty("weeklyActiveSellers")
+        Long weeklyActiveSellers,
+        
+        @JsonProperty("monthlyActiveSellers")
+        Long monthlyActiveSellers,
+        
+        @JsonProperty("averageSessionDuration")
+        Double averageSessionDuration,
+        
+        @JsonProperty("averageTransactionsPerSeller")
+        Double averageTransactionsPerSeller
+    ) {}
+    
+    // System Metrics
+    public record SystemMetrics(
+        @JsonProperty("overallSystemHealth")
+        OverallSystemHealth overallSystemHealth,
+        
+        @JsonProperty("paymentSystemMetrics")
+        PaymentSystemMetrics paymentSystemMetrics,
+        
+        @JsonProperty("userEngagement")
+        UserEngagement userEngagement
+    ) {}
+    
+    public record OverallSystemHealth(
+        @JsonProperty("totalSystemSales")
+        Double totalSystemSales,
+        
+        @JsonProperty("totalSystemTransactions")
+        Long totalSystemTransactions,
+        
+        @JsonProperty("systemUptime")
+        Double systemUptime,
+        
+        @JsonProperty("averageResponseTime")
+        Double averageResponseTime,
+        
+        @JsonProperty("errorRate")
+        Double errorRate,
+        
+        @JsonProperty("activeUsers")
+        Long activeUsers
+    ) {}
+    
+    public record PaymentSystemMetrics(
+        @JsonProperty("totalPaymentsProcessed")
+        Long totalPaymentsProcessed,
+        
+        @JsonProperty("pendingPayments")
+        Long pendingPayments,
+        
+        @JsonProperty("confirmedPayments")
+        Long confirmedPayments,
+        
+        @JsonProperty("rejectedPayments")
+        Long rejectedPayments,
+        
+        @JsonProperty("averageConfirmationTime")
+        Double averageConfirmationTime,
+        
+        @JsonProperty("paymentSuccessRate")
+        Double paymentSuccessRate
+    ) {}
+    
+    public record UserEngagement(
+        @JsonProperty("dailyActiveUsers")
+        Long dailyActiveUsers,
+        
+        @JsonProperty("weeklyActiveUsers")
+        Long weeklyActiveUsers,
+        
+        @JsonProperty("monthlyActiveUsers")
+        Long monthlyActiveUsers,
+        
+        @JsonProperty("averageSessionDuration")
+        Double averageSessionDuration,
+        
+        @JsonProperty("featureUsage")
+        FeatureUsage featureUsage
+    ) {}
+    
+    public record FeatureUsage(
+        @JsonProperty("qrScanner")
+        Double qrScanner,
+        
+        @JsonProperty("paymentManagement")
+        Double paymentManagement,
+        
+        @JsonProperty("analytics")
+        Double analytics,
+        
+        @JsonProperty("notifications")
+        Double notifications
+    ) {}
+    
+    // Administrative Insights
+    public record AdministrativeInsights(
+        @JsonProperty("managementAlerts")
+        List<ManagementAlert> managementAlerts,
+        
+        @JsonProperty("recommendations")
+        List<String> recommendations,
+        
+        @JsonProperty("growthOpportunities")
+        GrowthOpportunities growthOpportunities
+    ) {}
+    
+    public record ManagementAlert(
+        @JsonProperty("type")
+        String type,
+        
+        @JsonProperty("severity")
+        String severity,
+        
+        @JsonProperty("message")
+        String message,
+        
+        @JsonProperty("affectedBranch")
+        String affectedBranch,
+        
+        @JsonProperty("affectedSellers")
+        List<String> affectedSellers,
+        
+        @JsonProperty("recommendation")
+        String recommendation
+    ) {}
+    
+    public record GrowthOpportunities(
+        @JsonProperty("potentialNewBranches")
+        Long potentialNewBranches,
+        
+        @JsonProperty("marketExpansion")
+        String marketExpansion,
+        
+        @JsonProperty("sellerRecruitment")
+        Long sellerRecruitment,
+        
+        @JsonProperty("revenueProjection")
+        Double revenueProjection
+    ) {}
+    
+    // Financial Overview
+    public record FinancialOverview(
+        @JsonProperty("revenueBreakdown")
+        RevenueBreakdown revenueBreakdown,
+        
+        @JsonProperty("costAnalysis")
+        CostAnalysis costAnalysis
+    ) {}
+    
+    public record RevenueBreakdown(
+        @JsonProperty("totalRevenue")
+        Double totalRevenue,
+        
+        @JsonProperty("revenueByBranch")
+        List<RevenueByBranch> revenueByBranch,
+        
+        @JsonProperty("revenueGrowth")
+        RevenueGrowth revenueGrowth
+    ) {}
+    
+    public record RevenueByBranch(
+        @JsonProperty("branchId")
+        Long branchId,
+        
+        @JsonProperty("branchName")
+        String branchName,
+        
+        @JsonProperty("revenue")
+        Double revenue,
+        
+        @JsonProperty("percentage")
+        Double percentage
+    ) {}
+    
+    public record RevenueGrowth(
+        @JsonProperty("daily")
+        Double daily,
+        
+        @JsonProperty("weekly")
+        Double weekly,
+        
+        @JsonProperty("monthly")
+        Double monthly,
+        
+        @JsonProperty("yearly")
+        Double yearly
+    ) {}
+    
+    public record CostAnalysis(
+        @JsonProperty("operationalCosts")
+        Double operationalCosts,
+        
+        @JsonProperty("sellerCommissions")
+        Double sellerCommissions,
+        
+        @JsonProperty("systemMaintenance")
+        Double systemMaintenance,
+        
+        @JsonProperty("netProfit")
+        Double netProfit,
+        
+        @JsonProperty("profitMargin")
+        Double profitMargin
+    ) {}
+    
+    // Compliance and Security
+    public record ComplianceAndSecurity(
+        @JsonProperty("securityMetrics")
+        SecurityMetrics securityMetrics,
+        
+        @JsonProperty("complianceStatus")
+        ComplianceStatus complianceStatus
+    ) {}
+    
+    public record SecurityMetrics(
+        @JsonProperty("failedLoginAttempts")
+        Long failedLoginAttempts,
+        
+        @JsonProperty("suspiciousActivities")
+        Long suspiciousActivities,
+        
+        @JsonProperty("dataBreaches")
+        Long dataBreaches,
+        
+        @JsonProperty("securityScore")
+        Double securityScore
+    ) {}
+    
+    public record ComplianceStatus(
+        @JsonProperty("dataProtection")
+        String dataProtection,
+        
+        @JsonProperty("auditTrail")
+        String auditTrail,
+        
+        @JsonProperty("backupStatus")
+        String backupStatus,
+        
+        @JsonProperty("lastAudit")
+        String lastAudit
     ) {}
 }
