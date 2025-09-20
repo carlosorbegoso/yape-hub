@@ -31,6 +31,9 @@ public class SellerService {
     
     @Inject
     UserRepository userRepository;
+
+    @Inject
+    SubscriptionService subscriptionService;
     
     @Inject
     BranchRepository branchRepository;
@@ -50,17 +53,29 @@ public class SellerService {
                         return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Código de afiliación agotado"));
                     }
                     
-                    // Verificar si el teléfono ya existe
-                    return sellerRepository.findByPhone(request.phone())
-                            .chain(existingSeller -> {
-                                if (existingSeller != null) {
-                                    return Uni.createFrom().item(ApiResponse.<SellerResponse>error("El número de teléfono ya está registrado"));
-                                }
+                    // Verificar límites de vendedores según el plan
+                    return sellerRepository.findByAdminId(adminId)
+                            .chain(existingSellers -> {
+                                int currentSellerCount = existingSellers.size();
+                                int newSellerCount = currentSellerCount + 1;
                                 
-                                // Generar email automático basado en el teléfono
-                                String autoEmail = "seller_" + request.phone().replaceAll("[^0-9]", "") + "@yapechamo.com";
-                                
-                                return userRepository.findByEmail(autoEmail)
+                                return subscriptionService.checkSubscriptionLimits(adminId, newSellerCount)
+                                        .chain(withinLimits -> {
+                                            if (!withinLimits) {
+                                                return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Límite de vendedores excedido según su plan de suscripción"));
+                                            }
+                                            
+                                            // Verificar si el teléfono ya existe
+                                            return sellerRepository.findByPhone(request.phone())
+                                                    .chain(existingSeller -> {
+                                                        if (existingSeller != null) {
+                                                            return Uni.createFrom().item(ApiResponse.<SellerResponse>error("El número de teléfono ya está registrado"));
+                                                        }
+                                                        
+                                                        // Generar email automático basado en el teléfono
+                                                        String autoEmail = "seller_" + request.phone().replaceAll("[^0-9]", "") + "@yapechamo.com";
+                                                        
+                                                        return userRepository.findByEmail(autoEmail)
                                         .chain(existingUser -> {
                                             if (existingUser != null) {
                                                 return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Error interno: email automático ya existe"));
@@ -109,6 +124,8 @@ public class SellerService {
                                                                 });
                                                     });
                                         });
+                                                    });
+                                            });
                                         });
                             });
                 });

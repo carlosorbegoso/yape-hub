@@ -10,6 +10,7 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.payment.PaymentClaimRequest;
 import org.sky.dto.payment.PaymentClaimResponse;
 import org.sky.dto.payment.PaymentRejectRequest;
+import org.sky.annotation.TokenConsumption;
 import org.sky.service.PaymentNotificationService;
 import org.sky.service.SecurityService;
 import org.sky.service.WebSocketNotificationService;
@@ -81,6 +82,7 @@ public class PaymentController {
     @POST
     @Path("/claim")
     @Operation(summary = "Claim payment", description = "Allow seller to claim a payment")
+    @TokenConsumption(operationType = "payment_claim", tokens = 1)
     public Uni<Response> claimPayment(@Valid PaymentClaimRequest request,
                                      @HeaderParam("Authorization") String authorization) {
         log.info("🎯 PaymentController.claimPayment() - Vendedor reclamando pago");

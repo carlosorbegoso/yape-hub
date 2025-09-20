@@ -23,7 +23,6 @@ import org.sky.util.JwtUtil;
 import org.jboss.logging.Logger;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -173,7 +172,7 @@ public class AuthService {
     public Uni<ApiResponse<LoginResponse>> refreshToken(String refreshToken) {
         Long userId = jwtUtil.validateRefreshToken(refreshToken);
         if (userId == null) {
-            throw ValidationException.invalidField("refreshToken", refreshToken, "Invalid or expired refresh token");
+            throw ValidationException.invalidField("refreshToken", refreshToken != null ? refreshToken : "null", "Invalid or expired refresh token");
         }
         
         return userRepository.findById(userId)

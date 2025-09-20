@@ -5,8 +5,6 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.Admin;
 
-import java.util.List;
-
 @ApplicationScoped
 public class AdminRepository implements PanacheRepositoryBase<Admin, Long> {
     

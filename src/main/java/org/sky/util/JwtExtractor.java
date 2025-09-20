@@ -14,6 +14,10 @@ public class JwtExtractor {
     
     public Long extractUserIdFromToken(String token) {
         try {
+            if (token == null) {
+                throw new IllegalArgumentException("Token cannot be null");
+            }
+            
             // Remove "Bearer " prefix if present
             if (token.startsWith("Bearer ")) {
                 token = token.substring(7);
