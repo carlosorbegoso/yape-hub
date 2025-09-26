@@ -13,6 +13,9 @@ import org.sky.dto.notification.YapeNotificationResponse;
 import org.sky.dto.notification.YapeAuditResponse;
 import org.sky.service.NotificationService;
 import org.sky.service.SecurityService;
+import org.sky.service.WebSocketNotificationService;
+import org.sky.repository.SellerRepository;
+import org.sky.util.JwtUtil;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -36,6 +39,15 @@ public class NotificationController {
     
     @Inject
     SecurityService securityService;
+    
+    @Inject
+    WebSocketNotificationService webSocketNotificationService;
+    
+    @Inject
+    SellerRepository sellerRepository;
+    
+    @Inject
+    JwtUtil jwtUtil;
     
     private static final Logger log = Logger.getLogger(NotificationController.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -164,6 +176,64 @@ public class NotificationController {
                     log.warn("❌ Error en auditoría: " + throwable.getMessage());
                     return securityService.handleSecurityException(throwable);
                 });
+    }
+    
+    @GET
+    @Path("/debug-websocket")
+    @PermitAll
+    @Operation(summary = "Debug WebSocket connections", description = "Debug de conexiones WebSocket")
+    public Uni<Response> debugWebSocket(@QueryParam("sellerId") Long sellerId, @QueryParam("token") String token) {
+        log.info("🔍 Debug WebSocket - SellerId: " + sellerId + ", Token: " + (token != null ? token.substring(0, 50) + "..." : "null"));
+        
+        try {
+            // Verificar token
+            if (token == null) {
+                return Uni.createFrom().item(Response.ok("{\"error\": \"Token requerido\"}").build());
+            }
+            
+            // Validar token JWT
+            Long userId = jwtUtil.getUserIdFromToken(token);
+            if (userId == null) {
+                return Uni.createFrom().item(Response.ok("{\"error\": \"Token de autenticación inválido\"}").build());
+            }
+            
+            // Extraer sellerId del token
+            Long tokenSellerId = jwtUtil.getSellerIdFromToken(token);
+            if (tokenSellerId == null) {
+                return Uni.createFrom().item(Response.ok("{\"error\": \"Token no válido - falta sellerId\"}").build());
+            }
+            
+            // Validar que el sellerId del token coincide con el sellerId de la URL
+            if (!tokenSellerId.equals(sellerId)) {
+                return Uni.createFrom().item(Response.ok("{\"error\": \"Token no válido para este vendedor - esperado: " + sellerId + ", encontrado: " + tokenSellerId + "\"}").build());
+            }
+            
+            // Verificar si el vendedor existe
+            return sellerRepository.findById(sellerId)
+                    .map(seller -> {
+                        if (seller == null) {
+                            return Response.ok("{\"error\": \"Vendedor no encontrado\"}").build();
+                        }
+                        
+                        // Verificar conexiones WebSocket activas
+                        boolean hasActiveConnection = webSocketNotificationService.hasActiveConnection(sellerId);
+                        
+                        String response = String.format(
+                            "{\"success\": true, \"sellerId\": %d, \"sellerName\": \"%s\", \"hasActiveConnection\": %s, \"message\": \"Token válido y vendedor encontrado\"}",
+                            sellerId, seller.sellerName, hasActiveConnection
+                        );
+                        
+                        return Response.ok(response).build();
+                    })
+                    .onFailure().recoverWithItem(failure -> {
+                        log.error("❌ Error en debug WebSocket: " + failure.getMessage());
+                        return Response.ok("{\"error\": \"Error interno: " + failure.getMessage() + "\"}").build();
+                    });
+                    
+        } catch (Exception e) {
+            log.error("❌ Error en debug WebSocket: " + e.getMessage());
+            return Uni.createFrom().item(Response.ok("{\"error\": \"Error: " + e.getMessage() + "\"}").build());
+        }
     }
     
 }

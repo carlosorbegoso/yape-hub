@@ -129,15 +129,23 @@ public class JwtUtil {
             // Decode the payload (second part)
             String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
             
-            // Extract sellerId using regex
-            Pattern pattern = Pattern.compile("sellerId=?(\\d+)");
+            // Extract sellerId using regex (supports both formats: sellerId=123 and "sellerId": 123)
+            Pattern pattern = Pattern.compile("\"sellerId\"\\s*:\\s*(\\d+)|sellerId=?(\\d+)");
             Matcher matcher = pattern.matcher(payload);
             
             if (matcher.find()) {
-                return Long.parseLong(matcher.group(1));
-            } else {
-                return null;
+                // Try group 1 first (JSON format: "sellerId": 123)
+                String sellerIdStr = matcher.group(1);
+                if (sellerIdStr != null) {
+                    return Long.parseLong(sellerIdStr);
+                }
+                // Try group 2 (key=value format: sellerId=123)
+                sellerIdStr = matcher.group(2);
+                if (sellerIdStr != null) {
+                    return Long.parseLong(sellerIdStr);
+                }
             }
+            return null;
             
         } catch (Exception e) {
             return null;

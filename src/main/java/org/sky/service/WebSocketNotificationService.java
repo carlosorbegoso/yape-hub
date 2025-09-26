@@ -55,6 +55,33 @@ public class WebSocketNotificationService {
     }
     
     /**
+     * Verifica si hay una conexión WebSocket activa para un vendedor
+     */
+    public boolean hasActiveConnection(Long sellerId) {
+        jakarta.websocket.Session session = webSocketSessions.get(sellerId);
+        return session != null && session.isOpen();
+    }
+    
+    /**
+     * Obtiene el número de conexiones WebSocket activas
+     */
+    public int getActiveConnectionsCount() {
+        return (int) webSocketSessions.values().stream()
+                .filter(session -> session != null && session.isOpen())
+                .count();
+    }
+    
+    /**
+     * Obtiene la lista de vendedores con conexiones activas
+     */
+    public java.util.List<Long> getActiveSellerIds() {
+        return webSocketSessions.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue().isOpen())
+                .map(Map.Entry::getKey)
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
      * Verifica si un vendedor está conectado
      */
     public boolean isSellerConnected(Long sellerId) {
