@@ -126,18 +126,35 @@ public class StatsController {
     @GET
     @Path("/admin/dashboard")
     @Operation(summary = "Get admin dashboard summary", 
-               description = "Obtiene un resumen rápido de estadísticas para el dashboard del admin (últimos 7 días)")
+               description = "Obtiene un resumen rápido de estadísticas para el dashboard del admin con filtros opcionales")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Resumen de dashboard obtenido exitosamente"),
-        @APIResponse(responseCode = "401", description = "No autorizado")
+        @APIResponse(responseCode = "401", description = "No autorizado"),
+        @APIResponse(responseCode = "400", description = "Parámetros inválidos")
     })
     public Uni<Response> getAdminDashboard(@QueryParam("adminId") Long adminId,
+                                           @QueryParam("startDate") String startDateStr,
+                                           @QueryParam("endDate") String endDateStr,
                                            @HeaderParam("Authorization") String authorization) {
         log.info("📊 StatsController.getAdminDashboard() - AdminId: " + adminId);
+        log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
         
-        // Obtener estadísticas de los últimos 7 días
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(7);
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
@@ -182,7 +199,7 @@ public class StatsController {
         // Validar parámetros de fecha
         LocalDate startDate, endDate;
         try {
-            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(7);
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
             endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
         } catch (DateTimeParseException e) {
             log.warn("❌ Fechas inválidas: " + e.getMessage());
@@ -234,7 +251,7 @@ public class StatsController {
         // Validar parámetros de fecha
         LocalDate startDate, endDate;
         try {
-            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(7);
+            startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
             endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
         } catch (DateTimeParseException e) {
             log.warn("❌ Fechas inválidas: " + e.getMessage());

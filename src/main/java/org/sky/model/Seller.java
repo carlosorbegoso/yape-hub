@@ -44,7 +44,7 @@ public class Seller extends PanacheEntity {
     @Column(name = "affiliation_code")
     public String affiliationCode;
     
-    @Column(name = "affiliation_date")
+    @Column(name = "affiliation_date", nullable = false)
     public LocalDateTime affiliationDate;
     
     @Column(name = "total_payments")

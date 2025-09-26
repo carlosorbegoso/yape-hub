@@ -18,6 +18,8 @@ import org.sky.service.SubscriptionService;
 import org.sky.service.TokenService;
 import org.sky.repository.TokenPackageRepository;
 import org.sky.repository.SubscriptionPlanRepository;
+import org.sky.model.TokenPackage;
+import org.sky.model.SubscriptionPlan;
 import java.util.List;
 import java.util.Map;
 
@@ -506,5 +508,156 @@ public class BillingController {
                     Log.warn("❌ Error obteniendo dashboard: " + throwable.getMessage());
                     return securityService.handleSecurityException(throwable);
                 });
+    }
+
+    @POST
+    @Path("/load-data")
+    @Operation(summary = "Load subscription plans and token packages", description = "Carga los planes de suscripción y paquetes de tokens en la base de datos")
+    @WithTransaction
+    public Uni<Response> loadData() {
+        Log.info("🔄 BillingController.loadData() - Cargando datos iniciales");
+        
+        // Crear Plan Básico
+        SubscriptionPlan planBasico = new SubscriptionPlan();
+        planBasico.name = "Plan Básico";
+        planBasico.description = "Plan básico con funcionalidades esenciales para pequeñas empresas";
+        planBasico.pricePen = java.math.BigDecimal.valueOf(50.00);
+        planBasico.billingCycle = "monthly";
+        planBasico.maxAdmins = 1;
+        planBasico.maxSellers = 5;
+        planBasico.tokensIncluded = 500;
+        planBasico.features = "[\"QR Generation\", \"Payment Processing\", \"Basic Analytics\", \"Email Support\"]";
+        planBasico.isActive = true;
+        
+        return subscriptionPlanRepository.persist(planBasico)
+                .chain(savedPlan1 -> {
+                    // Crear Plan Profesional
+                    SubscriptionPlan planProfesional = new SubscriptionPlan();
+                    planProfesional.name = "Plan Profesional";
+                    planProfesional.description = "Plan profesional con funcionalidades avanzadas para empresas en crecimiento";
+                    planProfesional.pricePen = java.math.BigDecimal.valueOf(150.00);
+                    planProfesional.billingCycle = "monthly";
+                    planProfesional.maxAdmins = 3;
+                    planProfesional.maxSellers = 20;
+                    planProfesional.tokensIncluded = 2000;
+                    planProfesional.features = "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\"]";
+                    planProfesional.isActive = true;
+                    
+                    return subscriptionPlanRepository.persist(planProfesional);
+                })
+                .chain(savedPlan2 -> {
+                    // Crear Plan Empresarial
+                    SubscriptionPlan planEmpresarial = new SubscriptionPlan();
+                    planEmpresarial.name = "Plan Empresarial";
+                    planEmpresarial.description = "Plan empresarial con funcionalidades completas para grandes empresas";
+                    planEmpresarial.pricePen = java.math.BigDecimal.valueOf(300.00);
+                    planEmpresarial.billingCycle = "monthly";
+                    planEmpresarial.maxAdmins = 10;
+                    planEmpresarial.maxSellers = 100;
+                    planEmpresarial.tokensIncluded = 10000;
+                    planEmpresarial.features = "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\", \"Custom Integrations\", \"Dedicated Support\"]";
+                    planEmpresarial.isActive = true;
+                    
+                    return subscriptionPlanRepository.persist(planEmpresarial);
+                })
+                .map(savedPlan3 -> {
+                    Log.info("✅ Planes creados exitosamente");
+                    return Response.ok(ApiResponse.success("Planes creados exitosamente", Map.of(
+                            "plansCreated", 3,
+                            "message", "Plan Básico, Profesional y Empresarial creados"
+                    ))).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    Log.error("❌ Error creando planes: " + throwable.getMessage());
+                    return Response.status(500)
+                            .entity(ApiResponse.error("Error creando planes: " + throwable.getMessage()))
+                            .build();
+                });
+    }
+
+    private Uni<Integer> loadSubscriptionPlans() {
+        Log.info("📋 Cargando planes de suscripción");
+        
+        return subscriptionPlanRepository.findAll()
+                .list()
+                .chain(existingPlans -> {
+                    if (!existingPlans.isEmpty()) {
+                        Log.info("📋 Ya existen " + existingPlans.size() + " planes, limpiando...");
+                        return subscriptionPlanRepository.deleteAll()
+                                .replaceWith(0);
+                    }
+                    return Uni.createFrom().item(0);
+                })
+                .chain(deleted -> {
+                    // Crear planes de suscripción uno por uno
+                    SubscriptionPlan plan1 = createPlan("Plan Gratuito", "Plan básico gratuito con funcionalidades limitadas", 0.00, "monthly", 1, 2, 100, "[\"QR Generation\", \"Payment Processing\", \"Basic Analytics\"]");
+                    SubscriptionPlan plan2 = createPlan("Plan Básico", "Plan básico con funcionalidades esenciales para pequeñas empresas", 50.00, "monthly", 1, 5, 500, "[\"QR Generation\", \"Payment Processing\", \"Basic Analytics\", \"Email Support\"]");
+                    SubscriptionPlan plan3 = createPlan("Plan Profesional", "Plan profesional con funcionalidades avanzadas para empresas en crecimiento", 150.00, "monthly", 3, 20, 2000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\"]");
+                    SubscriptionPlan plan4 = createPlan("Plan Empresarial", "Plan empresarial con funcionalidades completas para grandes empresas", 300.00, "monthly", 10, 100, 10000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\", \"Custom Integrations\", \"Dedicated Support\"]");
+                    
+                    return subscriptionPlanRepository.persist(plan1)
+                            .chain(p1 -> subscriptionPlanRepository.persist(plan2))
+                            .chain(p2 -> subscriptionPlanRepository.persist(plan3))
+                            .chain(p3 -> subscriptionPlanRepository.persist(plan4))
+                            .replaceWith(4);
+                });
+    }
+
+    private Uni<Integer> loadTokenPackages() {
+        Log.info("🪙 Cargando paquetes de tokens");
+        
+        return tokenPackageRepository.findAll()
+                .list()
+                .chain(existingPackages -> {
+                    if (!existingPackages.isEmpty()) {
+                        Log.info("🪙 Ya existen " + existingPackages.size() + " paquetes, limpiando...");
+                        return tokenPackageRepository.deleteAll()
+                                .replaceWith(0);
+                    }
+                    return Uni.createFrom().item(0);
+                })
+                .chain(deleted -> {
+                    // Crear paquetes de tokens uno por uno
+                    TokenPackage pkg1 = createTokenPackage("tokens_100", "Paquete Inicial", "100 tokens para empezar a probar el servicio", 100, 5.00, 0.0000, false, "[\"Procesamiento de pagos\", \"Generación de QR\", \"Reportes básicos\"]", 1);
+                    TokenPackage pkg2 = createTokenPackage("tokens_500", "Paquete Básico", "500 tokens para uso básico mensual", 500, 18.00, 0.0000, true, "[\"Procesamiento de pagos\", \"Generación de QR\", \"Reportes básicos\", \"Soporte por email\"]", 2);
+                    TokenPackage pkg3 = createTokenPackage("tokens_1000", "Paquete Estándar", "1000 tokens para uso moderado", 1000, 40.00, 0.1000, false, "[\"Procesamiento de pagos\", \"Generación de QR\", \"Reportes avanzados\", \"Soporte prioritario\"]", 3);
+                    
+                    return tokenPackageRepository.persist(pkg1)
+                            .chain(p1 -> tokenPackageRepository.persist(pkg2))
+                            .chain(p2 -> tokenPackageRepository.persist(pkg3))
+                            .replaceWith(3);
+                });
+    }
+
+    private SubscriptionPlan createPlan(String name, String description, double price, String billingCycle, 
+                                      int maxAdmins, int maxSellers, int tokensIncluded, String features) {
+        SubscriptionPlan plan = new SubscriptionPlan();
+        plan.name = name;
+        plan.description = description;
+        plan.pricePen = java.math.BigDecimal.valueOf(price);
+        plan.billingCycle = billingCycle;
+        plan.maxAdmins = maxAdmins;
+        plan.maxSellers = maxSellers;
+        plan.tokensIncluded = tokensIncluded;
+        plan.features = features;
+        plan.isActive = true;
+        return plan;
+    }
+
+    private TokenPackage createTokenPackage(String packageId, String name, String description, int tokens, 
+                                          double price, double discount, boolean isPopular, String features, int sortOrder) {
+        TokenPackage pkg = new TokenPackage();
+        pkg.packageId = packageId;
+        pkg.name = name;
+        pkg.description = description;
+        pkg.tokens = tokens;
+        pkg.price = java.math.BigDecimal.valueOf(price);
+        pkg.currency = "PEN";
+        pkg.discount = java.math.BigDecimal.valueOf(discount);
+        pkg.isPopular = isPopular;
+        pkg.features = features;
+        pkg.isActive = true;
+        pkg.sortOrder = sortOrder;
+        return pkg;
     }
 }

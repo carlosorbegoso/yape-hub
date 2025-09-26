@@ -48,6 +48,9 @@ public class AuthService {
     @Inject
     AffiliationCodeRepository affiliationCodeRepository;
     
+    @Inject
+    SubscriptionService subscriptionService;
+    
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> registerAdmin(AdminRegisterRequest request) {
         return userRepository.findByEmail(request.email())
@@ -98,17 +101,21 @@ public class AuthService {
                     return branchRepository.persist(branch);
                 })
                 .chain(branch -> {
-                    // Generate tokens
-                    String accessToken = jwtUtil.generateAccessToken(branch.admin.user.id, branch.admin.user.role);
-                    String refreshToken = jwtUtil.generateRefreshToken(branch.admin.user.id);
-                    
-                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                            branch.admin.user.id, branch.admin.user.email, branch.admin.user.role, 
-                            branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
-                    );
-                    
-                    LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
-                    return Uni.createFrom().item(ApiResponse.success("Administrador registrado exitosamente", response));
+                    // Asignar suscripción gratuita por defecto
+                    return subscriptionService.subscribeToFreePlan(branch.admin.id)
+                            .chain(subscription -> {
+                                // Generate tokens
+                                String accessToken = jwtUtil.generateAccessToken(branch.admin.user.id, branch.admin.user.role);
+                                String refreshToken = jwtUtil.generateRefreshToken(branch.admin.user.id);
+                                
+                                LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                                        branch.admin.user.id, branch.admin.user.email, branch.admin.user.role, 
+                                        branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
+                                );
+                                
+                                LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
+                                return Uni.createFrom().item(ApiResponse.success("Administrador registrado exitosamente", response));
+                            });
                 }));
     }
     

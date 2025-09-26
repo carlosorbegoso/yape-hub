@@ -13,12 +13,17 @@ import org.sky.dto.billing.PaymentUploadResponse;
 import org.sky.repository.ManualPaymentRepository;
 import org.sky.repository.PaymentCodeRepository;
 import org.sky.service.SecurityService;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Path("/api/admin/billing")
 @Tag(name = "Admin Billing Management", description = "Gestión interna de facturación para administradores")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class AdminBillingController {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Inject
     ManualPaymentRepository manualPaymentRepository;
@@ -33,18 +38,38 @@ public class AdminBillingController {
     @Operation(summary = "Get admin billing information", description = "Obtiene información de administración de facturación según el tipo")
     public Uni<Response> getAdminBillingInfo(@QueryParam("type") @DefaultValue("dashboard") String type,
                                            @QueryParam("adminId") Long adminId,
+                                           @QueryParam("startDate") String startDateStr,
+                                           @QueryParam("endDate") String endDateStr,
                                            @QueryParam("status") @DefaultValue("all") String status,
                                            @QueryParam("include") @DefaultValue("details") String include,
                                            @HeaderParam("Authorization") String authorization) {
         Log.info("🔧 AdminBillingController.getAdminBillingInfo() - Type: " + type + ", AdminId: " + adminId);
+        Log.info("🔧 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            Log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     return switch (type.toLowerCase()) {
-                        case "payments" -> getPaymentsByStatus(adminId, status, include);
-                        case "codes" -> getPaymentCodesUnified(adminId, include);
-                        case "dashboard" -> getAdminDashboardUnified(adminId, include);
-                        case "stats" -> getAdminStats(adminId, include);
+                        case "payments" -> getPaymentsByStatus(adminId, status, include, startDate, endDate);
+                        case "codes" -> getPaymentCodesUnified(adminId, include, startDate, endDate);
+                        case "dashboard" -> getAdminDashboardUnified(adminId, include, startDate, endDate);
+                        case "stats" -> getAdminStats(adminId, include, startDate, endDate);
                         default -> Uni.createFrom().failure(new IllegalArgumentException("Tipo no válido: " + type));
                     };
                 })
@@ -55,37 +80,37 @@ public class AdminBillingController {
                 });
     }
 
-    private Uni<ApiResponse<Object>> getPaymentsByStatus(Long adminId, String status, String include) {
+    private Uni<ApiResponse<Object>> getPaymentsByStatus(Long adminId, String status, String include, LocalDate startDate, LocalDate endDate) {
         Log.info("💳 AdminBillingController.getPaymentsByStatus() - Status: " + status);
         
         return switch (status.toLowerCase()) {
-            case "pending" -> manualPaymentRepository.findPendingPayments()
+            case "pending" -> manualPaymentRepository.findPendingPayments(startDate, endDate)
                     .map(payments -> ApiResponse.success("Pagos pendientes obtenidos exitosamente", payments));
-            case "approved" -> manualPaymentRepository.findByStatus("approved")
+            case "approved" -> manualPaymentRepository.findByStatus("approved", startDate, endDate)
                     .map(payments -> ApiResponse.success("Pagos aprobados obtenidos exitosamente", payments));
-            case "rejected" -> manualPaymentRepository.findByStatus("rejected")
+            case "rejected" -> manualPaymentRepository.findByStatus("rejected", startDate, endDate)
                     .map(payments -> ApiResponse.success("Pagos rechazados obtenidos exitosamente", payments));
-            case "all" -> manualPaymentRepository.findByAdminId(adminId)
+            case "all" -> manualPaymentRepository.findByAdminId(adminId, startDate, endDate)
                     .map(payments -> ApiResponse.success("Todos los pagos obtenidos exitosamente", payments));
             default -> Uni.createFrom().item(ApiResponse.error("Estado no válido: " + status));
         };
     }
 
-    private Uni<ApiResponse<Object>> getPaymentCodesUnified(Long adminId, String include) {
+    private Uni<ApiResponse<Object>> getPaymentCodesUnified(Long adminId, String include, LocalDate startDate, LocalDate endDate) {
         Log.info("🔑 AdminBillingController.getPaymentCodesUnified()");
         
         return paymentCodeRepository.findByStatus("pending")
                 .map(codes -> ApiResponse.success("Códigos de pago obtenidos exitosamente", codes));
     }
 
-    private Uni<Response> getAdminDashboardUnified(Long adminId, String include) {
+    private Uni<Response> getAdminDashboardUnified(Long adminId, String include, LocalDate startDate, LocalDate endDate) {
         Log.info("📊 AdminBillingController.getAdminDashboardUnified()");
         
         return Uni.combine().all()
                 .unis(
-                    manualPaymentRepository.countPendingPayments(),
-                    manualPaymentRepository.countApprovedPayments(),
-                    manualPaymentRepository.countRejectedPayments(),
+                    manualPaymentRepository.countPendingPayments(startDate, endDate),
+                    manualPaymentRepository.countApprovedPayments(startDate, endDate),
+                    manualPaymentRepository.countRejectedPayments(startDate, endDate),
                     paymentCodeRepository.countPendingCodes()
                 )
                 .asTuple()
@@ -107,7 +132,7 @@ public class AdminBillingController {
                 });
     }
 
-    private Uni<ApiResponse<Object>> getAdminStats(Long adminId, String include) {
+    private Uni<ApiResponse<Object>> getAdminStats(Long adminId, String include, LocalDate startDate, LocalDate endDate) {
         Log.info("📈 AdminBillingController.getAdminStats()");
         
         // TODO: Implementar estadísticas avanzadas
@@ -297,8 +322,28 @@ public class AdminBillingController {
     @Path("/dashboard")
     @Operation(summary = "Get admin billing dashboard", description = "Obtiene el dashboard de administración de pagos")
     public Uni<Response> getAdminDashboard(@QueryParam("adminId") Long adminId,
+                                          @QueryParam("startDate") String startDateStr,
+                                          @QueryParam("endDate") String endDateStr,
                                           @HeaderParam("Authorization") String authorization) {
         Log.info("📊 AdminBillingController.getAdminDashboard() - AdminId: " + adminId);
+        Log.info("📊 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            Log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
@@ -307,9 +352,9 @@ public class AdminBillingController {
                     // Obtener estadísticas del dashboard
                     return Uni.combine().all()
                             .unis(
-                                manualPaymentRepository.countPendingPayments(),
-                                manualPaymentRepository.countApprovedPayments(),
-                                manualPaymentRepository.countRejectedPayments(),
+                                manualPaymentRepository.countPendingPayments(startDate, endDate),
+                                manualPaymentRepository.countApprovedPayments(startDate, endDate),
+                                manualPaymentRepository.countRejectedPayments(startDate, endDate),
                                 paymentCodeRepository.countPendingCodes()
                             )
                             .asTuple()

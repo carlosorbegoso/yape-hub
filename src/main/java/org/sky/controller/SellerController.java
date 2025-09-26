@@ -16,6 +16,9 @@ import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 @Path("/api/admin/sellers")
 @Produces(MediaType.APPLICATION_JSON)
@@ -34,24 +37,45 @@ public class SellerController {
     JsonWebToken jwt;
     
     private static final Logger log = Logger.getLogger(SellerController.class);
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     @GET
     @Path("/my-sellers")
     @PermitAll
     @WithTransaction
     @Operation(summary = "Get my sellers", description = "Get all sellers affiliated to the current admin with pagination")
-    public Uni<Response> getMySellers(@QueryParam("adminId") Long adminId, 
+    public Uni<Response> getMySellers(@QueryParam("adminId") Long adminId,
+                                     @QueryParam("startDate") String startDateStr,
+                                     @QueryParam("endDate") String endDateStr,
                                      @QueryParam("page") @DefaultValue("1") int page,
                                      @QueryParam("limit") @DefaultValue("20") int limit,
                                      @HeaderParam("Authorization") String authorization) {
         log.info("🚀 SellerController.getMySellers() - Endpoint llamado para adminId: " + adminId);
         log.info("🚀 Parámetros de paginación - page: " + page + ", limit: " + limit);
+        log.info("🚀 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(org.sky.dto.ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         // Validar autorización de admin
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return sellerService.getSellersByAdmin(adminId, page, limit);
+                    return sellerService.getSellersByAdmin(adminId, page, limit, startDate, endDate);
                 })
                 .map(response -> {
                     if (response.isSuccess()) {
@@ -177,6 +201,7 @@ public class SellerController {
                 });
     }
     
+
     // Helper method to get current user ID from JWT
     private Long getCurrentUserId() {
         if (jwt != null && jwt.getSubject() != null) {

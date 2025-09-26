@@ -25,6 +25,7 @@ import org.sky.service.PaymentNotificationService;
 import org.sky.controller.PaymentWebSocketController;
 import org.jboss.logging.Logger;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -80,31 +81,34 @@ public class NotificationService {
   }
 
   public Uni<ApiResponse<List<NotificationResponse>>> getNotifications(Long userId, String userRole,
-                                                                       int page, int limit, Boolean unreadOnly) {
+                                                                       int page, int limit, Boolean unreadOnly, LocalDate startDate, LocalDate endDate) {
+    log.info("🔔 NotificationService.getNotifications() - UserId: " + userId + ", Role: " + userRole);
+    log.info("🔔 Desde: " + startDate + ", Hasta: " + endDate);
+    
     Uni<List<Notification>> notificationsUni;
 
     if ("ADMIN".equals(userRole)) {
       if (unreadOnly != null && unreadOnly) {
-        notificationsUni = notificationRepository.findUnreadByTargetTypeAndTargetId(
-            Notification.TargetType.ADMIN, userId);
+        notificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and isRead = false and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+            Notification.TargetType.ADMIN, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
       } else {
-        notificationsUni = notificationRepository.findByTargetTypeAndTargetId(
-            Notification.TargetType.ADMIN, userId);
+        notificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+            Notification.TargetType.ADMIN, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
       }
     } else if ("SELLER".equals(userRole)) {
       if (unreadOnly != null && unreadOnly) {
-        notificationsUni = notificationRepository.findUnreadByTargetTypeAndTargetId(
-            Notification.TargetType.SELLER, userId);
+        notificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and isRead = false and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+            Notification.TargetType.SELLER, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
       } else {
-        notificationsUni = notificationRepository.findByTargetTypeAndTargetId(
-            Notification.TargetType.SELLER, userId);
+        notificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+            Notification.TargetType.SELLER, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
       }
     } else {
       // Get all notifications for user
-      Uni<List<Notification>> adminNotificationsUni = notificationRepository.findByTargetTypeAndTargetId(
-          Notification.TargetType.ADMIN, userId);
-      Uni<List<Notification>> sellerNotificationsUni = notificationRepository.findByTargetTypeAndTargetId(
-          Notification.TargetType.SELLER, userId);
+      Uni<List<Notification>> adminNotificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+          Notification.TargetType.ADMIN, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
+      Uni<List<Notification>> sellerNotificationsUni = notificationRepository.find("targetType = ?1 and targetId = ?2 and createdAt >= ?3 and createdAt <= ?4 order by createdAt desc", 
+          Notification.TargetType.SELLER, userId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
 
       notificationsUni = Uni.combine().all().unis(adminNotificationsUni, sellerNotificationsUni)
           .with((adminNotifications, sellerNotifications) -> {

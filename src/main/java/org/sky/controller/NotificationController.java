@@ -17,7 +17,11 @@ import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import jakarta.annotation.security.PermitAll;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 @Path("/api/notifications")
@@ -34,16 +38,39 @@ public class NotificationController {
     SecurityService securityService;
     
     private static final Logger log = Logger.getLogger(NotificationController.class);
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     
     @GET
     @Operation(summary = "Get notifications", description = "Get user notifications with pagination")
     public Uni<Response> getNotifications(@QueryParam("userId") Long userId,
                                     @QueryParam("userRole") String userRole,
+                                    @QueryParam("startDate") String startDateStr,
+                                    @QueryParam("endDate") String endDateStr,
                                     @QueryParam("page") @DefaultValue("1") int page,
                                     @QueryParam("limit") @DefaultValue("20") int limit,
                                     @QueryParam("unreadOnly") Boolean unreadOnly) {
-        return notificationService.getNotifications(userId, userRole, page, limit, unreadOnly)
+        log.info("🔔 NotificationController.getNotifications() - UserId: " + userId + ", Role: " + userRole);
+        log.info("🔔 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
+        
+        return notificationService.getNotifications(userId, userRole, page, limit, unreadOnly, startDate, endDate)
                 .map(response -> {
                     if (response.isSuccess()) {
                         return Response.ok(response).build();

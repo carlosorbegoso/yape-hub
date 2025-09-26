@@ -20,6 +20,9 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 @Path("/api/payments")
@@ -39,6 +42,7 @@ public class PaymentController {
     WebSocketNotificationService webSocketNotificationService;
     
     private static final Logger log = Logger.getLogger(PaymentController.class);
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     
     
@@ -151,12 +155,32 @@ public class PaymentController {
     })
     public Uni<Response> getPendingPayments(@QueryParam("sellerId") Long sellerId,
                                            @QueryParam("adminId") Long adminId,
+                                           @QueryParam("startDate") String startDateStr,
+                                           @QueryParam("endDate") String endDateStr,
                                            @QueryParam("page") @DefaultValue("0") int page,
                                            @QueryParam("size") @DefaultValue("20") int size,
                                            @QueryParam("limit") @DefaultValue("20") int limit,
                                            @HeaderParam("Authorization") String authorization) {
         log.info("📋 PaymentController.getPendingPayments() - Obteniendo pagos pendientes para vendedor: " + sellerId);
         log.info("📋 AdminId: " + adminId + ", Página: " + page + ", Tamaño: " + size + ", Limit: " + limit);
+        log.info("📋 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         // Usar limit como fallback si size no está especificado
         final int finalSize = (size == 20 && limit != 20) ? limit : size;
@@ -172,7 +196,7 @@ public class PaymentController {
                             return securityService.validateAdminAuthorization(authorization, userId)
                                     .chain(adminUserId -> {
                                         log.info("✅ Usuario ADMIN autorizado para ver todos los pagos");
-                                        return paymentNotificationService.getAllPendingPaymentsPaginated(page, finalSize);
+                                        return paymentNotificationService.getAllPendingPaymentsPaginated(page, finalSize, startDate, endDate);
                                     });
                         }
                         
@@ -181,7 +205,7 @@ public class PaymentController {
                             return securityService.validateAdminCanAccessSeller(authorization, adminId, sellerId)
                                     .chain(adminUserId -> {
                                         log.info("✅ Admin " + adminId + " autorizado para ver pagos de seller " + sellerId);
-                                        return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, finalSize);
+                                        return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, finalSize, startDate, endDate);
                                     });
                         }
                         
@@ -189,7 +213,7 @@ public class PaymentController {
                         return securityService.validateSellerAuthorization(authorization, sellerId)
                                 .chain(sellerUserId -> {
                                     log.info("✅ Autorización exitosa para sellerId: " + sellerId);
-                                    return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, finalSize);
+                                    return paymentNotificationService.getPendingPaymentsForSellerPaginated(sellerId, page, finalSize, startDate, endDate);
                                 });
                     } catch (Exception e) {
                         log.error("❌ Error en getPendingPayments: " + e.getMessage(), e);
@@ -225,16 +249,36 @@ public class PaymentController {
         @APIResponse(responseCode = "400", description = "Parámetros inválidos")
     })
     public Uni<Response> getAdminPaymentManagement(@QueryParam("adminId") Long adminId,
+                                                  @QueryParam("startDate") String startDateStr,
+                                                  @QueryParam("endDate") String endDateStr,
                                                   @QueryParam("page") @DefaultValue("0") int page,
                                                   @QueryParam("size") @DefaultValue("20") int size,
                                                   @QueryParam("status") String status,
                                                   @HeaderParam("Authorization") String authorization) {
         log.info("👑 PaymentController.getAdminPaymentManagement() - AdminId: " + adminId);
         log.info("👑 Página: " + page + ", Tamaño: " + size + ", Status: " + status);
+        log.info("👑 Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         // Validar autorización de admin
         return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> paymentNotificationService.getAdminPaymentManagement(adminId, page, size, status))
+                .chain(userId -> paymentNotificationService.getAdminPaymentManagement(adminId, page, size, status, startDate, endDate))
                 .map(managementResponse -> Response.ok(ApiResponse.success("Gestión de pagos obtenida exitosamente", managementResponse)).build())
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo gestión de pagos: " + throwable.getMessage());
@@ -349,11 +393,31 @@ public class PaymentController {
     })
     public Uni<Response> getConfirmedPayments(@QueryParam("sellerId") Long sellerId,
                                             @QueryParam("adminId") Long adminId,
+                                            @QueryParam("startDate") String startDateStr,
+                                            @QueryParam("endDate") String endDateStr,
                                             @QueryParam("page") @DefaultValue("0") int page,
                                             @QueryParam("size") @DefaultValue("20") int size,
                                             @HeaderParam("Authorization") String authorization) {
         log.info("✅ PaymentController.getConfirmedPayments() - Obteniendo pagos confirmados para vendedor: " + sellerId);
         log.info("✅ AdminId: " + adminId + ", Página: " + page + ", Tamaño: " + size);
+        log.info("✅ Desde: " + startDateStr + ", Hasta: " + endDateStr);
+        
+        // Validar parámetros de fecha
+        final LocalDate startDate, endDate;
+        try {
+            if (startDateStr != null && endDateStr != null) {
+                startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
+                endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
+            } else {
+                // Default: último mes
+                endDate = LocalDate.now();
+                startDate = endDate.minusDays(30);
+            }
+        } catch (DateTimeParseException e) {
+            log.warn("❌ Fechas inválidas: " + e.getMessage());
+            return Uni.createFrom().item(Response.status(400)
+                    .entity(ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+        }
         
         // Validar token JWT primero
         return securityService.validateJwtToken(authorization)
@@ -365,7 +429,7 @@ public class PaymentController {
                         return securityService.validateAdminCanAccessSeller(authorization, adminId, sellerId)
                                 .chain(adminUserId -> {
                                     log.info("✅ Admin " + adminId + " autorizado para ver pagos confirmados de seller " + sellerId);
-                                    return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, page, size);
+                                    return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, page, size, startDate, endDate);
                                 });
                     }
                     
@@ -373,7 +437,7 @@ public class PaymentController {
                     return securityService.validateSellerAuthorization(authorization, sellerId)
                             .chain(sellerUserId -> {
                                 log.info("✅ Autorización exitosa para sellerId: " + sellerId);
-                                return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, page, size);
+                                return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, page, size, startDate, endDate);
                             });
                 })
                 .map(confirmedPaymentsResponse -> Response.ok(ApiResponse.success("Pagos confirmados obtenidos exitosamente", confirmedPaymentsResponse)).build())

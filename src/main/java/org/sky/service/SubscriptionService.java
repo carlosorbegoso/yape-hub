@@ -216,14 +216,86 @@ public class SubscriptionService {
     }
 
     @WithTransaction
+    public Uni<SubscriptionStatusResponse> subscribeToFreePlan(Long adminId) {
+        Log.info("📋 SubscriptionService.subscribeToFreePlan() - AdminId: " + adminId);
+        
+        return subscriptionPlanRepository.findByName("Plan Gratuito")
+                .chain(freePlan -> {
+                    if (freePlan == null) {
+                        return Uni.createFrom().failure(new RuntimeException("Plan Gratuito no encontrado en la base de datos"));
+                    }
+                    
+                    // Verificar si ya tiene una suscripción activa
+                    return adminSubscriptionRepository.findActiveByAdminId(adminId)
+                            .chain(existingSubscription -> {
+                                if (existingSubscription != null) {
+                                    // Ya tiene suscripción, retornar la existente
+                                    return subscriptionPlanRepository.findById(existingSubscription.planId)
+                                            .map(plan -> new SubscriptionStatusResponse(
+                                                    existingSubscription.id,
+                                                    existingSubscription.status,
+                                                    plan.name,
+                                                    plan.description,
+                                                    plan.pricePen.doubleValue(),
+                                                    "PEN",
+                                                    plan.billingCycle,
+                                                    plan.maxSellers,
+                                                    plan.tokensIncluded,
+                                                    existingSubscription.startDate,
+                                                    existingSubscription.endDate,
+                                                    existingSubscription.isActive(),
+                                                    "Suscripción existente"
+                                            ));
+                                }
+                                
+                                // Crear nueva suscripción gratuita
+                                AdminSubscription subscription = new AdminSubscription();
+                                subscription.adminId = adminId;
+                                subscription.planId = freePlan.id;
+                                subscription.status = "active";
+                                subscription.startDate = LocalDateTime.now();
+                                subscription.endDate = null; // Plan gratuito sin expiración
+                                
+                                return adminSubscriptionRepository.persist(subscription)
+                                        .chain(savedSubscription -> {
+                                            // Agregar tokens incluidos en el plan
+                                            return tokenService.addTokens(adminId, freePlan.tokensIncluded)
+                                                    .map(tokens -> new SubscriptionStatusResponse(
+                                                            savedSubscription.id,
+                                                            savedSubscription.status,
+                                                            freePlan.name,
+                                                            freePlan.description,
+                                                            freePlan.pricePen.doubleValue(),
+                                                            "PEN",
+                                                            freePlan.billingCycle,
+                                                            freePlan.maxSellers,
+                                                            freePlan.tokensIncluded,
+                                                            savedSubscription.startDate,
+                                                            savedSubscription.endDate,
+                                                            true,
+                                                            "Suscripción gratuita activada exitosamente"
+                                                    ));
+                                        });
+                            });
+                });
+    }
+
+    @WithTransaction
     public Uni<Boolean> checkSubscriptionLimits(Long adminId, int sellersNeeded) {
         Log.info("🔍 SubscriptionService.checkSubscriptionLimits() - AdminId: " + adminId + ", SellersNeeded: " + sellersNeeded);
         
         return adminSubscriptionRepository.findActiveByAdminId(adminId)
                 .chain(subscription -> {
                     if (subscription == null) {
-                        // Plan gratuito: máximo 2 vendedores
-                        return Uni.createFrom().item(sellersNeeded <= 2);
+                        // Buscar plan gratuito en la base de datos
+                        return subscriptionPlanRepository.findByName("Plan Gratuito")
+                                .map(freePlan -> {
+                                    if (freePlan == null) {
+                                        // Fallback: si no existe el plan gratuito, usar límite de 1
+                                        return sellersNeeded <= 1;
+                                    }
+                                    return sellersNeeded <= freePlan.maxSellers;
+                                });
                     }
                     
                     return subscriptionPlanRepository.findById(subscription.planId)

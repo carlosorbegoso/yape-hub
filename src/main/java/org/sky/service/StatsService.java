@@ -12,8 +12,10 @@ import org.sky.dto.stats.QuickSummaryResponse;
 import org.sky.model.PaymentNotification;
 import org.sky.model.Seller;
 import org.sky.model.Branch;
+import org.sky.model.Transaction;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
+import org.sky.repository.TransactionRepository;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
@@ -35,6 +37,9 @@ public class StatsService {
     
     @Inject
     SellerRepository sellerRepository;
+    
+    @Inject
+    TransactionRepository transactionRepository;
     
     private static final Logger log = Logger.getLogger(StatsService.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -530,6 +535,10 @@ public class StatsService {
                                 List<PaymentNotification> sellerPayments = payments.stream()
                                         .filter(p -> sellerId.equals(p.confirmedBy) || sellerId.equals(p.rejectedBy))
                                         .collect(Collectors.toList());
+                                
+                                log.info("📊 Pagos filtrados para seller " + sellerId + ": " + sellerPayments.size() + " pagos");
+                                log.info("📊 Pagos confirmados por seller: " + sellerPayments.stream().filter(p -> sellerId.equals(p.confirmedBy)).count());
+                                log.info("📊 Pagos rechazados por seller: " + sellerPayments.stream().filter(p -> sellerId.equals(p.rejectedBy)).count());
                                 
                                 // Calcular métricas de resumen específicas del vendedor
                                 SellerAnalyticsResponse.OverviewMetrics overview = calculateSellerOverviewMetrics(sellerPayments, startDate, endDate);

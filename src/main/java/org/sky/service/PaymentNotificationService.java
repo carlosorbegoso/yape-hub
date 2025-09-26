@@ -22,6 +22,7 @@ import org.sky.exception.ValidationException;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.vertx.core.Vertx;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -552,16 +553,18 @@ public class PaymentNotificationService {
      * Obtiene los pagos pendientes para un vendedor específico con paginación
      */
     @WithTransaction
-    public Uni<PendingPaymentsResponse> getPendingPaymentsForSellerPaginated(Long sellerId, int page, int size) {
+    public Uni<PendingPaymentsResponse> getPendingPaymentsForSellerPaginated(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
         log.info("📋 PaymentNotificationService.getPendingPaymentsForSellerPaginated() - Obteniendo pagos pendientes paginados para vendedor: " + sellerId);
         log.info("📋 Página: " + page + ", Tamaño: " + size);
+        log.info("📋 Desde: " + startDate + ", Hasta: " + endDate);
         
         // Validar parámetros de paginación
         final int validatedPage = Math.max(0, page);
         final int validatedSize = (size <= 0 || size > 100) ? 20 : size;
         
-        // Obtener todos los pagos que están realmente pendientes (no confirmados ni rechazados por todos)
-        return paymentNotificationRepository.find("status in (?1, ?2)", "PENDING", "REJECTED_BY_SELLER").list()
+        // Obtener todos los pagos que están realmente pendientes (no confirmados ni rechazados por todos) con filtro de fechas
+        return paymentNotificationRepository.find("status in (?1, ?2) and createdAt >= ?3 and createdAt <= ?4", 
+                "PENDING", "REJECTED_BY_SELLER", startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list()
                 .chain(payments -> {
                     log.info("📋 Encontrados " + payments.size() + " pagos pendientes o rechazados por algunos");
                     
@@ -631,16 +634,18 @@ public class PaymentNotificationService {
      * Obtiene todos los pagos pendientes con paginación (para ADMINs)
      */
     @WithTransaction
-    public Uni<PendingPaymentsResponse> getAllPendingPaymentsPaginated(int page, int size) {
+    public Uni<PendingPaymentsResponse> getAllPendingPaymentsPaginated(int page, int size, LocalDate startDate, LocalDate endDate) {
         log.info("📋 PaymentNotificationService.getAllPendingPaymentsPaginated() - Obteniendo todos los pagos pendientes");
         log.info("📋 Página: " + page + ", Tamaño: " + size);
+        log.info("📋 Desde: " + startDate + ", Hasta: " + endDate);
 
         // Validar parámetros de paginación
         final int validatedPage = Math.max(0, page);
         final int validatedSize = (size <= 0 || size > 100) ? 20 : size;
 
-        // Obtener el total de pagos pendientes
-        return paymentNotificationRepository.count("status = ?1", "PENDING")
+        // Obtener el total de pagos pendientes con filtro de fechas
+        return paymentNotificationRepository.count("status = ?1 and createdAt >= ?2 and createdAt <= ?3", 
+                "PENDING", startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
                 .chain(totalCount -> {
                     log.info("📋 Total de pagos pendientes: " + totalCount);
 
@@ -648,8 +653,9 @@ public class PaymentNotificationService {
                     int totalPages = (int) Math.ceil((double) totalCount / validatedSize);
                     int currentPage = Math.min(validatedPage, Math.max(0, totalPages - 1));
 
-                    // Obtener los pagos paginados
-                    return paymentNotificationRepository.find("status = ?1 order by createdAt desc", "PENDING")
+                    // Obtener los pagos paginados con filtro de fechas
+                    return paymentNotificationRepository.find("status = ?1 and createdAt >= ?2 and createdAt <= ?3 order by createdAt desc", 
+                            "PENDING", startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
                             .page(currentPage, validatedSize)
                             .list()
                             .map(payments -> {
@@ -684,17 +690,20 @@ public class PaymentNotificationService {
      * Obtiene todos los pagos para gestión de administrador con información detallada
      */
     @WithTransaction
-    public Uni<AdminPaymentManagementResponse> getAdminPaymentManagement(Long adminId, int page, int size, String status) {
+    public Uni<AdminPaymentManagementResponse> getAdminPaymentManagement(Long adminId, int page, int size, String status, LocalDate startDate, LocalDate endDate) {
         log.info("👑 PaymentNotificationService.getAdminPaymentManagement() - AdminId: " + adminId + 
                 ", Página: " + page + ", Tamaño: " + size + ", Status: " + status);
+        log.info("👑 Desde: " + startDate + ", Hasta: " + endDate);
         
         // Construir query basada en filtros
-        String query = "adminId = ?1";
+        String query = "adminId = ?1 and createdAt >= ?2 and createdAt <= ?3";
         List<Object> params = new ArrayList<>();
         params.add(adminId);
+        params.add(startDate.atStartOfDay());
+        params.add(endDate.atTime(23, 59, 59));
         
         if (status != null && !status.isEmpty()) {
-            query += " and status = ?2";
+            query += " and status = ?4";
             params.add(status);
         }
         
@@ -906,17 +915,18 @@ public class PaymentNotificationService {
      * Obtiene pagos confirmados por un vendedor específico con paginación
      */
     @WithTransaction
-    public Uni<PendingPaymentsResponse> getConfirmedPaymentsForSellerPaginated(Long sellerId, int page, int size) {
+    public Uni<PendingPaymentsResponse> getConfirmedPaymentsForSellerPaginated(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
         log.info("✅ PaymentNotificationService.getConfirmedPaymentsForSellerPaginated() - SellerId: " + sellerId);
         log.info("✅ Página: " + page + ", Tamaño: " + size);
+        log.info("✅ Desde: " + startDate + ", Hasta: " + endDate);
         
         // Calcular offset
         int offset = page * size;
         
-        // Obtener pagos confirmados por este vendedor
+        // Obtener pagos confirmados por este vendedor con filtro de fechas
         return paymentNotificationRepository.find(
-                "confirmedBy = ?1 and status = ?2 order by confirmedAt desc", 
-                sellerId, "CONFIRMED"
+                "confirmedBy = ?1 and status = ?2 and createdAt >= ?3 and createdAt <= ?4 order by confirmedAt desc", 
+                sellerId, "CONFIRMED", startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
             )
             .page(offset, size)
             .list()

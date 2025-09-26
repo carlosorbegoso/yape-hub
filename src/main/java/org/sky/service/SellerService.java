@@ -9,6 +9,7 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.dto.seller.SellerListResponse;
 import org.sky.dto.seller.SellerResponse;
+import org.sky.dto.seller.SellerRegistrationResponse;
 import org.sky.model.AffiliationCode;
 import org.sky.model.Branch;
 import org.sky.model.Seller;
@@ -18,13 +19,18 @@ import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
 import org.sky.exception.ValidationException;
+import org.sky.util.JwtUtil;
+import org.jboss.logging.Logger;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class SellerService {
+    
+    private static final Logger log = Logger.getLogger(SellerService.class);
     
     @Inject
     AffiliationCodeRepository affiliationCodeRepository;
@@ -40,6 +46,9 @@ public class SellerService {
     
     @Inject
     SellerRepository sellerRepository;
+    
+    @Inject
+    JwtUtil jwtUtil;
     
     @WithTransaction
     public Uni<ApiResponse<SellerResponse>> affiliateSeller(Long adminId, AffiliateSellerRequest request) {
@@ -104,6 +113,7 @@ public class SellerService {
                                                         seller.phone = request.phone();
                                                         seller.branch = branch;
                                                         seller.affiliationCode = request.affiliationCode();
+                                                        seller.affiliationDate = java.time.LocalDateTime.now();
                                                         
                                                         return sellerRepository.persist(seller)
                                                                 .chain(persistedSeller -> {
@@ -120,6 +130,107 @@ public class SellerService {
                                                                                         persistedSeller.lastPayment, persistedSeller.affiliationDate
                                                                                 );
                                                                                 return ApiResponse.success("Vendedor afiliado exitosamente", response);
+                                                                            });
+                                                                });
+                                                    });
+                                        });
+                                                    });
+                                            });
+                                        });
+                            });
+                });
+    }
+    
+    @WithTransaction
+    public Uni<ApiResponse<SellerRegistrationResponse>> affiliateSellerWithToken(Long adminId, AffiliateSellerRequest request) {
+        return affiliationCodeRepository.findByAffiliationCode(request.affiliationCode())
+                .chain(affiliationCode -> {
+                    if (affiliationCode == null || !affiliationCode.isActive) {
+                        return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Código de afiliación inválido"));
+                    }
+                    
+                    if (affiliationCode.remainingUses <= 0) {
+                        return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Código de afiliación agotado"));
+                    }
+                    
+                    // Verificar límites de vendedores según el plan
+                    return sellerRepository.findByAdminId(adminId)
+                            .chain(existingSellers -> {
+                                int currentSellerCount = existingSellers.size();
+                                int newSellerCount = currentSellerCount + 1;
+                                log.info("🔍 SellerService.affiliateSellerWithToken() - AdminId: " + adminId + ", CurrentSellers: " + currentSellerCount + ", NewSellerCount: " + newSellerCount);
+                                
+                                return subscriptionService.checkSubscriptionLimits(adminId, newSellerCount)
+                                        .chain(withinLimits -> {
+                                            log.info("🔍 SubscriptionService.checkSubscriptionLimits() - AdminId: " + adminId + ", SellersNeeded: " + newSellerCount + ", WithinLimits: " + withinLimits);
+                                            if (!withinLimits) {
+                                                return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Límite de vendedores excedido según su plan de suscripción"));
+                                            }
+                                            
+                                            // Verificar si el teléfono ya existe
+                                            return sellerRepository.findByPhone(request.phone())
+                                                    .chain(existingSeller -> {
+                                                        if (existingSeller != null) {
+                                                            return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("El número de teléfono ya está registrado"));
+                                                        }
+                                                        
+                                                        // Generar email automático basado en el teléfono
+                                                        String autoEmail = "seller_" + request.phone().replaceAll("[^0-9]", "") + "@yapechamo.com";
+                                                        
+                                                        return userRepository.findByEmail(autoEmail)
+                                        .chain(existingUser -> {
+                                            if (existingUser != null) {
+                                                return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Error interno: email automático ya existe"));
+                                            }
+                                            
+                                            return branchRepository.findById(affiliationCode.branch.id)
+                                        .chain(branch -> {
+                                            if (branch == null || !branch.admin.id.equals(adminId)) {
+                                                return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Sucursal no encontrada"));
+                                            }
+                                            
+                                            // Create user with auto-generated credentials
+                                            User user = new User();
+                                            user.email = autoEmail;
+                                            user.password = BCrypt.hashpw("auto_password_" + request.phone(), BCrypt.gensalt());
+                                            user.role = User.UserRole.SELLER;
+                                            user.isVerified = true;
+                                            
+                                            return userRepository.persist(user)
+                                                    .chain(persistedUser -> {
+                                                        // Create seller
+                                                        Seller seller = new Seller();
+                                                        seller.user = persistedUser;
+                                                        seller.sellerName = request.sellerName();
+                                                        seller.email = autoEmail;
+                                                        seller.phone = request.phone();
+                                                        seller.branch = branch;
+                                                        seller.affiliationCode = request.affiliationCode();
+                                                        seller.affiliationDate = java.time.LocalDateTime.now();
+                                                        
+                                                        return sellerRepository.persist(seller)
+                                                                .chain(persistedSeller -> {
+                                                                    // Update affiliation code usage
+                                                                    affiliationCode.remainingUses--;
+                                                                    return affiliationCodeRepository.persist(affiliationCode)
+                                                                            .map(updatedCode -> {
+                                                                                // Generar token JWT para el seller
+                                                                                String token = jwtUtil.generateAccessToken(
+                                                                                    persistedUser.id,
+                                                                                    User.UserRole.SELLER,
+                                                                                    persistedSeller.id
+                                                                                );
+                                                                                
+                                                                                SellerRegistrationResponse response = new SellerRegistrationResponse(
+                                                                                        persistedSeller.id, persistedSeller.sellerName, 
+                                                                                        persistedSeller.email, persistedSeller.phone,
+                                                                                        persistedSeller.branch.id, persistedSeller.branch.name, 
+                                                                                        persistedSeller.isActive, persistedSeller.isOnline,
+                                                                                        persistedSeller.totalPayments, persistedSeller.totalAmount, 
+                                                                                        persistedSeller.lastPayment, persistedSeller.affiliationDate,
+                                                                                        token
+                                                                                );
+                                                                                return ApiResponse.success("Vendedor registrado exitosamente con token", response);
                                                                             });
                                                                 });
                                                     });
@@ -250,10 +361,15 @@ public class SellerService {
                 });
     }
     
+
     /**
      * Obtiene todos los vendedores afiliados a un administrador específico con paginación
      */
-    public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId, int page, int limit) {
+    public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId, int page, int limit, LocalDate startDate, LocalDate endDate) {
+        log.info("🚀 SellerService.getSellersByAdmin() - AdminId: " + adminId);
+        log.info("🚀 Página: " + page + ", Limit: " + limit);
+        log.info("🚀 Desde: " + startDate + ", Hasta: " + endDate);
+        
         // Validar parámetros de paginación
         if (page < 1) page = 1;
         if (limit < 1 || limit > 100) limit = 20; // Máximo 100 elementos por página
@@ -263,7 +379,8 @@ public class SellerService {
         final int finalLimit = limit;
         final int offset = (finalPage - 1) * finalLimit;
         
-        return sellerRepository.findByAdminId(adminId)
+        return sellerRepository.find("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3 order by affiliationDate desc", 
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list()
                 .chain(allSellers -> {
                     // Calcular información de paginación
                     int totalItems = allSellers.size();

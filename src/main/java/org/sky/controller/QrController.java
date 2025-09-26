@@ -208,7 +208,7 @@ public class QrController {
                                 return qrService.getAdminIdFromAffiliationCode(request.affiliationCode())
                                         .chain(adminId -> {
                                             log.info("🚀 AdminId obtenido del código: " + adminId);
-                                            return sellerService.affiliateSeller(adminId, request);
+                                            return sellerService.affiliateSellerWithToken(adminId, request);
                                         })
                                         .map(sellerResponse -> {
                                             log.info("🚀 Respuesta del servicio de registro - success: " + sellerResponse.isSuccess());
