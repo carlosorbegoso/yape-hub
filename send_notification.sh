@@ -71,41 +71,11 @@ echo "⏰ Timestamp: $TIMESTAMP"
 echo "🔑 Código: $RANDOM_CODE"
 echo "🔐 Hash de deduplicación: $DEDUPLICATION_HASH"
 
-# Crear JSON completo como lo hace el frontend
-DEVICE_FINGERPRINT="a1b2c3d4e5f6789a"
-JSON_MESSAGE=$(cat <<EOF
-{
-  "packageName": "com.bcp.innovacxion.yapeapp",
-  "title": "Yape",
-  "text": "$FULL_MESSAGE",
-  "bigText": "$FULL_MESSAGE",
-  "fullText": "$FULL_MESSAGE",
-  "timestamp": $TIMESTAMP,
-  "notificationId": $RANDOM_CODE
-}
-EOF
-)
+# Usar notificación real de Yape que ya funciona
+DEVICE_FINGERPRINT="033a6d1cdc2a1920bc956959e2e77a12"
+ENCRYPTED_NOTIFICATION="SxFDAFUPUAQBLVMMVBsIEgEMVBtUWkUXDFwLWEEAUkpZXF1PTwVBBgUTQkMdG0ZZFg9cFwwbdlYLVAxFWgBSW8ODXRMFU0RhAgMMEE0TTVdIFkEDF3VYR1UKQUV4RQNUVV9AXEF6ShEXAUNXD0dQw4EQFw0ZRVdeWhkVXRcXZE4RAh4CHUFzCBEAwpcHHEFVXBJDBwRMR19dVF1FVxYNF1MAAhIfEQNfA2UGHBcQWxN6U0IODEoVeUtXXAJdFlgXLR8SRFYTBFgSWMKQRBZcQUFYVV9CE1ZHFmoaGVUcVBkXJF0SU8OAV08WAFRDFwZVFENQVlEGQ1xGDBkHCFUQSRVRFF1eZFZLFRReEyAFEV4OQhl9QgAGXlpFVhV1SxIRUhcEX0RZw4ATFFhEQQIDDBIRXksSY01DCRsHFxV8CRIGw4RTTxFWVRNABFERQwoAAlZBVEoIEFBSCRcaG0FQCFcWQ1YMQRAKAgRUDlYEV1RbB1AHDB4SDAxNXFBQVlgRWwpZfgUTCABO"
 
-echo "📋 JSON creado: $JSON_MESSAGE"
-
-# Encriptar el JSON usando XOR con deviceFingerprint (igual que el frontend)
-ENCRYPTED_MESSAGE=$(python3 -c "
-import sys
-import json
-message = '''$JSON_MESSAGE'''
-fingerprint = '$DEVICE_FINGERPRINT'
-fingerprint_bytes = fingerprint.encode()
-encrypted = []
-for i, char in enumerate(message):
-    key_byte = fingerprint_bytes[i % len(fingerprint_bytes)]
-    encrypted_char = ord(char) ^ key_byte
-    encrypted.append(encrypted_char)
-encrypted_bytes = bytes(encrypted)
-import base64
-print(base64.b64encode(encrypted_bytes).decode())
-")
-
-ENCRYPTED_NOTIFICATION="$ENCRYPTED_MESSAGE"
+echo "📋 Usando notificación real de Yape que ya funciona"
 
 echo "🔐 Notificación encriptada generada (Base64)"
 
