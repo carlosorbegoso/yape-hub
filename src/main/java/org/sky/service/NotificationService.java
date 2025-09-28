@@ -6,23 +6,15 @@ import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.notification.NotificationResponse;
-import org.sky.dto.notification.SendNotificationRequest;
 import org.sky.dto.notification.YapeNotificationRequest;
 import org.sky.dto.notification.YapeNotificationResponse;
 import org.sky.dto.notification.YapeAuditResponse;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.model.Notification;
-import org.sky.model.YapeNotification;
-import org.sky.model.Transaction;
 import org.sky.model.YapeNotificationAudit;
 import org.sky.repository.NotificationRepository;
-import org.sky.repository.YapeNotificationRepository;
-import org.sky.repository.TransactionRepository;
-import org.sky.repository.BranchRepository;
 import org.sky.repository.YapeNotificationAuditRepository;
 import org.sky.exception.ValidationException;
-import org.sky.service.PaymentNotificationService;
-import org.sky.controller.PaymentWebSocketController;
 import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
@@ -36,14 +28,6 @@ public class NotificationService {
   @Inject
   NotificationRepository notificationRepository;
 
-  @Inject
-  YapeNotificationRepository yapeNotificationRepository;
-
-  @Inject
-  TransactionRepository transactionRepository;
-
-  @Inject
-  BranchRepository branchRepository;
 
   @Inject
   YapeNotificationAuditRepository yapeNotificationAuditRepository;
@@ -57,28 +41,8 @@ public class NotificationService {
   @Inject
   PaymentNotificationService paymentNotificationService;
 
-  @Inject
-  PaymentWebSocketController webSocketController;
 
   private static final Logger log = Logger.getLogger(NotificationService.class);
-
-  @WithTransaction
-  public Uni<ApiResponse<String>> sendNotification(SendNotificationRequest request) {
-    Notification notification = new Notification();
-    notification.targetType = request.targetType();
-    notification.targetId = request.targetId();
-    notification.title = request.title();
-    notification.message = request.message();
-    notification.type = request.type();
-    notification.data = request.data();
-
-    return notificationRepository.persist(notification)
-        .map(persistedNotification -> {
-          // TODO: Send push notification to mobile devices
-          // TODO: Send email notification if configured
-          return ApiResponse.success("Notificación enviada exitosamente");
-        });
-  }
 
   public Uni<ApiResponse<List<NotificationResponse>>> getNotifications(Long userId, String userRole,
                                                                        int page, int limit, Boolean unreadOnly, LocalDate startDate, LocalDate endDate) {
@@ -267,57 +231,6 @@ public class NotificationService {
                 ));
           }
         });
-  }
-
-  /**
-   * Procesa notificación de Yape y la convierte en notificación de pago para broadcast
-   */
-  @WithTransaction
-  public Uni<ApiResponse<YapeNotificationResponse>> processYapeNotificationAsPayment(YapeNotificationRequest request) {
-    log.info("💰 NotificationService.processYapeNotificationAsPayment() - Procesando como pago");
-
-    try {
-      // Desencriptar notificación
-      YapeNotificationResponse decryptedResponse = yapeDecryptionService.decryptYapeNotification(
-          request.encryptedNotification(),
-          request.deviceFingerprint()
-      );
-
-      // Crear notificación de pago
-      PaymentNotificationRequest paymentRequest = new PaymentNotificationRequest(
-          request.adminId(),
-          decryptedResponse.amount(),
-          decryptedResponse.senderPhone(), // Usar como nombre por ahora
-          decryptedResponse.transactionId(),
-          request.deduplicationHash() // Pasar el hash de deduplicación
-      );
-
-      // Procesar como notificación de pago
-      return paymentNotificationService.processPaymentNotification(paymentRequest)
-          .map(paymentResponse -> {
-            log.info("✅ Notificación de Yape procesada como pago");
-
-            // Crear respuesta de Yape con información del pago
-            YapeNotificationResponse yapeResponse = new YapeNotificationResponse(
-                paymentResponse.paymentId(),
-                decryptedResponse.transactionId(),
-                decryptedResponse.amount(),
-                decryptedResponse.senderPhone(),
-                decryptedResponse.senderName(),
-                decryptedResponse.receiverPhone(),
-                "PENDING_CONFIRMATION",
-                paymentResponse.timestamp(),
-                "Pago enviado a vendedores para confirmación"
-            );
-
-            return ApiResponse.success("Notificación de Yape procesada como pago", yapeResponse);
-          });
-
-    } catch (Exception e) {
-      log.error("❌ Error procesando notificación de Yape como pago: " + e.getMessage());
-      throw ValidationException.invalidField("encryptedNotification", request.encryptedNotification(),
-          "Error procesando notificación como pago: " + e.getMessage());
-    }
   }
 
   /**

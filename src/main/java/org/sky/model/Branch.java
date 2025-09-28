@@ -1,6 +1,7 @@
 package org.sky.model;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
+import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,7 +12,10 @@ import java.util.List;
 
 @Entity
 @Table(name = "branches")
-public class Branch extends PanacheEntity {
+public class Branch extends PanacheEntityBase {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long id;
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admin_id", nullable = false)

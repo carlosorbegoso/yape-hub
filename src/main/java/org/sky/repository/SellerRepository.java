@@ -1,6 +1,6 @@
 package org.sky.repository;
 
-import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.Seller;
@@ -8,11 +8,7 @@ import org.sky.model.Seller;
 import java.util.List;
 
 @ApplicationScoped
-public class SellerRepository implements PanacheRepositoryBase<Seller, Long> {
-
-  public Uni<Seller> findByUserId(Long userId) {
-    return find("user.id", userId).firstResult();
-  }
+public class SellerRepository implements PanacheRepository<Seller> {
 
 
   public Uni<Seller> findByPhone(String phone) {
@@ -25,6 +21,10 @@ public class SellerRepository implements PanacheRepositoryBase<Seller, Long> {
 
   public Uni<List<Seller>> findByAdminId(Long adminId) {
     return find("branch.admin.id", adminId).list();
+  }
+
+  public Uni<Seller> findByUserId(Long userId) {
+    return find("user.id", userId).firstResult();
   }
 
   public Uni<Seller> findBySellerIdAndAdminId(Long sellerId, Long adminId) {

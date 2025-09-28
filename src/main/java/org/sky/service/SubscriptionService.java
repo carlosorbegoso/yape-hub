@@ -5,15 +5,12 @@ import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.billing.SubscriptionPlanResponse;
 import org.sky.dto.billing.SubscriptionStatusResponse;
 import org.sky.model.AdminSubscription;
-import org.sky.model.SubscriptionPlan;
 import org.sky.repository.AdminSubscriptionRepository;
 import org.sky.repository.SubscriptionPlanRepository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @ApplicationScoped
 public class SubscriptionService {
@@ -27,30 +24,7 @@ public class SubscriptionService {
     @Inject
     TokenService tokenService;
 
-    @WithTransaction
-    public Uni<List<SubscriptionPlanResponse>> getAvailablePlans() {
-        Log.info("📋 SubscriptionService.getAvailablePlans()");
-        
-        return subscriptionPlanRepository.findAll()
-                .list()
-                .map(plans -> plans.stream()
-                        .map(plan -> new SubscriptionPlanResponse(
-                                plan.id,
-                                plan.name,
-                                plan.description,
-                                plan.pricePen.doubleValue(),
-                                plan.billingCycle,
-                                plan.maxAdmins,
-                                plan.maxSellers,
-                                plan.tokensIncluded,
-                                plan.features,
-                                plan.isActive,
-                                plan.createdAt
-                        ))
-                        .toList());
-    }
-
-    @WithTransaction
+  @WithTransaction
     public Uni<SubscriptionStatusResponse> getSubscriptionStatus(Long adminId) {
         Log.info("📋 SubscriptionService.getSubscriptionStatus() - AdminId: " + adminId);
         

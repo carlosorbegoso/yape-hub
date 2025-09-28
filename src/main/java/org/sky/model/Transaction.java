@@ -1,6 +1,7 @@
 package org.sky.model;
 
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
+import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -8,7 +9,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transactions")
-public class Transaction extends PanacheEntity {
+public class Transaction extends PanacheEntityBase {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  public Long id;
     
     @Column(name = "transaction_id", unique = true, nullable = false)
     public String transactionId;

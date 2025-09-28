@@ -8,19 +8,19 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.sky.dto.ApiResponse;
+import org.sky.dto.ErrorResponse;
 import org.sky.dto.auth.AdminRegisterRequest;
 import org.sky.dto.auth.LoginRequest;
-import org.sky.service.AuthService;
-import org.sky.util.JwtExtractor;
-import org.sky.util.JwtUtil;
-import org.sky.model.User;
+import org.sky.service.auth.AuthService;
+
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.sky.util.jwt.JwtExtractor;
 
-import java.util.Map;
+import java.time.Instant;
+
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -28,15 +28,14 @@ import java.util.Map;
 @Tag(name = "Authentication", description = "Authentication and user management endpoints")
 public class AuthController {
 
-  private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-    @Inject
-    AuthService authService;
+  @Inject
+  AuthService authService;
     
-    @Inject
-    JwtUtil jwtUtil;
-    
-    @Inject
-    JwtExtractor jwtExtractor;
+  @Inject
+  JwtExtractor  jwtExtractor;
+
+  @Inject
+  JsonWebToken jwt;
     
     @POST
     @Path("/admin/register")
@@ -44,9 +43,8 @@ public class AuthController {
     @PermitAll
     @Operation(summary = "Register new admin", description = "Register a new business administrator")
     public Uni<Response> registerAdmin(@Valid AdminRegisterRequest request) {
-        log.info("Register new administrator");
-        return authService.registerAdmin(request)
-                .map(response -> Response.status(201).entity(response).build());
+      return authService.registerAdmin(request)
+          .map(response -> Response.status(Response.Status.CREATED).entity(response).build());
     }
     
     @POST
@@ -67,31 +65,34 @@ public class AuthController {
         return authService.refreshToken(token)
                 .map(response -> Response.ok(response).build());
     }
-    
-    @POST
-    @Path("/logout")
-    @PermitAll
-    @Operation(summary = "User logout", description = "Logout user and invalidate session")
-    public Uni<Response> logout(@HeaderParam("X-Auth-Token") String token) {
-        try {
-            Long userId = jwtExtractor.extractUserIdFromToken(token);
-            return authService.logout(userId)
-                    .map(response -> Response.ok(response).build());
-        } catch (Exception e) {
-            log.error("Error during logout: {}", e.getMessage());
-            org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
-                "Invalid token: " + e.getMessage(),
-                "INVALID_TOKEN",
-                java.util.Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"),
-                java.time.Instant.now()
-            );
-            return Uni.createFrom().item(Response.status(400)
-                    .entity(errorResponse)
-                    .build());
-        }
-    }
-    
-    @POST
+
+  @POST
+  @Path("/logout")
+  @PermitAll
+  @Operation(summary = "User logout", description = "Logout user and invalidate session")
+  public Uni<Response> logout() {
+    return jwtExtractor.extractUserId(jwt)
+        .onItem().ifNull().failWith(() -> new RuntimeException("UserId not found in token"))
+        .chain(userId ->
+            authService.logout(userId)
+                .map(result -> Response.ok(result).build())
+        )
+        .onFailure().recoverWithItem(throwable ->
+            Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ErrorResponse(
+                    "Invalid token",
+                    "INVALID_TOKEN",
+                    java.util.Map.of("error", "UserId not found in token"),
+                    Instant.now()
+                ))
+                .build()
+        );
+  }
+
+
+
+
+  @POST
     @Path("/forgot-password")
     @Operation(summary = "Forgot password", description = "Send password reset email")
     public Response forgotPassword(@QueryParam("email") String email) {
@@ -112,22 +113,11 @@ public class AuthController {
                     if (response.isSuccess()) {
                         return Response.ok(response).build();
                     } else {
-                        return Response.status(400).entity(response).build();
+                      return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
                     }
                 });
     }
     
-    
-    @POST
-    @Path("/change-password")
-    @Operation(summary = "Change password", description = "Change user password")
-    public Response changePassword(@QueryParam("userId") Long userId, 
-                                  @QueryParam("currentPassword") String currentPassword,
-                                  @QueryParam("newPassword") String newPassword) {
-        // TODO: Implement change password functionality
-        ApiResponse<String> response = ApiResponse.success("Password changed successfully");
-        return Response.ok(response).build();
-    }
-    
-    
+
+
 }

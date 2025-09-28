@@ -15,7 +15,8 @@ import org.sky.service.NotificationService;
 import org.sky.service.SecurityService;
 import org.sky.service.WebSocketNotificationService;
 import org.sky.repository.SellerRepository;
-import org.sky.util.JwtUtil;
+import org.sky.util.jwt.JwtExtractor;
+import org.sky.util.jwt.JwtValidator;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -47,7 +48,10 @@ public class NotificationController {
     SellerRepository sellerRepository;
     
     @Inject
-    JwtUtil jwtUtil;
+    JwtExtractor jwtExtractor;
+    
+    @Inject
+    JwtValidator jwtValidator;
     
     private static final Logger log = Logger.getLogger(NotificationController.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -192,13 +196,13 @@ public class NotificationController {
             }
             
             // Validar token JWT
-            Long userId = jwtUtil.getUserIdFromToken(token);
+            Long userId = jwtExtractor.extractUserId(jwtValidator.parseToken(token).await().indefinitely()).await().indefinitely();
             if (userId == null) {
                 return Uni.createFrom().item(Response.ok("{\"error\": \"Token de autenticación inválido\"}").build());
             }
             
             // Extraer sellerId del token
-            Long tokenSellerId = jwtUtil.getSellerIdFromToken(token);
+            Long tokenSellerId = jwtExtractor.extractSellerId(jwtValidator.parseToken(token).await().indefinitely()).await().indefinitely();
             if (tokenSellerId == null) {
                 return Uni.createFrom().item(Response.ok("{\"error\": \"Token no válido - falta sellerId\"}").build());
             }

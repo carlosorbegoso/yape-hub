@@ -21,19 +21,4 @@ public class AdminSubscriptionRepository implements PanacheRepository<AdminSubsc
         return find("adminId = ?1 order by startDate desc", adminId).list();
     }
 
-    public Uni<List<AdminSubscription>> findActiveSubscriptions() {
-        return find("status = 'active' and (endDate is null or endDate > ?1)", LocalDateTime.now()).list();
-    }
-
-    public Uni<Long> countActiveSubscriptions() {
-        return count("status = 'active' and (endDate is null or endDate > ?1)", LocalDateTime.now());
-    }
-
-    public Uni<List<AdminSubscription>> findExpiredSubscriptions() {
-        return find("status = 'active' and endDate <= ?1", LocalDateTime.now()).list();
-    }
-
-    public Uni<List<AdminSubscription>> findByPlanId(Long planId) {
-        return find("planId = ?1", planId).list();
-    }
 }

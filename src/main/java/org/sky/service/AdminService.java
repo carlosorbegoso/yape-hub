@@ -7,13 +7,10 @@ import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.admin.AdminProfileResponse;
 import org.sky.dto.admin.UpdateAdminProfileRequest;
-import org.sky.model.Admin;
-import org.sky.model.Branch;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.BranchRepository;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class AdminService {
@@ -36,7 +33,7 @@ public class AdminService {
                                 List<AdminProfileResponse.BranchInfo> branchInfos = branches.stream()
                                         .map(branch -> new AdminProfileResponse.BranchInfo(
                                                 branch.id, branch.name, branch.code, branch.address, branch.isActive))
-                                        .collect(Collectors.toList());
+                                        .toList();
                                 
                                 AdminProfileResponse response = new AdminProfileResponse(
                                         admin.id, admin.user.email, admin.businessName, admin.businessType,

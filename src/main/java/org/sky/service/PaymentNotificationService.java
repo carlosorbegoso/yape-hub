@@ -963,32 +963,12 @@ public class PaymentNotificationService {
                 });
             });
     }
-    
-    /**
-     * Clase interna para información de vendedores conectados
-     */
-    public static class ConnectedSellerInfo {
-        public final Long sellerId;
-        public final String sellerName;
-        public final String email;
-        public final String phone;
-        public final Long branchId;
-        public final String branchName;
-        public final boolean isConnected;
-        public final java.time.LocalDateTime lastSeen;
-        
-        public ConnectedSellerInfo(Long sellerId, String sellerName, String email, String phone, 
-                                 Long branchId, String branchName, boolean isConnected, 
-                                 java.time.LocalDateTime lastSeen) {
-            this.sellerId = sellerId;
-            this.sellerName = sellerName;
-            this.email = email;
-            this.phone = phone;
-            this.branchId = branchId;
-            this.branchName = branchName;
-            this.isConnected = isConnected;
-            this.lastSeen = lastSeen;
-        }
-    }
+
+  /**
+   * Clase interna para información de vendedores conectados
+   */
+  public record ConnectedSellerInfo(Long sellerId, String sellerName, String email, String phone, Long branchId,
+                                    String branchName, boolean isConnected, LocalDateTime lastSeen) {
+  }
     
 }

@@ -1,12 +1,12 @@
 package org.sky.repository;
 
-import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.Admin;
 
 @ApplicationScoped
-public class AdminRepository implements PanacheRepositoryBase<Admin, Long> {
+public class AdminRepository implements PanacheRepository<Admin> {
     
     public Uni<Admin> findByUserId(Long userId) {
         return find("user.id", userId).firstResult();

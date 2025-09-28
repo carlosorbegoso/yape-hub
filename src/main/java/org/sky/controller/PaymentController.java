@@ -8,7 +8,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.payment.PaymentClaimRequest;
-import org.sky.dto.payment.PaymentClaimResponse;
 import org.sky.dto.payment.PaymentRejectRequest;
 import org.sky.annotation.TokenConsumption;
 import org.sky.service.PaymentNotificationService;
@@ -361,7 +360,7 @@ public class PaymentController {
                 .chain(userId -> paymentNotificationService.getAllSellersStatusForAdmin(adminId))
                 .map(allSellers -> {
                     // Contar conectados y desconectados
-                    long connectedCount = allSellers.stream().filter(s -> s.isConnected).count();
+                    long connectedCount = allSellers.stream().filter(s -> s.isConnected()).count();
                     long disconnectedCount = allSellers.size() - connectedCount;
                     
                     // Crear respuesta con estadísticas

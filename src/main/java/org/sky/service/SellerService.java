@@ -10,8 +10,6 @@ import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.dto.seller.SellerListResponse;
 import org.sky.dto.seller.SellerResponse;
 import org.sky.dto.seller.SellerRegistrationResponse;
-import org.sky.model.AffiliationCode;
-import org.sky.model.Branch;
 import org.sky.model.Seller;
 import org.sky.model.User;
 import org.sky.repository.AffiliationCodeRepository;
@@ -19,12 +17,13 @@ import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
 import org.sky.exception.ValidationException;
-import org.sky.util.JwtUtil;
+import org.sky.util.jwt.JwtExtractor;
+import org.sky.util.jwt.JwtValidator;
+import org.sky.util.jwt.JwtGenerator;
 import org.jboss.logging.Logger;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
@@ -48,100 +47,15 @@ public class SellerService {
     SellerRepository sellerRepository;
     
     @Inject
-    JwtUtil jwtUtil;
+    JwtExtractor jwtExtractor;
     
-    @WithTransaction
-    public Uni<ApiResponse<SellerResponse>> affiliateSeller(Long adminId, AffiliateSellerRequest request) {
-        return affiliationCodeRepository.findByAffiliationCode(request.affiliationCode())
-                .chain(affiliationCode -> {
-                    if (affiliationCode == null || !affiliationCode.isActive) {
-                        return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Código de afiliación inválido"));
-                    }
-                    
-                    if (affiliationCode.remainingUses <= 0) {
-                        return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Código de afiliación agotado"));
-                    }
-                    
-                    // Verificar límites de vendedores según el plan
-                    return sellerRepository.findByAdminId(adminId)
-                            .chain(existingSellers -> {
-                                int currentSellerCount = existingSellers.size();
-                                int newSellerCount = currentSellerCount + 1;
-                                
-                                return subscriptionService.checkSubscriptionLimits(adminId, newSellerCount)
-                                        .chain(withinLimits -> {
-                                            if (!withinLimits) {
-                                                return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Límite de vendedores excedido según su plan de suscripción"));
-                                            }
-                                            
-                                            // Verificar si el teléfono ya existe
-                                            return sellerRepository.findByPhone(request.phone())
-                                                    .chain(existingSeller -> {
-                                                        if (existingSeller != null) {
-                                                            return Uni.createFrom().item(ApiResponse.<SellerResponse>error("El número de teléfono ya está registrado"));
-                                                        }
-                                                        
-                                                        // Generar email automático basado en el teléfono
-                                                        String autoEmail = "seller_" + request.phone().replaceAll("[^0-9]", "") + "@yapechamo.com";
-                                                        
-                                                        return userRepository.findByEmail(autoEmail)
-                                        .chain(existingUser -> {
-                                            if (existingUser != null) {
-                                                return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Error interno: email automático ya existe"));
-                                            }
-                                            
-                                            return branchRepository.findById(affiliationCode.branch.id)
-                                        .chain(branch -> {
-                                            if (branch == null || !branch.admin.id.equals(adminId)) {
-                                                return Uni.createFrom().item(ApiResponse.<SellerResponse>error("Sucursal no encontrada"));
-                                            }
-                                            
-                                            // Create user with auto-generated credentials
-                                            User user = new User();
-                                            user.email = autoEmail;
-                                            user.password = BCrypt.hashpw("auto_password_" + request.phone(), BCrypt.gensalt());
-                                            user.role = User.UserRole.SELLER;
-                                            user.isVerified = true;
-                                            
-                                            return userRepository.persist(user)
-                                                    .chain(persistedUser -> {
-                                                        // Create seller
-                                                        Seller seller = new Seller();
-                                                        seller.user = persistedUser;
-                                                        seller.sellerName = request.sellerName();
-                                                        seller.email = autoEmail;
-                                                        seller.phone = request.phone();
-                                                        seller.branch = branch;
-                                                        seller.affiliationCode = request.affiliationCode();
-                                                        seller.affiliationDate = java.time.LocalDateTime.now();
-                                                        
-                                                        return sellerRepository.persist(seller)
-                                                                .chain(persistedSeller -> {
-                                                                    // Update affiliation code usage
-                                                                    affiliationCode.remainingUses--;
-                                                                    return affiliationCodeRepository.persist(affiliationCode)
-                                                                            .map(updatedCode -> {
-                                                                                SellerResponse response = new SellerResponse(
-                                                                                        persistedSeller.id, persistedSeller.sellerName, 
-                                                                                        persistedSeller.email, persistedSeller.phone,
-                                                                                        persistedSeller.branch.id, persistedSeller.branch.name, 
-                                                                                        persistedSeller.isActive, persistedSeller.isOnline,
-                                                                                        persistedSeller.totalPayments, persistedSeller.totalAmount, 
-                                                                                        persistedSeller.lastPayment, persistedSeller.affiliationDate
-                                                                                );
-                                                                                return ApiResponse.success("Vendedor afiliado exitosamente", response);
-                                                                            });
-                                                                });
-                                                    });
-                                        });
-                                                    });
-                                            });
-                                        });
-                            });
-                });
-    }
+    @Inject
+    JwtValidator jwtValidator;
     
-    @WithTransaction
+    @Inject
+    JwtGenerator jwtGenerator;
+
+  @WithTransaction
     public Uni<ApiResponse<SellerRegistrationResponse>> affiliateSellerWithToken(Long adminId, AffiliateSellerRequest request) {
         return affiliationCodeRepository.findByAffiliationCode(request.affiliationCode())
                 .chain(affiliationCode -> {
@@ -215,7 +129,7 @@ public class SellerService {
                                                                     return affiliationCodeRepository.persist(affiliationCode)
                                                                             .map(updatedCode -> {
                                                                                 // Generar token JWT para el seller
-                                                                                String token = jwtUtil.generateAccessToken(
+                                                                                String token = jwtGenerator.generateAccessToken(
                                                                                     persistedUser.id,
                                                                                     User.UserRole.SELLER,
                                                                                     persistedSeller.id

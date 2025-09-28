@@ -6,12 +6,11 @@ import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.qr.*;
+import org.sky.exception.ValidationException;
 import org.sky.model.AffiliationCode;
 import org.sky.model.Branch;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.AffiliationCodeRepository;
-import org.sky.repository.QrCodeRepository;
-import org.sky.exception.ValidationException;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -25,6 +24,8 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import org.sky.service.auth.AuthService;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -36,9 +37,6 @@ public class QrService {
 
   @Inject
   AffiliationCodeRepository affiliationCodeRepository;
-
-  @Inject
-  QrCodeRepository qrCodeRepository;
 
   @Inject
   AuthService authService;
