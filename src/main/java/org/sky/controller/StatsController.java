@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.service.SecurityService;
+import org.sky.service.security.SecurityService;
 import org.sky.service.StatsService;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;

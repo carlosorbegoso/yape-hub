@@ -11,7 +11,7 @@ import org.sky.dto.ErrorResponse;
 import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.annotation.TokenConsumption;
 import org.sky.service.QrService;
-import org.sky.service.SecurityService;
+import org.sky.service.security.SecurityService;
 import org.sky.service.SellerService;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.eclipse.microprofile.openapi.annotations.Operation;

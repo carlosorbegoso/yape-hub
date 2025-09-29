@@ -1,4 +1,4 @@
-package org.sky.service.notification;
+package org.sky.service.notification.yape;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;

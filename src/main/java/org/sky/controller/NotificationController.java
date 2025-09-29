@@ -6,21 +6,15 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.notification.NotificationResponse;
 import org.sky.dto.notification.YapeNotificationRequest;
-import org.sky.dto.notification.YapeNotificationResponse;
-import org.sky.dto.notification.YapeAuditResponse;
-import org.sky.service.notification.NotificationQueryService;
-import org.sky.service.notification.NotificationUpdateService;
-import org.sky.service.notification.YapeNotificationProcessor;
-import org.sky.service.notification.YapeAuditService;
-import org.sky.service.SecurityService;
+import org.sky.service.notification.yape.NotificationQueryService;
+import org.sky.service.notification.yape.NotificationUpdateService;
+import org.sky.service.notification.yape.YapeNotificationProcessor;
+import org.sky.service.notification.yape.YapeAuditService;
+import org.sky.service.security.SecurityService;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
-
-import java.util.List;
 
 @Path("/api/notifications")
 @Produces(MediaType.APPLICATION_JSON)

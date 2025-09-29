@@ -2,15 +2,13 @@ package org.sky.controller;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.PermitAll;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.service.SellerService;
-import org.sky.service.SecurityService;
+import org.sky.service.security.SecurityService;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;

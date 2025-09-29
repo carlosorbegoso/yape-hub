@@ -9,7 +9,7 @@ import jakarta.ws.rs.core.Response;
 import org.sky.dto.branch.BranchCreateRequest;
 import org.sky.dto.branch.BranchUpdateRequest;
 import org.sky.service.branch.BranchService;
-import org.sky.service.SecurityService;
+import org.sky.service.security.SecurityService;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
