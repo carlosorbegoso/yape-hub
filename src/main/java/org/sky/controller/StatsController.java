@@ -267,7 +267,7 @@ public class StatsController {
                 })
                 .map(analytics -> {
                     log.info("✅ Analytics de vendedor obtenidos exitosamente");
-                    return Response.ok(ApiResponse.<SellerAnalyticsResponse>success("Analytics de vendedor obtenidos exitosamente", analytics)).build();
+                    return Response.ok(ApiResponse.success("Analytics de vendedor obtenidos exitosamente", analytics)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error obteniendo analytics de vendedor: " + throwable.getMessage());

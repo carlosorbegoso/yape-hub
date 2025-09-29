@@ -294,48 +294,47 @@ public class SellerService {
         final int offset = (finalPage - 1) * finalLimit;
         
         return sellerRepository.find("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3 order by affiliationDate desc", 
-                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list()
-                .chain(allSellers -> {
-                    // Calcular información de paginación
-                    int totalItems = allSellers.size();
-                    int totalPages = (int) Math.ceil((double) totalItems / finalLimit);
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                .page(finalPage - 1, finalLimit)  // OPTIMIZADO: Paginación en BD
+                .list()
+                .chain(paginatedSellers -> {
+                    // Obtener conteo total para la información de paginación
+                    return sellerRepository.count("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3", 
+                            adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                            .map(totalCount -> {
+                                int totalPages = (int) Math.ceil((double) totalCount / finalLimit);
                     
-                    // Aplicar paginación
-                    List<Seller> paginatedSellers = allSellers.stream()
-                            .skip(offset)
-                            .limit(finalLimit)
-                            .collect(Collectors.toList());
+                                List<SellerResponse> sellerResponses = paginatedSellers.stream()
+                                        .map(seller -> new SellerResponse(
+                                                seller.id,
+                                                seller.sellerName,
+                                                seller.email,
+                                                seller.phone,
+                                                seller.branch.id,
+                                                seller.branch.name,
+                                                seller.isActive,
+                                                seller.isOnline,
+                                                seller.totalPayments,
+                                                seller.totalAmount,
+                                                seller.lastPayment,
+                                                seller.affiliationDate
+                                        ))
+                                        .collect(Collectors.toList());
                     
-                    List<SellerResponse> sellerResponses = paginatedSellers.stream()
-                            .map(seller -> new SellerResponse(
-                                    seller.id,
-                                    seller.sellerName,
-                                    seller.email,
-                                    seller.phone,
-                                    seller.branch.id,
-                                    seller.branch.name,
-                                    seller.isActive,
-                                    seller.isOnline,
-                                    seller.totalPayments,
-                                    seller.totalAmount,
-                                    seller.lastPayment,
-                                    seller.affiliationDate
-                            ))
-                            .collect(Collectors.toList());
+                                SellerListResponse.PaginationInfo pagination = new SellerListResponse.PaginationInfo(
+                                        finalPage, // currentPage
+                                        totalPages, // totalPages
+                                        totalCount.intValue(), // totalItems - CORREGIDO
+                                        finalLimit // itemsPerPage
+                                );
                     
-                    SellerListResponse.PaginationInfo pagination = new SellerListResponse.PaginationInfo(
-                            finalPage, // currentPage
-                            totalPages, // totalPages
-                            totalItems, // totalItems
-                            finalLimit // itemsPerPage
-                    );
+                                SellerListResponse listResponse = new SellerListResponse(
+                                        sellerResponses,
+                                        pagination
+                                );
                     
-                    SellerListResponse listResponse = new SellerListResponse(
-                            sellerResponses,
-                            pagination
-                    );
-                    
-                    return Uni.createFrom().item(ApiResponse.success("Vendedores obtenidos exitosamente", listResponse));
+                                return ApiResponse.success("Vendedores obtenidos exitosamente", listResponse);
+                            });
                 });
     }
 }

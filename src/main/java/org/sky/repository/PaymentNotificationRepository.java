@@ -115,7 +115,46 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     }
     
     /**
-     * Result record for daily stats
+     * Find payments for quick summary (limited result set for dashboard)
+     */
+    public Uni<List<PaymentNotification>> findPaymentsForQuickSummary(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
+                .page(0, 1000)  // LÍMITE: máximo 1000 pagos para resumen rápido
+                .list();
+    }
+    
+    /**
+     * Find payments for detailed analytics with pagination
+     */
+    public Uni<List<PaymentNotification>> findPaymentsForAnalytics(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
+                .page(0, 3000)  // LÍMITE: máximo 3000 pagos para análisis
+                .list();
+    }
+    
+    /**
+     * Find payments confirmed by specific seller
+     */
+    public Uni<List<PaymentNotification>> findPaymentsConfirmedBySeller(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
+                sellerId, startDateTime, endDateTime)
+                .page(0, 2000)  // Límite específico para vendedor
+                .list();
+    }
+    
+    /**
+     * Count payments by status for specific admin
+     */
+    public Uni<Long> countPaymentsByStatus(Long adminId, String status, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return count("adminId = ?1 and status = ?2 and createdAt >= ?3 and createdAt <= ?4", 
+                adminId, status, startDateTime, endDateTime);
+    }
+    
+    // TODO: Implement getPaymentTrends with simplified query approach
+    
+    /**
+     * Result records
      */
     public record DailyStatsResult(LocalDate date, int count, double totalAmount) {}
+    public record PaymentTrendResult(LocalDate date, int totalCount, double confirmedAmount, int confirmedCount) {}
 }

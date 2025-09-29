@@ -93,7 +93,8 @@ public class CacheService {
     private User loadUserFromDB(String email) {
         try {
             log.debug("🔄 Loading user from DB: " + email);
-            return userRepository.findByEmail(email).await().atMost(Duration.ofSeconds(2));
+            return userRepository.findByEmail(email)
+                    .await().indefinitely();  // Espera indefinidamente pero reactivo
         } catch (Exception e) {
             log.error("❌ Error loading user: " + email, e);
             return null;
@@ -103,7 +104,10 @@ public class CacheService {
     private User loadUserByIdFromDB(Long userId) {
         try {
             log.debug("🔄 Loading user by ID from DB: " + userId);
-            return userRepository.findById(userId).await().atMost(Duration.ofSeconds(2));
+
+
+            return userRepository.findById(userId)
+                    .await().indefinitely();  // Espera indefinidamente pero reactivo
         } catch (Exception e) {
             log.error("❌ Error loading user by ID: " + userId, e);
             return null;
