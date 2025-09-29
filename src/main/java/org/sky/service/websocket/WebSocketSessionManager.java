@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.websocket.Session;
+import jakarta.websocket.SendResult;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import org.sky.service.security.SecurityService;
@@ -68,37 +69,41 @@ public class WebSocketSessionManager {
 
     public Uni<Void> sendErrorAndClose(Session session, String errorMessage) {
         return Uni.createFrom().item(() -> {
-            try {
-                if (session.isOpen()) {
-                    String errorResponse = createErrorMessage(errorMessage);
-                    session.getAsyncRemote().sendText(errorResponse, result -> {
-                        if (result.getException() != null) {
-                            log.error("Error sending error message: " + result.getException().getMessage());
-                        }
-                        try {
-                            if (session.isOpen()) {
-                                session.close();
-                            }
-                        } catch (Exception closeException) {
-                            // Session already closed
-                        }
-                    });
-                } else {
-                    session.close();
-                }
-                return null;
-            } catch (Exception e) {
-                log.error("Error in sendErrorAndClose: " + e.getMessage());
-                try {
-                    if (session.isOpen()) {
-                        session.close();
-                    }
-                } catch (Exception closeException) {
-                    // Session already closed
-                }
-                return null;
-            }
+            sendErrorMessage(session, errorMessage);
+            closeSessionSafely(session);
+            return null;
         });
+    }
+
+    private void sendErrorMessage(Session session, String errorMessage) {
+        if (!session.isOpen()) {
+            return;
+        }
+
+        try {
+            String errorResponse = createErrorMessage(errorMessage);
+            session.getAsyncRemote().sendText(errorResponse, result -> handleSendResult(result));
+        } catch (Exception e) {
+            log.error("Error sending error message: " + e.getMessage());
+        }
+    }
+
+    private void handleSendResult(SendResult result) {
+        if (result.getException() != null) {
+            log.error("Error sending error message: " + result.getException().getMessage());
+        }
+    }
+
+    private void closeSessionSafely(Session session) {
+        if (!session.isOpen()) {
+            return;
+        }
+
+        try {
+            session.close();
+        } catch (Exception e) {
+            log.debug("Session already closed: " + e.getMessage());
+        }
     }
 
     private String createErrorMessage(String errorMessage) {
