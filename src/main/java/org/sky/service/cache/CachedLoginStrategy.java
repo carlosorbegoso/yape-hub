@@ -1,4 +1,4 @@
-package org.sky.service.auth;
+package org.sky.service.cache;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -7,19 +7,19 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
 import org.sky.model.User;
-import org.sky.service.CacheService;
+import org.sky.service.auth.LoginStrategy;
 
 @ApplicationScoped
 public class CachedLoginStrategy implements LoginStrategy {
 
     @Inject
-    UserValidations userValidationService;
+    org.sky.service.auth.UserValidations userValidationService;
     
     @Inject
-    JwtTokenService tokenService;
+    org.sky.service.auth.JwtTokenService tokenService;
     
     @Inject
-    LoginResponseBuilder loginResponseBuilder;
+    org.sky.service.auth.LoginResponseBuilder loginResponseBuilder;
 
     @Override
     public Uni<ApiResponse<LoginResponse>> execute(LoginRequest request) {

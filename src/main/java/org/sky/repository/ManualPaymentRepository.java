@@ -13,7 +13,7 @@ import java.util.List;
 public class ManualPaymentRepository implements PanacheRepository<ManualPayment> {
 
     public Uni<List<ManualPayment>> findByAdminId(Long adminId) {
-        return find("adminId = ?1 order by createdAt desc", adminId).list();
+        return find("adminId = ?1 order by createdAt desc", adminId).range(0, 100).list(); // Limited to 100 for low-resource efficiency
     }
 
     public Uni<List<ManualPayment>> findByAdminId(Long adminId, LocalDate startDate, LocalDate endDate) {

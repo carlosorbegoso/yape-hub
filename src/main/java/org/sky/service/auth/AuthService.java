@@ -22,7 +22,7 @@ import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
 import org.sky.service.SubscriptionService;
-import org.sky.service.CacheService;
+import org.sky.service.cache.CacheService;
 
 import org.sky.util.jwt.JwtExtractor;
 import org.sky.util.jwt.JwtGenerator;
@@ -60,7 +60,7 @@ public class AuthService {
     CacheService cacheService;
     
     @Inject
-    CachedLoginStrategy cachedLoginStrategy;
+    org.sky.service.cache.CachedLoginStrategy cachedLoginStrategy;
     
     @Inject
     DatabaseLoginStrategy databaseLoginStrategy;
@@ -158,62 +158,27 @@ public class AuthService {
             return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
         }
 
-        return cacheService.getCachedValidToken(refreshToken)
-                .chain(cachedUserId -> {
-                    if (cachedUserId != null) {
-                        return userRepository.findByIdForRefresh(Long.parseLong(cachedUserId))
-                                .chain(user -> {
-                                    if (user == null || !user.isActive) {
-                                        return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
-                                    }
-                                    return tokenService.generateTokens(user)
-                                            .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
-                                });
-                    } else {
-                        return cacheService.getCachedJwtValidation(refreshToken)
-                                .chain(cachedValidation -> {
-                                    if (cachedValidation != null && !cachedValidation) {
-                                        return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
-                                    }
-                                    
-                                    if (cachedValidation == null) {
-                                        return jwtValidator.isValidRefreshToken(refreshToken)
-                                                .chain(isValid -> {
-                                                    return cacheService.cacheJwtValidation(refreshToken, isValid)
-                                                            .chain(v -> {
-                                                                if (!isValid) {
-                                                                    return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
-                                                                }
-                                                                return validateAndExtractUser(refreshToken);
-                                                            });
-                                                });
-                                    } else {
-                                        return validateAndExtractUser(refreshToken);
-                                    }
-                                });
+        // Validar refresh token usando JwtValidator
+        return jwtValidator.isValidRefreshToken(refreshToken)
+                .chain(isValid -> {
+                    if (!isValid) {
+                        return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
                     }
+                    
+                    // Parsear token para extraer userId
+                    return jwtValidator.parseToken(refreshToken)
+                            .chain(jwt -> jwtExtractor.extractUserId(jwt))
+                            .chain(userId -> userRepository.findByIdForRefresh(userId)
+                                    .chain(user -> {
+                                        if (user == null || !user.isActive) {
+                                            return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
+                                        }
+                                        return tokenService.generateTokens(user)
+                                            .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
+                                    }));
                 });
     }
 
-    private Uni<ApiResponse<LoginResponse>> validateAndExtractUser(String refreshToken) {
-        return jwtValidator.parseToken(refreshToken)
-            .onItem().ifNull().failWith(() -> ValidationException.invalidField("refreshToken", refreshToken, "Invalid or expired refresh token"))
-            .chain(jwtExtractor::extractUserId)
-            .onItem().ifNull().failWith(() -> ValidationException.invalidField("userId", "null", "User ID not found in token"))
-            .chain(this::validateUserAndBuildResponse);
-    }
-
-    private Uni<ApiResponse<LoginResponse>> validateUserAndBuildResponse(Long userId) {
-        return userRepository.findByIdForRefresh(userId)
-            .onItem().ifNull().failWith(() -> ValidationException.invalidField("user", userId.toString(), "User not found"))
-            .chain(user -> {
-                if (!user.isActive) {
-                    throw ValidationException.invalidField("user", userId.toString(), "User account is inactive");
-                }
-                return tokenService.generateTokens(user)
-                    .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
-            });
-    }
 
 
 

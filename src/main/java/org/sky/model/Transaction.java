@@ -47,11 +47,11 @@ public class Transaction extends PanacheEntityBase {
     @Column(name = "yape_notification_id")
     public Long yapeNotificationId;
     
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id", nullable = false)
     public Branch branch;
     
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id")
     public Seller seller;
     

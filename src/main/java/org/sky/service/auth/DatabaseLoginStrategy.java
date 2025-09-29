@@ -7,7 +7,7 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
 import org.sky.model.User;
-import org.sky.service.CacheService;
+import org.sky.service.cache.CacheService;
 
 @ApplicationScoped
 public class DatabaseLoginStrategy implements LoginStrategy {

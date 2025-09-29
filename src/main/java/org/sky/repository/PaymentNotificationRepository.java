@@ -4,9 +4,13 @@ import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.PaymentNotification;
-
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.persistence.EntityManager;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class PaymentNotificationRepository implements PanacheRepository<PaymentNotification> {
@@ -64,4 +68,54 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
                 return Uni.createFrom().nullItem();
             });
     }
+    
+    // ==================================================================================
+    // CONSULTAS PARA ESTADÍSTICAS (MOVIDAS DESDE StatsService)
+    // ==================================================================================
+    
+    /**
+     * Find payments by admin ID within date range for stats (OPLIMIZADO para pocos recursos)
+     */
+    public Uni<List<PaymentNotification>> findPaymentsForStatsByAdminId(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
+                .page(0, 5000)  // LÍMITE CRÍTICO: máximo 5000 pagos para evitar OOM
+                .list();
+    }
+    
+    /**
+     * Find payments by seller ID within date range for stats
+     */
+    public Uni<List<PaymentNotification>> findPaymentsForStatsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("seller.id = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", sellerId, startDateTime, endDateTime)
+                .page(0, 5000)  // LÍMITE CRÍTICO: máximo 5000 pagos
+                .list();
+    }
+    
+    /**
+     * Find payments by confirmed by admin within date range
+     */
+    public Uni<List<PaymentNotification>> findPaymentsConfirmedByAdmin(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
+                .page(0, 5000)  // LÍMITE CRÍTICO
+                .list();
+    }
+    
+    /**
+     * Count payments by admin ID within date range
+     */
+    public Uni<Long> countPaymentsByAdminId(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return count("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3", adminId, startDateTime, endDateTime);
+    }
+    
+    /**
+     * Count payments by seller ID within date range
+     */
+    public Uni<Long> countPaymentsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return count("seller.id = ?1 and createdAt >= ?2 and createdAt <= ?3", sellerId, startDateTime, endDateTime);
+    }
+    
+    /**
+     * Result record for daily stats
+     */
+    public record DailyStatsResult(LocalDate date, int count, double totalAmount) {}
 }

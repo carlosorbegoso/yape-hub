@@ -11,7 +11,7 @@ import java.util.List;
 public class BranchRepository implements PanacheRepository<Branch> {
     
     public Uni<List<Branch>> findByAdminId(Long adminId) {
-        return find("admin.id", adminId).list();
+        return find("admin.id = ?1 ORDER BY id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
     
     public Uni<Branch> findByCode(String code) {

@@ -3,6 +3,21 @@ plugins {
     id 'io.quarkus'
 }
 
+// Optimización de recursos para build más eficiente
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+// Optimización de compilación para JVM 21
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs = ['-parameters']
+    options.fork = true
+    options.forkOptions.jvmArgs = ['--enable-preview']
+    options.incremental = true
+}
+
 repositories {
     mavenCentral()
     mavenLocal()
@@ -68,20 +83,17 @@ dependencies {
 group = 'org.sky'
 version = '1.0.0-SNAPSHOT'
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
 test {
     systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
-}
-
-compileJava {
-    options.encoding = 'UTF-8'
-    options.compilerArgs << '-parameters'
+    maxParallelForks = 1  // Reducir uso de memoria en tests
+    forkEvery = 1
 }
 
 compileTestJava {
     options.encoding = 'UTF-8'
+}
+
+// Configuración para Native Build optimizado
+quarkus {
+    finalName = 'yape-hub-optimized'
 }

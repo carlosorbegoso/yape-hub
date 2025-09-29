@@ -49,18 +49,24 @@ public class StatsService {
      */
     @WithTransaction
     public Uni<SalesStatsResponse> getAdminStats(Long adminId, LocalDate startDate, LocalDate endDate) {
-        log.info("📊 StatsService.getAdminStats() - AdminId: " + adminId + 
+        log.info("📊 StatsService.getAdminStats() OPTIMIZED - AdminId: " + adminId + 
                 ", Desde: " + startDate + ", Hasta: " + endDate);
         
-        return paymentNotificationRepository.find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3", 
+        // OPTIMIZACIÓN CRÍTICA: Límite máximo para evitar cargar millones de registros
+        int maxDaysDiff = (int) startDate.until(endDate).getDays();
+        if (maxDaysDiff > 30) {
+            return Uni.createFrom().failure(new RuntimeException("Período muy amplio. Máximo 30 días permitidos para estadísticas."));
+        }
+        
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .list()
                 .chain(payments -> {
-                    // Obtener vendedores del admin
-                    return sellerRepository.find("branch.admin.id = ?1", adminId)
+                    // OPTIMIZACIÓN: Solo obtener sellers activos necesarios
+                    return sellerRepository.find("branch.admin.id = ?1 and isActive = true", adminId)
+                            .range(0, 100)  // LÍMITE: máximo 100 sellers
                             .list()
                             .map(sellers -> {
-                                log.info("📊 Procesando " + payments.size() + " pagos para " + sellers.size() + " vendedores");
+                                log.info("📊 OPTIMIZED - Procesando " + payments.size() + " pagos (límitado a 5000) para " + sellers.size() + " vendedores");
                                 
                                 // Calcular estadísticas generales
                                 SalesStatsResponse.SummaryStats summary = calculateSummaryStats(payments);
@@ -71,11 +77,11 @@ public class StatsService {
                                 // Calcular estadísticas por vendedor
                                 List<SalesStatsResponse.SellerStats> sellerStats = calculateSellerStats(payments, sellers);
                                 
-                                // Crear respuesta
+                                // Crear respuesta optimizada
                                 SalesStatsResponse.PeriodInfo period = new SalesStatsResponse.PeriodInfo(
                                     startDate.format(DATE_FORMATTER),
                                     endDate.format(DATE_FORMATTER),
-                                    (int) startDate.until(endDate).getDays() + 1
+                                    maxDaysDiff + 1
                                 );
                                 
                                 return new SalesStatsResponse(period, summary, dailyStats, sellerStats);

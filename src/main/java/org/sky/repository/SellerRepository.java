@@ -15,11 +15,11 @@ public class SellerRepository implements PanacheRepository<Seller> {
     }
 
     public Uni<List<Seller>> findByBranchId(Long branchId) {
-        return find("branch.id", branchId).list();
+        return find("branch.id = ?1 ORDER BY id", branchId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
 
     public Uni<List<Seller>> findByAdminId(Long adminId) {
-        return find("SELECT s FROM Seller s JOIN FETCH s.branch b WHERE b.admin.id = ?1", adminId).list();
+        return find("SELECT s FROM Seller s JOIN FETCH s.branch b WHERE b.admin.id = ?1 ORDER BY s.id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
 
     public Uni<Seller> findByUserId(Long userId) {

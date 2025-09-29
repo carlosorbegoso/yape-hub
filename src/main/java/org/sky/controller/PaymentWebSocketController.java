@@ -39,8 +39,7 @@ public class PaymentWebSocketController {
     public void onClose(Session session, @PathParam("sellerId") String sellerIdParam) {
         try {
             Long sellerId = Long.parseLong(sellerIdParam);
-            sessionManager.unregisterSession(sellerId)
-                    .subscribe().with(success -> {}, error -> {});
+            sessionManager.unregisterSession(sellerId);
         } catch (Exception e) {
             log.error("Error in onClose for seller " + sellerIdParam + ": " + e.getMessage());
         }
@@ -51,8 +50,7 @@ public class PaymentWebSocketController {
         log.error("WebSocket error for seller " + sellerIdParam + ": " + throwable.getMessage());
         try {
             Long sellerId = Long.parseLong(sellerIdParam);
-            sessionManager.unregisterSession(sellerId)
-                    .subscribe().with(success -> {}, error -> {});
+            sessionManager.unregisterSession(sellerId);
         } catch (Exception e) {
             log.error("Error in onError for seller " + sellerIdParam + ": " + e.getMessage());
         }

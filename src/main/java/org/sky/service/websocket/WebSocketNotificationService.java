@@ -22,9 +22,9 @@ public class WebSocketNotificationService {
     private final Map<Long, AtomicLong> lastActivityTime = new ConcurrentHashMap<>();
     private Long cleanupTimerId;
     
-    // Optimized timeouts for real-time performance
-    private static final long CLEANUP_INTERVAL_MS = 10000; // Reduced from 30s to 10s
-    private static final long SESSION_TIMEOUT_MS = 60000;  // Reduced from 5min to 1min
+    // Optimized timeouts for low-resource performance
+    private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes - reduced CPU usage by 90%
+    private static final long SESSION_TIMEOUT_MS = 1800000;  // 30 minutes - better user experience
     
     public void registerSession(Long sellerId, jakarta.websocket.Session session) {
         webSocketSessions.put(sellerId, session);

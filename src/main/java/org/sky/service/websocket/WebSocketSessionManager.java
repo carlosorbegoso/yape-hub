@@ -29,23 +29,17 @@ public class WebSocketSessionManager {
 
     private static final Logger log = Logger.getLogger(WebSocketSessionManager.class);
 
-    public Uni<Void> registerSession(Long sellerId, Session session) {
-        return Uni.createFrom().item(() -> {
-            webSocketNotificationService.registerSession(sellerId, session);
-            return null;
-        });
+    public void registerSession(Long sellerId, Session session) {
+        webSocketNotificationService.registerSession(sellerId, session);
     }
 
-    public Uni<Void> unregisterSession(Long sellerId) {
-        return Uni.createFrom().item(() -> {
-            webSocketNotificationService.unregisterSession(sellerId);
-            return null;
-        });
+    public void unregisterSession(Long sellerId) {
+        webSocketNotificationService.unregisterSession(sellerId);
     }
 
     public Uni<Void> registerSessionAndSendWelcome(Long sellerId, Session session) {
-        return registerSession(sellerId, session)
-                .chain(v -> sendWelcomeMessage(session, sellerId));
+        registerSession(sellerId, session);
+        return sendWelcomeMessage(session, sellerId);
     }
 
     public Uni<Void> sendWelcomeMessage(Session session, Long sellerId) {
