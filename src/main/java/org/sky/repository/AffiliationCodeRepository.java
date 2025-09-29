@@ -1,7 +1,6 @@
 package org.sky.repository;
 
 import io.quarkus.hibernate.reactive.panache.PanacheRepository;
-import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.AffiliationCode;

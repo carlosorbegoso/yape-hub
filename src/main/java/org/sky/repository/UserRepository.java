@@ -16,5 +16,14 @@ public class UserRepository implements PanacheRepositoryBase<User, Long> {
         return find("email = ?1 and role = ?2", email, role).firstResult();
     }
     
+    // Consulta para login
+    public Uni<User> findByEmailAndRoleForLogin(String email, User.UserRole role) {
+        return find("email = ?1 and role = ?2", email, role).firstResult();
+    }
+    
+    // Consulta para refreshToken
+    public Uni<User> findByIdForRefresh(Long userId) {
+        return findById(userId);
+    }
 
 }

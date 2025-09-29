@@ -12,7 +12,9 @@ import org.sky.dto.auth.LoginResponse;
 import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
 import org.sky.exception.ValidationException;
 import org.sky.model.Admin;
+import org.sky.model.AffiliationCode;
 import org.sky.model.Branch;
+import org.sky.model.Seller;
 import org.sky.model.User;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.AffiliationCodeRepository;
@@ -20,6 +22,7 @@ import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
 import org.sky.service.SubscriptionService;
+import org.sky.service.CacheService;
 
 import org.sky.util.jwt.JwtExtractor;
 import org.sky.util.jwt.JwtGenerator;
@@ -52,6 +55,9 @@ public class AuthService {
     
     @Inject
     SubscriptionService subscriptionService;
+    
+    @Inject
+    CacheService cacheService;
 
   public AuthService(JwtGenerator jwtGenerator, JwtValidator jwtValidator, JwtExtractor jwtExtractor) {
     this.jwtGenerator = jwtGenerator;
@@ -88,7 +94,6 @@ public class AuthService {
         })
         .chain(user -> userRepository.persist(user)
                 .chain(persistedUser -> {
-                    // Create admin
                     Admin admin = new Admin();
                     admin.user = persistedUser;
                     admin.businessName = request.businessName();
@@ -108,94 +113,192 @@ public class AuthService {
                     branch.address = request.address();
                     return branchRepository.persist(branch);
                 })
-                .chain(branch -> {
-                    // Asignar suscripción gratuita por defecto
-                    return subscriptionService.subscribeToFreePlan(branch.admin.id)
-                            .chain(subscription -> {
-                                // Generate tokens
-                                String accessToken = jwtGenerator.generateAccessToken(branch.admin.user.id, branch.admin.user.role, null);
-                                String refreshToken = jwtGenerator.generateRefreshToken(branch.admin.user.id);
-                                
-                                LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                        branch.admin.user.id, branch.admin.user.email, branch.admin.user.role, 
-                                        branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
-                                );
-                                
-                                LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
-                                return Uni.createFrom().item(ApiResponse.success("Administrador registrado exitosamente", response));
-                            });
-                }));
+                .chain(branch -> subscriptionService.subscribeToFreePlan(branch.admin.id)
+                        .chain(subscription -> {
+                            // Generate tokens
+                            String accessToken = jwtGenerator.generateAccessToken(branch.admin.user.id, branch.admin.user.role, null);
+                            String refreshToken = jwtGenerator.generateRefreshToken(branch.admin.user.id);
+
+                            LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                                    branch.admin.user.id, branch.admin.user.email, branch.admin.user.role,
+                                    branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
+                            );
+
+                            LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
+                            return Uni.createFrom().item(ApiResponse.success("Administrador registrado exitosamente", response));
+                        })));
     }
     
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> login(LoginRequest request) {
-        return userRepository.findByEmailAndRole(request.email(), request.role())
-                .chain(user -> {
-                    if (user == null) {
-                        throw ValidationException.invalidField("credentials", request.email(), "Invalid email or password");
+        // Intentar obtener del cache primero
+        return cacheService.getCachedUser(request.email(), request.role().toString())
+                .chain(cachedUser -> {
+                    if (cachedUser != null) {
+                        // Usuario encontrado en cache, validar credenciales
+                        return validateUserCredentials(cachedUser, request)
+                                .chain(user -> generateTokens(user))
+                                .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
+                    } else {
+                        // Usuario no en cache, consultar base de datos
+                        return getUserForLogin(request)
+                                .chain(user -> validateUserCredentials(user, request))
+                                .chain(user -> updateUserLoginInfo(user, request))
+                                .chain(user -> {
+                                    // Cachear usuario de forma reactiva
+                                    return cacheService.cacheUser(request.email(), request.role().toString(), user)
+                                            .chain(v -> generateTokens(user));
+                                })
+                                .chain(tokenData -> buildLoginResponse(tokenData));
                     }
-                    
-                    // Check if user is active
-                    if (!user.isActive) {
-                        throw ValidationException.invalidField("user", request.email(), "User account is inactive");
-                    }
-                    
-                    // Verify password
-                    if (!BCrypt.checkpw(request.password(), user.password)) {
-                        throw ValidationException.invalidField("credentials", request.email(), "Invalid email or password");
-                    }
-                    
-                    // Update last login and device fingerprint
-                    user.lastLogin = LocalDateTime.now();
-                    user.deviceFingerprint = request.deviceFingerprint();
-                    
-                    return userRepository.persist(user)
-                            .chain(updatedUser -> {
-                                // Generate tokens
-                                String accessToken = jwtGenerator.generateAccessToken(updatedUser.id, updatedUser.role, null);
-                                String refreshToken = jwtGenerator.generateRefreshToken(updatedUser.id);
-                                
-                                // Get business info for admin
-                                if (updatedUser.role == User.UserRole.ADMIN) {
-                                    return adminRepository.findByUserId(updatedUser.id)
-                                            .chain(admin -> {
-                                                String businessName = admin != null ? admin.businessName : null;
-                                                Long businessId = admin != null ? admin.id : null;
-                                                
-                                                LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                                        updatedUser.id, updatedUser.email, updatedUser.role, 
-                                                        businessId, businessName, updatedUser.isVerified, null
-                                                );
-                                                
-                                                LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
-                                                return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
-                                            });
-                                } else {
-                                    // Para SELLERs, obtener información de la sucursal y admin
-                                    return sellerRepository.findByUserId(updatedUser.id)
-                                            .chain(seller -> {
-                                                if (seller == null || seller.branch == null || seller.branch.admin == null) {
-                                                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                                            updatedUser.id, updatedUser.email, updatedUser.role, 
-                                                            null, null, updatedUser.isVerified, seller != null ? seller.id : null
-                                                    );
-                                                    LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
-                                                    return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
-                                                }
-                                                
-                                                LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                                        updatedUser.id, updatedUser.email, updatedUser.role, 
-                                                        seller.branch.admin.id, seller.branch.admin.businessName, 
-                                                        updatedUser.isVerified, seller.id
-                                                );
-                                                
-                                                LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);
-                                                return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
-                                            });
-                                }
-                            });
                 });
     }
+
+    private Uni<User> validateUserCredentials(User user, LoginRequest request) {
+        if (user == null) {
+            return Uni.createFrom().failure(
+                ValidationException.invalidField("credentials", request.email(), "Invalid email or password")
+            );
+        }
+        
+        if (!user.isActive) {
+            return Uni.createFrom().failure(
+                ValidationException.invalidField("user", request.email(), "User account is inactive")
+            );
+        }
+        
+        if (!BCrypt.checkpw(request.password(), user.password)) {
+            return Uni.createFrom().failure(
+                ValidationException.invalidField("credentials", request.email(), "Invalid email or password")
+            );
+        }
+        
+        return Uni.createFrom().item(user);
+    }
+
+    private Uni<User> updateUserLoginInfo(User user, LoginRequest request) {
+        user.lastLogin = LocalDateTime.now();
+        user.deviceFingerprint = request.deviceFingerprint();
+        return userRepository.persist(user);
+    }
+
+    private Uni<TokenData> generateTokens(User user) {
+        String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, null);
+        String refreshToken = jwtGenerator.generateRefreshToken(user.id);
+        return Uni.createFrom().item(new TokenData(user, accessToken, refreshToken));
+    }
+
+    private Uni<User> getUserForLogin(LoginRequest request) {
+        return userRepository.findByEmailAndRoleForLogin(request.email(), request.role());
+    }
+
+    private Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(TokenData tokenData) {
+        // Para usuarios cacheados, construir respuesta directamente sin consultas adicionales
+        User user = tokenData.user;
+        
+        
+        // Para usuarios cacheados, usar datos ya cargados
+        if (user.role == User.UserRole.ADMIN) {
+            // Para ADMIN, buscar admin por userId
+            return adminRepository.findByUserId(user.id)
+                    .map(admin -> {
+                        Long adminBusinessId = admin != null ? admin.id : null;
+                        String adminBusinessName = admin != null ? admin.businessName : null;
+                        
+                        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                            user.id, user.email, user.role,
+                            adminBusinessId, adminBusinessName, user.isVerified, null
+                        );
+                        
+                        LoginResponse response = new LoginResponse(
+                            tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
+                        );
+                        
+                        return ApiResponse.success("Login exitoso", response);
+                    });
+        } else {
+            // Para SELLER, buscar seller por userId
+            return sellerRepository.findByUserId(user.id)
+                    .map(seller -> {
+                        Long sellerBusinessId = null;
+                        String sellerBusinessName = null;
+                        Long sellerIdValue = seller != null ? seller.id : null;
+                        
+                        if (seller != null && seller.branch != null && seller.branch.admin != null) {
+                            sellerBusinessId = seller.branch.admin.id;
+                            sellerBusinessName = seller.branch.admin.businessName;
+                        }
+                        
+                        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                            user.id, user.email, user.role,
+                            sellerBusinessId, sellerBusinessName, user.isVerified, sellerIdValue
+                        );
+                        
+                        LoginResponse response = new LoginResponse(
+                            tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
+                        );
+                        
+                        return ApiResponse.success("Login exitoso", response);
+                    });
+        }
+    }
+
+    private Uni<ApiResponse<LoginResponse>> buildLoginResponse(TokenData tokenData) {
+        User user = tokenData.user;
+        
+        if (user.role == User.UserRole.ADMIN) {
+            return buildAdminLoginResponse(tokenData);
+        } else {
+            return buildSellerLoginResponse(tokenData);
+        }
+    }
+
+    private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(TokenData tokenData) {
+        return adminRepository.findByUserId(tokenData.user.id)
+                .map(admin -> {
+                    Long businessId = admin != null ? admin.id : null;
+                    String businessName = admin != null ? admin.businessName : null;
+                    
+                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                        tokenData.user.id, tokenData.user.email, tokenData.user.role,
+                        businessId, businessName, tokenData.user.isVerified, null
+                    );
+                    
+                    LoginResponse response = new LoginResponse(
+                        tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
+                    );
+                    
+                    return ApiResponse.success("Login exitoso", response);
+                });
+    }
+
+    private Uni<ApiResponse<LoginResponse>> buildSellerLoginResponse(TokenData tokenData) {
+        return sellerRepository.findByUserId(tokenData.user.id)
+                .map(seller -> {
+                    Long businessId = null;
+                    String businessName = null;
+                    Long sellerId = seller != null ? seller.id : null;
+                    
+                    if (seller != null && seller.branch != null && seller.branch.admin != null) {
+                        businessId = seller.branch.admin.id;
+                        businessName = seller.branch.admin.businessName;
+                    }
+                    
+                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+                        tokenData.user.id, tokenData.user.email, tokenData.user.role,
+                        businessId, businessName, tokenData.user.isVerified, sellerId
+                    );
+                    
+                    LoginResponse response = new LoginResponse(
+                        tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
+                    );
+                    
+                    return ApiResponse.success("Login exitoso", response);
+                });
+    }
+
+  private record TokenData(User user, String accessToken, String refreshToken) {
+  }
     
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> refreshToken(String refreshToken) {
@@ -203,13 +306,47 @@ public class AuthService {
             return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
         }
 
-        return jwtValidator.isValidRefreshToken(refreshToken)
-            .onItem().transformToUni(isValid -> {
-                if (!isValid) {
-                    return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
-                }
-                return validateAndExtractUser(refreshToken);
-            });
+        // Intentar obtener del cache primero
+        return cacheService.getCachedValidToken(refreshToken)
+                .chain(cachedUserId -> {
+                    if (cachedUserId != null) {
+                        // Token válido en cache, obtener usuario
+                        return userRepository.findByIdForRefresh(Long.parseLong(cachedUserId))
+                                .chain(user -> {
+                                    if (user == null || !user.isActive) {
+                                        return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
+                                    }
+                                    return generateTokens(user)
+                                            .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
+                                });
+                    } else {
+                        // Token no en cache, validar y procesar
+                        return cacheService.getCachedJwtValidation(refreshToken)
+                                .chain(cachedValidation -> {
+                                    if (cachedValidation != null && !cachedValidation) {
+                                        return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
+                                    }
+                                    
+                                    if (cachedValidation == null) {
+                                        // No está en cache, validar JWT
+                                        return jwtValidator.isValidRefreshToken(refreshToken)
+                                                .chain(isValid -> {
+                                                    // Cachear resultado de validación de forma reactiva
+                                                    return cacheService.cacheJwtValidation(refreshToken, isValid)
+                                                            .chain(v -> {
+                                                                if (!isValid) {
+                                                                    return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
+                                                                }
+                                                                return validateAndExtractUser(refreshToken);
+                                                            });
+                                                });
+                                    } else {
+                                        // Token válido en cache, procesar
+                                        return validateAndExtractUser(refreshToken);
+                                    }
+                                });
+                    }
+                });
     }
 
     private Uni<ApiResponse<LoginResponse>> validateAndExtractUser(String refreshToken) {
@@ -221,14 +358,14 @@ public class AuthService {
     }
 
     private Uni<ApiResponse<LoginResponse>> validateUserAndBuildResponse(Long userId) {
-        return userRepository.findById(userId)
+        return userRepository.findByIdForRefresh(userId)
             .onItem().ifNull().failWith(() -> ValidationException.invalidField("user", userId.toString(), "User not found"))
             .chain(user -> {
                 if (!user.isActive) {
                     throw ValidationException.invalidField("user", userId.toString(), "User account is inactive");
                 }
-                return buildLoginResponse(user)
-                    .map(loginResponse -> ApiResponse.success("Token refreshed successfully", loginResponse));
+                return generateTokens(user)
+                    .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
             });
     }
 
@@ -254,7 +391,7 @@ public class AuthService {
                   admin != null ? admin.id : null,
                   admin != null ? admin.businessName : null,
                   user.isVerified,
-                  null // no sellerId para admin
+                  null
               )
           ));
 
@@ -269,15 +406,14 @@ public class AuthService {
                       user.id,
                       user.email,
                       user.role,
-                      null, // no businessId
-                      null, // no businessName
+                      null,
+                      null,
                       user.isVerified,
-                      null // no sellerId
+                      null
                   )
               ));
             }
-            
-            // Obtener información de la sucursal y admin
+
             return Uni.createFrom().item(seller.branch)
                 .chain(branch -> {
                   if (branch == null || branch.admin == null) {
@@ -289,10 +425,10 @@ public class AuthService {
                             user.id,
                             user.email,
                             user.role,
-                            null, // no businessId
-                            null, // no businessName
+                            null,
+                            null,
                             user.isVerified,
-                            seller.id // sellerId
+                            seller.id
                         )
                     ));
                   }
@@ -305,10 +441,10 @@ public class AuthService {
                           user.id,
                           user.email,
                           user.role,
-                          branch.admin.id, // businessId del admin
-                          branch.admin.businessName, // businessName del admin
+                          branch.admin.id,
+                          branch.admin.businessName,
                           user.isVerified,
-                          seller.id // sellerId
+                          seller.id
                       )
                   ));
                 });
@@ -324,9 +460,9 @@ public class AuthService {
                     if (user != null) {
                         user.deviceFingerprint = null;
                         return userRepository.persist(user)
-                                .map(u -> ApiResponse.success("Logout exitoso"));
+                                .map(u -> ApiResponse.success("exit logout"));
                     }
-                    return Uni.createFrom().item(ApiResponse.success("Logout exitoso"));
+                    return Uni.createFrom().item(ApiResponse.success("exit logout"));
                 });
     }
     
@@ -334,104 +470,74 @@ public class AuthService {
     
     @WithTransaction
     public Uni<ApiResponse<SellerLoginWithAffiliationResponse>> loginByPhoneWithAffiliation(String phone, String affiliationCode) {
-        
         return sellerRepository.findByPhone(phone)
-                .chain(seller -> {
-                    if (seller == null) {
-                        return Uni.createFrom().failure(
-                            ValidationException.invalidField("phone", phone, "Vendedor no encontrado con este número de teléfono")
-                        );
-                    }
-                    
-                    // Validar estado del vendedor
-                    if (!seller.isActive) {
-                        return Uni.createFrom().failure(
-                            ValidationException.invalidField("seller", phone, "Vendedor inactivo - contacte al administrador")
-                        );
-                    }
-                    
-                    // Validar que el vendedor tenga sucursal asignada
-                    if (seller.branch == null) {
-                        return Uni.createFrom().failure(
-                            ValidationException.invalidField("branch", phone, "Vendedor no tiene sucursal asignada")
-                        );
-                    }
-                    
-                    // Validar que la sucursal esté activa
-                    if (!seller.branch.isActive) {
-                        return Uni.createFrom().failure(
-                            ValidationException.invalidField("branch", seller.branch.id.toString(), "La sucursal está inactiva")
-                        );
-                    }
-                    
-                    // Validar código de afiliación
-                    return affiliationCodeRepository.findByAffiliationCode(affiliationCode)
-                            .chain(code -> {
-                                if (code == null || !code.isActive) {
-                                    return Uni.createFrom().failure(
-                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación inválido")
-                                    );
-                                }
+                .chain(seller -> UserValidations.validateSeller(seller, phone))
+                .chain(seller -> validateSellerBranch(seller, phone))
+                .chain(seller -> validateAndProcessAffiliationCode(seller, affiliationCode))
+                .chain(this::updateUserLastLogin)
+                .chain(seller -> generateLoginResponse(seller, affiliationCode));
+    }
 
-                                // Verificar que el código no haya expirado
-                                if (code.expiresAt != null && code.expiresAt.isBefore(LocalDateTime.now())) {
-                                    return Uni.createFrom().failure(
-                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación expirado")
-                                    );
-                                }
+    private Uni<Seller> validateSellerBranch(Seller seller, String phone) {
+        if (seller.branch == null) {
+            return Uni.createFrom().failure(
+                ValidationException.invalidField("branch", phone, "Vendedor no tiene sucursal asignada")
+            );
+        }
+        return UserValidations.validateBranch(seller.branch)
+                .map(validatedBranch -> seller);
+    }
 
-                                // Verificar que el código tenga usos restantes
-                                if (code.remainingUses <= 0) {
-                                    return Uni.createFrom().failure(
-                                        ValidationException.invalidField("affiliationCode", affiliationCode, "Código de afiliación agotado")
-                                    );
-                                }
-
-                                // Verificar que el vendedor esté afiliado a la sucursal del código
-                                if (!seller.branch.id.equals(code.branch.id)) {
-                                    return Uni.createFrom().failure(
-                                        ValidationException.invalidField("affiliationCode", affiliationCode,
-                                            "El vendedor no está afiliado a esta sucursal")
-                                    );
-                                }
-                                
-                                // Reducir usos del código
-                                code.remainingUses--;
-                                
-                                return affiliationCodeRepository.persist(code)
-                                        .chain(updatedCode -> {
-                                            // Generar token JWT
-                                            User user = seller.user;
-                                            if (user == null) {
-                                                return Uni.createFrom().failure(
-                                                    ValidationException.invalidField("user", phone, "Usuario no encontrado")
-                                                );
-                                            }
-                                            
-                                            // Actualizar último login
-                                            user.lastLogin = LocalDateTime.now();
-                                            
-                                            return userRepository.persist(user)
-                                                    .chain(updatedUser -> {
-                                                        // Generar token de acceso con sellerId
-                                                        String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, seller.id);
-                                                        
-                                                        SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(
-                                                            seller.id,
-                                                            seller.sellerName,
-                                                            user.email,
-                                                            seller.phone,
-                                                            seller.branch.id,
-                                                            seller.branch.name,
-                                                            seller.branch.code,
-                                                            affiliationCode,
-                                                            accessToken
-                                                        );
-                                                        
-                                                        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
-                                                    });
-                                        });
+    private Uni<Seller> validateAndProcessAffiliationCode(Seller seller, String affiliationCode) {
+        return Uni.combine()
+                .all()
+                .unis(
+                    Uni.createFrom().item(seller.branch),
+                    affiliationCodeRepository.findByAffiliationCode(affiliationCode)
+                )
+                .asTuple()
+                .chain(tuple -> {
+                    Branch branch = tuple.getItem1();
+                    AffiliationCode code = tuple.getItem2();
+                    
+                    return UserValidations.validateAffiliationCode(code, affiliationCode, branch)
+                            .chain(validatedCode -> {
+                                validatedCode.remainingUses--;
+                                return affiliationCodeRepository.persist(validatedCode)
+                                        .map(updatedCode -> seller);
                             });
                 });
+    }
+
+    private Uni<Seller> updateUserLastLogin(Seller seller) {
+        User user = seller.user;
+        if (user == null) {
+            return Uni.createFrom().failure(
+                ValidationException.invalidField("user", seller.phone, "Usuario no encontrado")
+            );
+        }
+        
+        user.lastLogin = LocalDateTime.now();
+        return userRepository.persist(user)
+                .map(updatedUser -> seller);
+    }
+
+    private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(Seller seller, String affiliationCode) {
+        User user = seller.user;
+        String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, seller.id);
+        
+        SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(
+            seller.id,
+            seller.sellerName,
+            user.email,
+            seller.phone,
+            seller.branch.id,
+            seller.branch.name,
+            seller.branch.code,
+            affiliationCode,
+            accessToken
+        );
+        
+        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
     }
 }
