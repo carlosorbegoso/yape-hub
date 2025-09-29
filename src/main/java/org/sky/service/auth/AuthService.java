@@ -58,6 +58,18 @@ public class AuthService {
     
     @Inject
     CacheService cacheService;
+    
+    @Inject
+    CachedLoginStrategy cachedLoginStrategy;
+    
+    @Inject
+    DatabaseLoginStrategy databaseLoginStrategy;
+    
+    @Inject
+    TokenService tokenService;
+    
+    @Inject
+    LoginResponseBuilder loginResponseBuilder;
 
   public AuthService(JwtGenerator jwtGenerator, JwtValidator jwtValidator, JwtExtractor jwtExtractor) {
     this.jwtGenerator = jwtGenerator;
@@ -115,7 +127,6 @@ public class AuthService {
                 })
                 .chain(branch -> subscriptionService.subscribeToFreePlan(branch.admin.id)
                         .chain(subscription -> {
-                            // Generate tokens
                             String accessToken = jwtGenerator.generateAccessToken(branch.admin.user.id, branch.admin.user.role, null);
                             String refreshToken = jwtGenerator.generateRefreshToken(branch.admin.user.id);
 
@@ -131,196 +142,34 @@ public class AuthService {
     
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> login(LoginRequest request) {
-        // Intentar obtener del cache primero
         return cacheService.getCachedUser(request.email(), request.role().toString())
                 .chain(cachedUser -> {
                     if (cachedUser != null) {
-                        // Usuario encontrado en cache, validar credenciales
-                        return validateUserCredentials(cachedUser, request)
-                                .chain(user -> generateTokens(user))
-                                .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
+                        return cachedLoginStrategy.executeWithCachedUser(cachedUser, request);
                     } else {
-                        // Usuario no en cache, consultar base de datos
-                        return getUserForLogin(request)
-                                .chain(user -> validateUserCredentials(user, request))
-                                .chain(user -> updateUserLoginInfo(user, request))
-                                .chain(user -> {
-                                    // Cachear usuario de forma reactiva
-                                    return cacheService.cacheUser(request.email(), request.role().toString(), user)
-                                            .chain(v -> generateTokens(user));
-                                })
-                                .chain(tokenData -> buildLoginResponse(tokenData));
+                        return databaseLoginStrategy.execute(request);
                     }
                 });
     }
 
-    private Uni<User> validateUserCredentials(User user, LoginRequest request) {
-        if (user == null) {
-            return Uni.createFrom().failure(
-                ValidationException.invalidField("credentials", request.email(), "Invalid email or password")
-            );
-        }
-        
-        if (!user.isActive) {
-            return Uni.createFrom().failure(
-                ValidationException.invalidField("user", request.email(), "User account is inactive")
-            );
-        }
-        
-        if (!BCrypt.checkpw(request.password(), user.password)) {
-            return Uni.createFrom().failure(
-                ValidationException.invalidField("credentials", request.email(), "Invalid email or password")
-            );
-        }
-        
-        return Uni.createFrom().item(user);
-    }
-
-    private Uni<User> updateUserLoginInfo(User user, LoginRequest request) {
-        user.lastLogin = LocalDateTime.now();
-        user.deviceFingerprint = request.deviceFingerprint();
-        return userRepository.persist(user);
-    }
-
-    private Uni<TokenData> generateTokens(User user) {
-        String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, null);
-        String refreshToken = jwtGenerator.generateRefreshToken(user.id);
-        return Uni.createFrom().item(new TokenData(user, accessToken, refreshToken));
-    }
-
-    private Uni<User> getUserForLogin(LoginRequest request) {
-        return userRepository.findByEmailAndRoleForLogin(request.email(), request.role());
-    }
-
-    private Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(TokenData tokenData) {
-        // Para usuarios cacheados, construir respuesta directamente sin consultas adicionales
-        User user = tokenData.user;
-        
-        
-        // Para usuarios cacheados, usar datos ya cargados
-        if (user.role == User.UserRole.ADMIN) {
-            // Para ADMIN, buscar admin por userId
-            return adminRepository.findByUserId(user.id)
-                    .map(admin -> {
-                        Long adminBusinessId = admin != null ? admin.id : null;
-                        String adminBusinessName = admin != null ? admin.businessName : null;
-                        
-                        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                            user.id, user.email, user.role,
-                            adminBusinessId, adminBusinessName, user.isVerified, null
-                        );
-                        
-                        LoginResponse response = new LoginResponse(
-                            tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
-                        );
-                        
-                        return ApiResponse.success("Login exitoso", response);
-                    });
-        } else {
-            // Para SELLER, buscar seller por userId
-            return sellerRepository.findByUserId(user.id)
-                    .map(seller -> {
-                        Long sellerBusinessId = null;
-                        String sellerBusinessName = null;
-                        Long sellerIdValue = seller != null ? seller.id : null;
-                        
-                        if (seller != null && seller.branch != null && seller.branch.admin != null) {
-                            sellerBusinessId = seller.branch.admin.id;
-                            sellerBusinessName = seller.branch.admin.businessName;
-                        }
-                        
-                        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                            user.id, user.email, user.role,
-                            sellerBusinessId, sellerBusinessName, user.isVerified, sellerIdValue
-                        );
-                        
-                        LoginResponse response = new LoginResponse(
-                            tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
-                        );
-                        
-                        return ApiResponse.success("Login exitoso", response);
-                    });
-        }
-    }
-
-    private Uni<ApiResponse<LoginResponse>> buildLoginResponse(TokenData tokenData) {
-        User user = tokenData.user;
-        
-        if (user.role == User.UserRole.ADMIN) {
-            return buildAdminLoginResponse(tokenData);
-        } else {
-            return buildSellerLoginResponse(tokenData);
-        }
-    }
-
-    private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(TokenData tokenData) {
-        return adminRepository.findByUserId(tokenData.user.id)
-                .map(admin -> {
-                    Long businessId = admin != null ? admin.id : null;
-                    String businessName = admin != null ? admin.businessName : null;
-                    
-                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                        tokenData.user.id, tokenData.user.email, tokenData.user.role,
-                        businessId, businessName, tokenData.user.isVerified, null
-                    );
-                    
-                    LoginResponse response = new LoginResponse(
-                        tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
-                    );
-                    
-                    return ApiResponse.success("Login exitoso", response);
-                });
-    }
-
-    private Uni<ApiResponse<LoginResponse>> buildSellerLoginResponse(TokenData tokenData) {
-        return sellerRepository.findByUserId(tokenData.user.id)
-                .map(seller -> {
-                    Long businessId = null;
-                    String businessName = null;
-                    Long sellerId = seller != null ? seller.id : null;
-                    
-                    if (seller != null && seller.branch != null && seller.branch.admin != null) {
-                        businessId = seller.branch.admin.id;
-                        businessName = seller.branch.admin.businessName;
-                    }
-                    
-                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                        tokenData.user.id, tokenData.user.email, tokenData.user.role,
-                        businessId, businessName, tokenData.user.isVerified, sellerId
-                    );
-                    
-                    LoginResponse response = new LoginResponse(
-                        tokenData.accessToken, tokenData.refreshToken, 3600L, userInfo
-                    );
-                    
-                    return ApiResponse.success("Login exitoso", response);
-                });
-    }
-
-  private record TokenData(User user, String accessToken, String refreshToken) {
-  }
-    
     @WithTransaction
     public Uni<ApiResponse<LoginResponse>> refreshToken(String refreshToken) {
         if (refreshToken == null || refreshToken.trim().isEmpty()) {
             return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
         }
 
-        // Intentar obtener del cache primero
         return cacheService.getCachedValidToken(refreshToken)
                 .chain(cachedUserId -> {
                     if (cachedUserId != null) {
-                        // Token válido en cache, obtener usuario
                         return userRepository.findByIdForRefresh(Long.parseLong(cachedUserId))
                                 .chain(user -> {
                                     if (user == null || !user.isActive) {
                                         return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
                                     }
-                                    return generateTokens(user)
-                                            .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
+                                    return tokenService.generateTokens(user)
+                                            .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
                                 });
                     } else {
-                        // Token no en cache, validar y procesar
                         return cacheService.getCachedJwtValidation(refreshToken)
                                 .chain(cachedValidation -> {
                                     if (cachedValidation != null && !cachedValidation) {
@@ -328,10 +177,8 @@ public class AuthService {
                                     }
                                     
                                     if (cachedValidation == null) {
-                                        // No está en cache, validar JWT
                                         return jwtValidator.isValidRefreshToken(refreshToken)
                                                 .chain(isValid -> {
-                                                    // Cachear resultado de validación de forma reactiva
                                                     return cacheService.cacheJwtValidation(refreshToken, isValid)
                                                             .chain(v -> {
                                                                 if (!isValid) {
@@ -341,7 +188,6 @@ public class AuthService {
                                                             });
                                                 });
                                     } else {
-                                        // Token válido en cache, procesar
                                         return validateAndExtractUser(refreshToken);
                                     }
                                 });
@@ -364,93 +210,11 @@ public class AuthService {
                 if (!user.isActive) {
                     throw ValidationException.invalidField("user", userId.toString(), "User account is inactive");
                 }
-                return generateTokens(user)
-                    .chain(tokenData -> buildLoginResponseFromCachedUser(tokenData));
+                return tokenService.generateTokens(user)
+                    .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
             });
     }
 
-  private Uni<LoginResponse> buildLoginResponse(User user) {
-    String accessToken = jwtGenerator.generateAccessToken(
-        user.id,
-        user.role,
-        null
-    );
-    String refreshToken = jwtGenerator.generateRefreshToken(user.id);
-    Long expiresIn = jwtGenerator.getAccessTokenExpirySeconds();
-
-    return switch (user.role) {
-      case ADMIN -> adminRepository.findByUserId(user.id)
-          .map(admin -> new LoginResponse(
-              accessToken,
-              refreshToken,
-              expiresIn,
-              new LoginResponse.UserInfo(
-                  user.id,
-                  user.email,
-                  user.role,
-                  admin != null ? admin.id : null,
-                  admin != null ? admin.businessName : null,
-                  user.isVerified,
-                  null
-              )
-          ));
-
-      case SELLER -> sellerRepository.findByUserId(user.id)
-          .chain(seller -> {
-            if (seller == null) {
-              return Uni.createFrom().item(new LoginResponse(
-                  accessToken,
-                  refreshToken,
-                  expiresIn,
-                  new LoginResponse.UserInfo(
-                      user.id,
-                      user.email,
-                      user.role,
-                      null,
-                      null,
-                      user.isVerified,
-                      null
-                  )
-              ));
-            }
-
-            return Uni.createFrom().item(seller.branch)
-                .chain(branch -> {
-                  if (branch == null || branch.admin == null) {
-                    return Uni.createFrom().item(new LoginResponse(
-                        accessToken,
-                        refreshToken,
-                        expiresIn,
-                        new LoginResponse.UserInfo(
-                            user.id,
-                            user.email,
-                            user.role,
-                            null,
-                            null,
-                            user.isVerified,
-                            seller.id
-                        )
-                    ));
-                  }
-                  
-                  return Uni.createFrom().item(new LoginResponse(
-                      accessToken,
-                      refreshToken,
-                      expiresIn,
-                      new LoginResponse.UserInfo(
-                          user.id,
-                          user.email,
-                          user.role,
-                          branch.admin.id,
-                          branch.admin.businessName,
-                          user.isVerified,
-                          seller.id
-                      )
-                  ));
-                });
-          });
-    };
-  }
 
 
   @WithTransaction
@@ -465,9 +229,7 @@ public class AuthService {
                     return Uni.createFrom().item(ApiResponse.success("exit logout"));
                 });
     }
-    
 
-    
     @WithTransaction
     public Uni<ApiResponse<SellerLoginWithAffiliationResponse>> loginByPhoneWithAffiliation(String phone, String affiliationCode) {
         return sellerRepository.findByPhone(phone)
