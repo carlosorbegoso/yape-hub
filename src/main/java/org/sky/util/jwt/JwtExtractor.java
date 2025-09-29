@@ -24,12 +24,24 @@ public class JwtExtractor {
   public Uni<Long> extractLongClaim(JsonWebToken jwt, String claimName) {
     return Uni.createFrom().item(() -> {
       Object claim = jwt.getClaim(claimName);
-      if (claim instanceof Number n) return n.longValue();
+      
+      if (claim instanceof Number n) {
+        return n.longValue();
+      }
       if (claim instanceof String s) {
         try {
           return Long.parseLong(s);
         } catch (NumberFormatException ignored) {
-          Log.debug("Invalid claim name: " + claimName);
+          // Invalid string format
+        }
+      }
+      // Handle JsonLongNumber and other numeric types
+      if (claim != null) {
+        try {
+          String claimStr = claim.toString();
+          return Long.parseLong(claimStr);
+        } catch (NumberFormatException ignored) {
+          // Invalid format
         }
       }
       return null;

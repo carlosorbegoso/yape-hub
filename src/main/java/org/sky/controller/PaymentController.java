@@ -12,7 +12,7 @@ import org.sky.dto.payment.PaymentRejectRequest;
 import org.sky.annotation.TokenConsumption;
 import org.sky.service.PaymentNotificationService;
 import org.sky.service.security.SecurityService;
-import org.sky.service.WebSocketNotificationService;
+import org.sky.service.websocket.WebSocketNotificationService;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;

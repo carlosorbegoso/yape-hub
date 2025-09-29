@@ -44,7 +44,7 @@ public class PaymentNotificationService {
     SellerRepository sellerRepository;
     
     @Inject
-    WebSocketNotificationService webSocketNotificationService;
+    org.sky.service.websocket.WebSocketNotificationService webSocketNotificationService;
     
     @Inject
     Vertx vertx;
