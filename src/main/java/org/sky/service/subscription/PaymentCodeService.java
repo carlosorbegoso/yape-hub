@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
@@ -26,34 +26,19 @@ public class PaymentCodeService {
 
     @WithTransaction
     public Uni<PaymentCodeResponse> generatePaymentCode(Long adminId, Long planId, String tokensPackage) {
-        return generateUniqueCode()
-                .chain(paymentCode -> 
-                    amountCalculator.calculateAmount(planId, tokensPackage)
-                        .chain(amount -> createPaymentCode(adminId, planId, tokensPackage, paymentCode, amount)));
+        return Uni.combine().all().unis(
+                generateUniqueCode(),
+                amountCalculator.calculateAmount(planId, tokensPackage)
+        ).asTuple()
+        .chain(tuple -> createPaymentCode(adminId, planId, tokensPackage, tuple.getItem1(), tuple.getItem2()));
     }
 
     @WithTransaction
     public Uni<PaymentStatusResponse> getPaymentStatus(String paymentCode) {
         return paymentCodeRepository.findByCode(paymentCode)
-                .chain(code -> {
-                    if (code == null) {
-                        return createNotFoundStatus(paymentCode);
-                    }
-                    
-                    boolean isExpired = code.isExpired();
-                    String status = isExpired ? "expired" : code.status;
-                    
-                    return getStatusMessage(status, isExpired)
-                            .map(message -> new PaymentStatusResponse(
-                                paymentCode,
-                                status,
-                                code.amountPen.doubleValue(),
-                                "PEN",
-                                code.expiresAt,
-                                isExpired,
-                                message
-                            ));
-                });
+                .chain(code -> code != null ? 
+                    processValidCode(paymentCode, code) : 
+                    createNotFoundStatus(paymentCode));
     }
 
     @WithTransaction
@@ -96,6 +81,22 @@ public class PaymentCodeService {
         return Uni.createFrom().item(() -> 
             "PAY_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()
         );
+    }
+
+    private Uni<PaymentStatusResponse> processValidCode(String paymentCode, PaymentCode code) {
+        boolean isExpired = code.isExpired();
+        String status = isExpired ? "expired" : code.status;
+        
+        return getStatusMessage(status, isExpired)
+                .map(message -> new PaymentStatusResponse(
+                    paymentCode,
+                    status,
+                    code.amountPen.doubleValue(),
+                    "PEN",
+                    code.expiresAt,
+                    isExpired,
+                    message
+                ));
     }
 
     private Uni<PaymentStatusResponse> createNotFoundStatus(String paymentCode) {

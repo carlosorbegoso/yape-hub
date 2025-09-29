@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,12 +17,15 @@ public class PaymentActivationService {
     SubscriptionService subscriptionService;
 
     public Uni<String> activatePlanOrTokens(Long adminId, PaymentCode code) {
-        if (code.planId != null) {
-            return activateSubscription(adminId, code.planId);
-        } else if (code.tokensPackage != null) {
-            return activateTokens(adminId, code.tokensPackage);
-        }
-        return Uni.createFrom().item("Activation completed");
+        return Uni.createFrom().item(code)
+                .chain(c -> {
+                    if (c.planId != null) {
+                        return activateSubscription(adminId, c.planId);
+                    } else if (c.tokensPackage != null) {
+                        return activateTokens(adminId, c.tokensPackage);
+                    }
+                    return Uni.createFrom().item("Activation completed");
+                });
     }
 
     private Uni<String> activateSubscription(Long adminId, Long planId) {

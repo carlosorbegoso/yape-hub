@@ -6,7 +6,7 @@ import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.service.TokenService;
 import org.sky.service.SubscriptionService;
-import org.sky.service.payment.PaymentHistoryService;
+import org.sky.service.subscription.PaymentHistoryService;
 
 @ApplicationScoped
 public class BillingInfoService {

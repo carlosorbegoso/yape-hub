@@ -6,7 +6,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
-import org.sky.service.websocket.WebSocketNotificationService;
 
 @ApplicationScoped
 public class WebSocketMessageHandler {
@@ -81,10 +80,16 @@ public class WebSocketMessageHandler {
     private Uni<Void> handleHeartbeat(Session session, Long sellerId) {
         return Uni.createFrom().item(() -> {
             try {
-                String pongMessage = "{\"type\":\"PONG\",\"message\":\"Heartbeat received\",\"sellerId\":" + sellerId + "}";
+                // Optimized heartbeat response for real-time performance
+                String pongMessage = "{\"type\":\"PONG\",\"message\":\"Heartbeat received\",\"sellerId\":" + sellerId + ",\"timestamp\":" + System.currentTimeMillis() + "}";
+                
+                // Send message immediately for real-time performance
                 session.getAsyncRemote().sendText(pongMessage);
+                
+                log.debug("⚡ Real-time heartbeat response sent to seller " + sellerId);
                 return null;
             } catch (Exception e) {
+                log.error("❌ Error sending heartbeat response to seller " + sellerId, e);
                 throw new RuntimeException(e);
             }
         });
@@ -93,10 +98,16 @@ public class WebSocketMessageHandler {
     private Uni<Void> sendConfirmation(Session session, Long sellerId) {
         return Uni.createFrom().item(() -> {
             try {
-                String confirmationMessage = "{\"type\":\"MESSAGE_RECEIVED\",\"message\":\"Message processed\",\"sellerId\":" + sellerId + "}";
+                // Optimized confirmation message for real-time performance
+                String confirmationMessage = "{\"type\":\"MESSAGE_RECEIVED\",\"message\":\"Message processed\",\"sellerId\":" + sellerId + ",\"timestamp\":" + System.currentTimeMillis() + "}";
+                
+                // Send message immediately for real-time performance
                 session.getAsyncRemote().sendText(confirmationMessage);
+                
+                log.debug("⚡ Real-time confirmation sent to seller " + sellerId);
                 return null;
             } catch (Exception e) {
+                log.error("❌ Error sending confirmation to seller " + sellerId, e);
                 throw new RuntimeException(e);
             }
         });

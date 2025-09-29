@@ -19,7 +19,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
     UserValidations userValidationService;
     
     @Inject
-    TokenService tokenService;
+    JwtTokenService tokenService;
     
     @Inject
     LoginResponseBuilder loginResponseBuilder;
@@ -42,7 +42,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
                                         .asTuple()
                                         .chain(tuple -> {
                                             User updatedUser = tuple.getItem1();
-                                            TokenService.TokenData tokenData = tuple.getItem2();
+                                            JwtTokenService.TokenData tokenData = tuple.getItem2();
 
                                             return cacheService.cacheUser(request.email(), request.role().toString(), updatedUser)
                                                     .chain(v -> loginResponseBuilder.buildLoginResponse(tokenData));
@@ -56,7 +56,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
                                 .asTuple()
                                 .chain(tuple -> {
                                     User updatedUser = tuple.getItem1();
-                                    TokenService.TokenData tokenData = tuple.getItem2();
+                                    JwtTokenService.TokenData tokenData = tuple.getItem2();
 
                                     return cacheService.cacheUser(request.email(), request.role().toString(), updatedUser)
                                             .chain(v -> loginResponseBuilder.buildLoginResponse(tokenData));

@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,12 +8,9 @@ public class PaymentImageValidator {
 
     public Uni<Boolean> validateImage(String base64String) {
         return isValidBase64(base64String)
-                .chain(isValid -> {
-                    if (Boolean.FALSE.equals(isValid)) {
-                        return Uni.createFrom().failure(new RuntimeException("Invalid base64 image format"));
-                    }
-                    return Uni.createFrom().item(true);
-                });
+                .chain(isValid -> Boolean.TRUE.equals(isValid) ? 
+                    Uni.createFrom().item(true) : 
+                    Uni.createFrom().failure(new RuntimeException("Invalid base64 image format")));
     }
 
     private Uni<Boolean> isValidBase64(String base64String) {

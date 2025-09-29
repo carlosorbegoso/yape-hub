@@ -1,6 +1,5 @@
 package org.sky.service.notification.yape;
 
-import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -13,7 +12,7 @@ import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.model.YapeNotificationAudit;
 import org.sky.repository.YapeNotificationAuditRepository;
 import org.sky.service.DeviceFingerprintService;
-import org.sky.service.PaymentNotificationService;
+import org.sky.service.hubnotifications.PaymentNotificationService;
 import org.sky.service.YapeDecryptionService;
 import org.sky.exception.ValidationException;
 

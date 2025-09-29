@@ -16,7 +16,7 @@ public class CachedLoginStrategy implements LoginStrategy {
     UserValidations userValidationService;
     
     @Inject
-    TokenService tokenService;
+    JwtTokenService tokenService;
     
     @Inject
     LoginResponseBuilder loginResponseBuilder;

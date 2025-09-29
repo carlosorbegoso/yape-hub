@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,12 +16,15 @@ public class PaymentAmountCalculator {
     TokenPackageRepository tokenPackageRepository;
 
     public Uni<Double> calculateAmount(Long planId, String tokensPackage) {
-        if (planId != null) {
-            return calculatePlanAmount(planId);
-        } else if (tokensPackage != null) {
-            return calculateTokensAmount(tokensPackage);
-        }
-        return Uni.createFrom().item(0.0);
+        return Uni.createFrom().item(() -> new AmountRequest(planId, tokensPackage))
+                .chain(request -> {
+                    if (request.planId() != null) {
+                        return calculatePlanAmount(request.planId());
+                    } else if (request.tokensPackage() != null) {
+                        return calculateTokensAmount(request.tokensPackage());
+                    }
+                    return Uni.createFrom().item(0.0);
+                });
     }
 
     private Uni<Double> calculatePlanAmount(Long planId) {
@@ -40,4 +43,6 @@ public class PaymentAmountCalculator {
                 })
                 .onFailure().recoverWithItem(0.0);
     }
+
+    private record AmountRequest(Long planId, String tokensPackage) {}
 }

@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.websocket.Session;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import org.sky.service.security.SecurityService;
 
@@ -18,6 +19,12 @@ public class WebSocketSessionManager {
 
     @Inject
     WebSocketTokenExtractor tokenExtractor;
+
+    @ConfigProperty(name = "websocket.session.max-text-message-buffer-size", defaultValue = "4096")
+    int maxTextMessageBufferSize;
+
+    @ConfigProperty(name = "websocket.session.max-idle-timeout", defaultValue = "60000")
+    int maxIdleTimeout;
 
     private static final Logger log = Logger.getLogger(WebSocketSessionManager.class);
 
@@ -35,23 +42,23 @@ public class WebSocketSessionManager {
         });
     }
 
-    public Uni<Void> sendWelcomeMessage(Long sellerId, Session session) {
-        return Uni.createFrom().item(() -> {
-            try {
-                String welcomeMessage = "{\"type\":\"CONNECTED\",\"message\":\"WebSocket connection established\",\"sellerId\":" + sellerId + "}";
-                session.getBasicRemote().sendText(welcomeMessage);
-                return null;
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to send welcome message", e);
-            }
-        });
-    }
-
     public Uni<Void> registerSessionAndSendWelcome(Long sellerId, Session session) {
-        return Uni.combine().all().unis(
-                registerSession(sellerId, session),
-                sendWelcomeMessage(sellerId, session)
-        ).with((registered, welcome) -> null);
+        return registerSession(sellerId, session)
+                .chain(v -> {
+                    try {
+                        // Optimized welcome message for real-time performance
+                        String welcomeMessage = "{\"type\":\"CONNECTED\",\"message\":\"WebSocket connection established\",\"sellerId\":" + sellerId + ",\"timestamp\":" + System.currentTimeMillis() + "}";
+                        
+                        // Send message immediately for real-time performance
+                        session.getAsyncRemote().sendText(welcomeMessage);
+                        
+                        log.info("⚡ Real-time welcome message sent to seller " + sellerId);
+                        return Uni.createFrom().voidItem();
+                    } catch (Exception e) {
+                        log.error("❌ Error sending welcome message to seller " + sellerId, e);
+                        return Uni.createFrom().failure(e);
+                    }
+                });
     }
 
     public Uni<Void> sendErrorAndClose(Session session, String errorMessage) {
@@ -90,21 +97,25 @@ public class WebSocketSessionManager {
     }
 
     public Uni<Void> handleConnection(Session session, String sellerIdParam) {
+        log.info("🔌 Handling WebSocket connection for seller: " + sellerIdParam);
         return Uni.createFrom().item(() -> {
             try {
                 Long sellerId = Long.parseLong(sellerIdParam);
                 
                         // Validate seller ID range
                         if (sellerId <= 0) {
+                            log.warn("❌ Invalid seller ID: " + sellerId);
                             return null;
                         }
                 
                 // Set session properties for robustness
-                session.setMaxTextMessageBufferSize(8192); // 8KB
-                session.setMaxIdleTimeout(30000); // 30 seconds
+                session.setMaxTextMessageBufferSize(maxTextMessageBufferSize);
+                session.setMaxIdleTimeout(maxIdleTimeout);
+                log.info("🔌 Session configured for seller " + sellerId);
                 
                 return sellerId;
                     } catch (NumberFormatException e) {
+                        log.error("❌ Invalid seller ID format: " + sellerIdParam);
                         return null;
                     }
         })
@@ -115,16 +126,20 @@ public class WebSocketSessionManager {
             
             return tokenExtractor.extractTokenFromSession(session)
                             .chain(token -> {
+                                log.info("🔐 Extracted token for seller " + sellerId + ": " + (token != null ? "present" : "null"));
                                 if (token == null) {
                                     return sendErrorAndClose(session, "Authentication token required");
                                 }
                         
                         String authorization = "Bearer " + token;
+                        log.info("🔐 Validating authorization for seller " + sellerId);
                         return securityService.validateSellerAuthorization(authorization, sellerId)
                                 .chain(userId -> {
+                                    log.info("✅ Authentication successful for seller " + sellerId + ", userId: " + userId);
                                     return registerSessionAndSendWelcome(sellerId, session);
                                 })
                                 .onFailure().recoverWithUni(throwable -> {
+                                    log.error("❌ Authentication failed for seller " + sellerId + ": " + throwable.getMessage());
                                     return sendErrorAndClose(session, "Authentication failed: " + throwable.getMessage());
                                 });
                     });

@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import io.vertx.core.Vertx;
+import io.smallrye.mutiny.Uni;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,12 +22,14 @@ public class WebSocketNotificationService {
     private final Map<Long, AtomicLong> lastActivityTime = new ConcurrentHashMap<>();
     private Long cleanupTimerId;
     
-    private static final long CLEANUP_INTERVAL_MS = 30000;
-    private static final long SESSION_TIMEOUT_MS = 300000;
+    // Optimized timeouts for real-time performance
+    private static final long CLEANUP_INTERVAL_MS = 10000; // Reduced from 30s to 10s
+    private static final long SESSION_TIMEOUT_MS = 60000;  // Reduced from 5min to 1min
     
     public void registerSession(Long sellerId, jakarta.websocket.Session session) {
         webSocketSessions.put(sellerId, session);
         lastActivityTime.put(sellerId, new AtomicLong(System.currentTimeMillis()));
+        log.info("📱 Registered WebSocket session for seller " + sellerId + ". Total sessions: " + webSocketSessions.size());
         
         if (cleanupTimerId == null) {
             startCleanupTimer();
@@ -36,23 +39,50 @@ public class WebSocketNotificationService {
     public void unregisterSession(Long sellerId) {
         webSocketSessions.remove(sellerId);
         lastActivityTime.remove(sellerId);
+        log.info("📱 Unregistered WebSocket session for seller " + sellerId + ". Total sessions: " + webSocketSessions.size());
     }
     
-    public void sendNotification(Long sellerId, String message) {
-        jakarta.websocket.Session session = webSocketSessions.get(sellerId);
-        if (session != null && session.isOpen()) {
-            try {
-                session.getAsyncRemote().sendText(message);
-                
-                AtomicLong lastActivity = lastActivityTime.get(sellerId);
-                if (lastActivity != null) {
-                    lastActivity.set(System.currentTimeMillis());
+    /**
+     * Optimized real-time notification sending with immediate delivery
+     */
+    public Uni<Void> sendNotificationReactive(Long sellerId, String message) {
+        return Uni.createFrom().item(() -> {
+            jakarta.websocket.Session session = webSocketSessions.get(sellerId);
+            if (session != null && session.isOpen()) {
+                try {
+                    // Send message immediately for real-time performance
+                    session.getAsyncRemote().sendText(message);
+                    
+                    // Update activity immediately
+                    AtomicLong lastActivity = lastActivityTime.get(sellerId);
+                    if (lastActivity != null) {
+                        lastActivity.set(System.currentTimeMillis());
+                    }
+                    
+                    log.debug("⚡ Real-time notification sent to seller " + sellerId);
+                    return null;
+                } catch (Exception e) {
+                    log.error("❌ Error sending real-time notification to seller " + sellerId + ": " + e.getMessage());
+                    unregisterSession(sellerId);
+                    throw new RuntimeException(e);
                 }
-            } catch (Exception e) {
-                log.error("Error sending notification to seller " + sellerId + ": " + e.getMessage());
-                unregisterSession(sellerId);
+            } else {
+                log.warn("⚠️ Seller " + sellerId + " not connected for real-time notification");
+                return null;
             }
-        }
+        });
+    }
+    
+    /**
+     * Legacy method for backward compatibility - now uses reactive approach
+     */
+    public void sendNotification(Long sellerId, String message) {
+        sendNotificationReactive(sellerId, message)
+            .subscribe()
+            .with(
+                success -> {},
+                failure -> log.error("Failed to send notification to seller " + sellerId, failure)
+            );
     }
     
     
@@ -67,10 +97,12 @@ public class WebSocketNotificationService {
     }
     
     public java.util.Set<Long> getConnectedSellerIds() {
-        return webSocketSessions.entrySet().stream()
+        java.util.Set<Long> connectedIds = webSocketSessions.entrySet().stream()
                 .filter(entry -> entry.getValue() != null && entry.getValue().isOpen())
                 .map(Map.Entry::getKey)
                 .collect(java.util.stream.Collectors.toSet());
+        log.info("📱 getConnectedSellerIds() - Total sessions: " + webSocketSessions.size() + ", Connected: " + connectedIds.size());
+        return connectedIds;
     }
     
     
@@ -113,6 +145,38 @@ public class WebSocketNotificationService {
         if (lastActivity != null) {
             lastActivity.set(System.currentTimeMillis());
         }
+    }
+    
+    /**
+     * Broadcast message to multiple sellers with optimized real-time delivery
+     */
+    public Uni<Void> broadcastToSellersReactive(java.util.Set<Long> sellerIds, String message) {
+        return Uni.createFrom().item(() -> {
+            final int[] sentCount = {0};
+            for (Long sellerId : sellerIds) {
+                if (isSellerConnected(sellerId)) {
+                    sendNotificationReactive(sellerId, message)
+                        .subscribe()
+                        .with(
+                            success -> sentCount[0]++,
+                            failure -> log.warn("Failed to broadcast to seller " + sellerId, failure)
+                        );
+                }
+            }
+            log.info("📡 Broadcast sent to " + sentCount[0] + " connected sellers");
+            return null;
+        });
+    }
+    
+    /**
+     * Get real-time connection status for all sellers
+     */
+    public java.util.Map<Long, Boolean> getRealTimeConnectionStatus() {
+        java.util.Map<Long, Boolean> status = new ConcurrentHashMap<>();
+        webSocketSessions.forEach((sellerId, session) -> {
+            status.put(sellerId, session != null && session.isOpen());
+        });
+        return status;
     }
     
 }

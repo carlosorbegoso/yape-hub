@@ -7,7 +7,7 @@ import org.sky.model.User;
 import org.sky.util.jwt.JwtGenerator;
 
 @ApplicationScoped
-public class TokenService {
+public class JwtTokenService {
 
     @Inject
     JwtGenerator jwtGenerator;

@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
@@ -23,18 +23,19 @@ public class PaymentUploadService {
 
     @WithTransaction
     public Uni<PaymentUploadResponse> uploadPaymentImage(Long adminId, String paymentCode, String imageBase64) {
-        return imageValidator.validateImage(imageBase64)
-                .chain(valid -> paymentCodeService.findValidCode(paymentCode)
-                        .chain(code -> validatePaymentCode(code)
-                                .chain(validCode -> createManualPayment(adminId, validCode, imageBase64))));
+        return Uni.combine().all().unis(
+                imageValidator.validateImage(imageBase64),
+                paymentCodeService.findValidCode(paymentCode)
+        ).asTuple()
+        .chain(tuple -> {
+            PaymentCode code = tuple.getItem2();
+            if (code == null) {
+                return Uni.createFrom().failure(new RuntimeException("Invalid or expired payment code"));
+            }
+            return createManualPayment(adminId, code, imageBase64);
+        });
     }
 
-    private Uni<PaymentCode> validatePaymentCode(PaymentCode code) {
-        if (code == null) {
-            return Uni.createFrom().failure(new RuntimeException("Invalid or expired payment code"));
-        }
-        return Uni.createFrom().item(code);
-    }
 
     private Uni<PaymentUploadResponse> createManualPayment(Long adminId, PaymentCode code, String imageBase64) {
         ManualPayment payment = new ManualPayment();

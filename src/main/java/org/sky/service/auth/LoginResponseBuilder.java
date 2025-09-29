@@ -18,7 +18,7 @@ public class LoginResponseBuilder {
     @Inject
     SellerRepository sellerRepository;
 
-    public Uni<ApiResponse<LoginResponse>> buildLoginResponse(TokenService.TokenData tokenData) {
+    public Uni<ApiResponse<LoginResponse>> buildLoginResponse(JwtTokenService.TokenData tokenData) {
         User user = tokenData.user();
         
         if (user.role == User.UserRole.ADMIN) {
@@ -28,7 +28,7 @@ public class LoginResponseBuilder {
         }
     }
 
-    public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(TokenService.TokenData tokenData) {
+    public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(JwtTokenService.TokenData tokenData) {
         User user = tokenData.user();
         
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
@@ -43,7 +43,7 @@ public class LoginResponseBuilder {
         return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
     }
 
-    private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(TokenService.TokenData tokenData) {
+    private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(JwtTokenService.TokenData tokenData) {
         return adminRepository.findByUserId(tokenData.user().id)
                 .map(admin -> {
                     Long businessId = admin != null ? admin.id : null;
@@ -62,7 +62,7 @@ public class LoginResponseBuilder {
                 });
     }
 
-    private Uni<ApiResponse<LoginResponse>> buildSellerLoginResponse(TokenService.TokenData tokenData) {
+    private Uni<ApiResponse<LoginResponse>> buildSellerLoginResponse(JwtTokenService.TokenData tokenData) {
         return sellerRepository.findByUserId(tokenData.user().id)
                 .map(seller -> {
                     Long businessId = null;

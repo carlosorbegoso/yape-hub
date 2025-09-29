@@ -9,8 +9,8 @@ import org.sky.dto.billing.SubscriptionStatusResponse;
 import org.sky.dto.billing.TokenStatusResponse;
 import org.sky.service.SubscriptionService;
 import org.sky.service.TokenService;
-import org.sky.service.payment.PaymentCodeService;
-import org.sky.service.payment.PaymentUploadService;
+import org.sky.service.subscription.PaymentCodeService;
+import org.sky.service.subscription.PaymentUploadService;
 
 import java.util.List;
 import java.util.Map;

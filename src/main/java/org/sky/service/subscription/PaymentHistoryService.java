@@ -1,4 +1,4 @@
-package org.sky.service.payment;
+package org.sky.service.subscription;
 
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
@@ -20,19 +20,17 @@ public class PaymentHistoryService {
     public Uni<List<PaymentHistoryResponse>> getPaymentHistory(Long adminId, String period) {
         return paymentHistoryRepository.findByAdminId(adminId)
                 .onFailure().recoverWithItem(throwable -> List.<PaymentHistory>of())
-                .chain(this::convertToResponseList);
+                .map(this::convertToResponseList);
     }
 
-    private Uni<List<PaymentHistoryResponse>> convertToResponseList(List<PaymentHistory> payments) {
-        return Uni.createFrom().item(() -> {
-            if (payments == null || payments.isEmpty()) {
-                return List.of();
-            }
-            
-            return payments.stream()
-                    .map(this::convertToResponse)
-                    .toList();
-        });
+    private List<PaymentHistoryResponse> convertToResponseList(List<PaymentHistory> payments) {
+        if (payments == null || payments.isEmpty()) {
+            return List.of();
+        }
+        
+        return payments.stream()
+                .map(this::convertToResponse)
+                .toList();
     }
 
     private PaymentHistoryResponse convertToResponse(PaymentHistory payment) {

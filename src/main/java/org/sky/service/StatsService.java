@@ -1238,24 +1238,10 @@ public class StatsService {
         
         // Comparaciones específicas para el vendedor individual
         // En un sistema real, se compararían con datos históricos del mismo vendedor
-        SellerAnalyticsResponse.ComparisonData vsPreviousWeek = new SellerAnalyticsResponse.ComparisonData(
-            0.0, 0L, 0.0 // Sin datos históricos para comparar
-        );
-        
-        SellerAnalyticsResponse.ComparisonData vsPreviousMonth = new SellerAnalyticsResponse.ComparisonData(
-            0.0, 0L, 0.0 // Sin datos históricos para comparar
-        );
-        
-        SellerAnalyticsResponse.ComparisonData vsPersonalBest = new SellerAnalyticsResponse.ComparisonData(
-            0.0, 0L, 0.0 // Sin datos históricos para comparar
-        );
-        
-        SellerAnalyticsResponse.ComparisonData vsAverage = new SellerAnalyticsResponse.ComparisonData(
-            0.0, 0L, 0.0 // Sin datos históricos para comparar
-        );
+        SellerAnalyticsResponse.ComparisonData emptyComparison = createEmptyComparison();
         
         return new SellerAnalyticsResponse.SellerComparisons(
-            vsPreviousWeek, vsPreviousMonth, vsPersonalBest, vsAverage
+            emptyComparison, emptyComparison, emptyComparison, emptyComparison
         );
     }
     
@@ -2035,5 +2021,12 @@ public class StatsService {
                                 return report;
                             });
                 });
+    }
+    
+    /**
+     * Método utilitario para crear comparaciones vacías
+     */
+    private SellerAnalyticsResponse.ComparisonData createEmptyComparison() {
+        return new SellerAnalyticsResponse.ComparisonData(0.0, 0L, 0.0);
     }
 }

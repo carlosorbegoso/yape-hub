@@ -66,7 +66,7 @@ public class AuthService {
     DatabaseLoginStrategy databaseLoginStrategy;
     
     @Inject
-    TokenService tokenService;
+    JwtTokenService tokenService;
     
     @Inject
     LoginResponseBuilder loginResponseBuilder;
