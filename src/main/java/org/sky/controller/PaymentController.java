@@ -39,7 +39,7 @@ public class PaymentController {
         return securityService.validateJwtToken(authorization)
                 .chain(adminId -> hubNotificationControllerService.getSellerConnectionStatus(sellerId, adminId))
                 .map(status -> Response.ok(ApiResponse.success("Connection status retrieved", status)).build())
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @POST
@@ -62,7 +62,7 @@ public class PaymentController {
         return securityService.validateJwtToken(authorization)
                 .chain(userId -> hubNotificationControllerService.rejectPayment(request, userId, null))
                 .map(response -> Response.ok(ApiResponse.success("Payment rejected successfully", response)).build())
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @GET
@@ -165,7 +165,7 @@ public class PaymentController {
                     
                     return Response.ok(ApiResponse.success("Connected sellers retrieved successfully", response)).build();
                 })
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @GET
@@ -182,7 +182,7 @@ public class PaymentController {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> hubNotificationControllerService.getAllSellersStatusForAdmin(adminId))
                 .map(response -> Response.ok(ApiResponse.success("Sellers status retrieved successfully", response)).build())
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @GET

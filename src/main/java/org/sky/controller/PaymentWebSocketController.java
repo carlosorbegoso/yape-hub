@@ -8,16 +8,13 @@ import jakarta.websocket.server.ServerEndpoint;
 import org.jboss.logging.Logger;
 import org.sky.service.websocket.WebSocketMessageHandler;
 import org.sky.service.websocket.WebSocketSessionManager;
-import org.sky.service.websocket.WebSocketTokenExtractor;
 import org.sky.service.security.SecurityService;
 
 @ServerEndpoint("/ws/payments/{sellerId}")
 @ApplicationScoped
 public class PaymentWebSocketController {
 
-    @Inject
-    SecurityService securityService;
-
+    // ONLY used services - removed SecurityService and WebSocketTokenExtractor duplication
     @Inject
     WebSocketMessageHandler messageHandler;
 
@@ -25,10 +22,9 @@ public class PaymentWebSocketController {
     WebSocketSessionManager sessionManager;
 
     @Inject
-    WebSocketTokenExtractor tokenExtractor;
+    SecurityService securityService;
 
     private static final Logger log = Logger.getLogger(PaymentWebSocketController.class);
-    
 
     @OnOpen
     public void onOpen(Session session, @PathParam("sellerId") String sellerIdParam) {
@@ -64,11 +60,11 @@ public class PaymentWebSocketController {
 
     @OnMessage
     public void onMessage(String message, Session session, @PathParam("sellerId") String sellerIdParam) {
-        messageHandler.handleMessage(message, session, sellerIdParam)
+        sessionManager.validateSellerId(sellerIdParam)
+                .chain(sellerId -> messageHandler.handleMessage(message, session, sellerIdParam))
                 .subscribe().with(
                     success -> {},
                     error -> log.error("Error processing message from seller " + sellerIdParam + ": " + error.getMessage())
                 );
     }
-
 }
