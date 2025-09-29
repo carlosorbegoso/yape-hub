@@ -13,6 +13,10 @@ public class TokenPackageRepository implements PanacheRepository<TokenPackage> {
         return find("isActive = true order by sortOrder asc, tokens asc").list();
     }
     
+    public Uni<TokenPackage> findByPackageId(String packageId) {
+        return find("packageId = ?1 and isActive = true", packageId).firstResult();
+    }
+    
 
 
 

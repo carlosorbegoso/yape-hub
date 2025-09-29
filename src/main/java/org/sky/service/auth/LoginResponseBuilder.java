@@ -31,11 +31,16 @@ public class LoginResponseBuilder {
     public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(TokenService.TokenData tokenData) {
         User user = tokenData.user();
         
-        if (user.role == User.UserRole.ADMIN) {
-            return buildAdminLoginResponse(tokenData);
-        } else {
-            return buildSellerLoginResponse(tokenData);
-        }
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+            user.id, user.email, user.role,
+            null, null, user.isVerified, null
+        );
+        
+        LoginResponse response = new LoginResponse(
+            tokenData.accessToken(), tokenData.refreshToken(), 3600L, userInfo
+        );
+        
+        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
     }
 
     private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(TokenService.TokenData tokenData) {

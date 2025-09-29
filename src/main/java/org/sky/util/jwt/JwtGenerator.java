@@ -52,12 +52,6 @@ public class JwtGenerator {
         .claim("type", "refresh")
         .sign();
   }
-  public long getAccessTokenExpirySeconds() {
-    return accessDuration.toSeconds();
-  }
 
-  public long getRefreshTokenExpirySeconds() {
-    return refreshDuration.toSeconds();
-  }
 
 }

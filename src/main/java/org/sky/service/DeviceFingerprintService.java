@@ -63,11 +63,5 @@ public class DeviceFingerprintService {
         }
         return false;
     }
-    
-    /**
-     * Genera un device fingerprint para testing
-     */
-    public String generateTestDeviceFingerprint() {
-        return "a1b2c3d4e5f6g7h8";
-    }
+
 }

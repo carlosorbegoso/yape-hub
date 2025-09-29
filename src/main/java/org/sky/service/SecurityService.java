@@ -30,7 +30,7 @@ public class SecurityService {
         
         return jwtValidator.isValidAccessToken(token)
             .onItem().transformToUni(isValid -> {
-                if (!isValid) {
+                if (Boolean.FALSE.equals(isValid)) {
                     return Uni.createFrom().failure(new SecurityException("Token inválido"));
                 }
                 

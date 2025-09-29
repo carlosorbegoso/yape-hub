@@ -13,6 +13,7 @@ import org.sky.dto.billing.PaymentUploadResponse;
 import org.sky.repository.ManualPaymentRepository;
 import org.sky.repository.PaymentCodeRepository;
 import org.sky.service.SecurityService;
+import org.sky.service.payment.PaymentApprovalService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -33,6 +34,9 @@ public class AdminBillingController {
 
     @Inject
     SecurityService securityService;
+    
+    @Inject
+    PaymentApprovalService paymentApprovalService;
 
     @GET
     @Operation(summary = "Get admin billing information", description = "Obtiene información de administración de facturación según el tipo")
@@ -193,31 +197,10 @@ public class AdminBillingController {
         Log.info("✅ AdminBillingController.approvePayment() - PaymentId: " + paymentId + ", AdminId: " + adminId);
         
         return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> {
-                    Log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return manualPaymentRepository.findById(paymentId)
-                            .chain(payment -> {
-                                if (payment == null || !payment.isPending()) {
-                                    return Uni.createFrom().failure(new RuntimeException("Pago no encontrado o ya procesado"));
-                                }
-                                
-                                // Aprobar el pago
-                                payment.approve(adminId, reviewNotes);
-                                
-                                return manualPaymentRepository.persist(payment)
-                                        .map(savedPayment -> {
-                                            Log.info("✅ Pago aprobado exitosamente: " + paymentId);
-                                            return new PaymentUploadResponse(
-                                                paymentId,
-                                                "Pago aprobado exitosamente",
-                                                "approved"
-                                            );
-                                        });
-                            });
-                })
+                .chain(userId -> paymentApprovalService.approvePayment(adminId, paymentId, reviewNotes))
                 .map(response -> {
                     Log.info("✅ Pago aprobado exitosamente");
-                    return Response.ok(ApiResponse.success("Pago aprobado exitosamente", response)).build();
+                    return Response.ok(ApiResponse.success("Payment approved successfully", response)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     Log.warn("❌ Error aprobando pago: " + throwable.getMessage());
@@ -235,31 +218,10 @@ public class AdminBillingController {
         Log.info("❌ AdminBillingController.rejectPayment() - PaymentId: " + paymentId + ", AdminId: " + adminId);
         
         return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> {
-                    Log.info("✅ Autorización exitosa para adminId: " + adminId);
-                    return manualPaymentRepository.findById(paymentId)
-                            .chain(payment -> {
-                                if (payment == null || !payment.isPending()) {
-                                    return Uni.createFrom().failure(new RuntimeException("Pago no encontrado o ya procesado"));
-                                }
-                                
-                                // Rechazar el pago
-                                payment.reject(adminId, reviewNotes);
-                                
-                                return manualPaymentRepository.persist(payment)
-                                        .map(savedPayment -> {
-                                            Log.info("❌ Pago rechazado exitosamente: " + paymentId);
-                                            return new PaymentUploadResponse(
-                                                paymentId,
-                                                "Pago rechazado: " + reviewNotes,
-                                                "rejected"
-                                            );
-                                        });
-                            });
-                })
+                .chain(userId -> paymentApprovalService.rejectPayment(adminId, paymentId, reviewNotes))
                 .map(response -> {
                     Log.info("✅ Pago rechazado exitosamente");
-                    return Response.ok(ApiResponse.success("Pago rechazado exitosamente", response)).build();
+                    return Response.ok(ApiResponse.success("Payment rejected successfully", response)).build();
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     Log.warn("❌ Error rechazando pago: " + throwable.getMessage());

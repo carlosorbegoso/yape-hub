@@ -6,10 +6,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.Optional;
-import org.sky.model.User;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class JwtExtractor {
@@ -40,19 +36,4 @@ public class JwtExtractor {
     });
   }
 
-  public Uni<Set<User.UserRole>> extractRoles(JsonWebToken jwt) {
-    return Uni.createFrom().item(() ->
-        jwt.getGroups().stream()
-            .map(r -> {
-              try {
-                return User.UserRole.valueOf(r.toUpperCase());
-              } catch (IllegalArgumentException e) {
-                Log.debug("Invalid role: " + r.toUpperCase());
-                return null;
-              }
-            })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toSet())
-    );
-  }
 }
