@@ -5,21 +5,20 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.SellerFinancialResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
+import org.sky.service.stats.calculators.template.BaseStatsCalculator;
+import org.sky.service.stats.calculators.template.SellerFinancialRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @ApplicationScoped
-public class SellerFinancialCalculator {
+public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinancialRequest, SellerFinancialResponse> {
     
-    private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final double DEFAULT_COMMISSION_RATE = 0.10;
     private static final String DEFAULT_CURRENCY = "PEN";
-    private static final String DEFAULT_SELLER_NAME = "Sin nombre";
     
     @Inject
     PaymentNotificationRepository paymentNotificationRepository;
@@ -30,63 +29,93 @@ public class SellerFinancialCalculator {
     @WithTransaction
     public Uni<SellerFinancialResponse> calculateSellerFinancialAnalytics(Long sellerId, LocalDate startDate, LocalDate endDate,
                                                         String include, String currency, Double commissionRate) {
+        var request = new SellerFinancialRequest(sellerId, startDate, endDate, include, currency, commissionRate);
+        
         return sellerRepository.findById(sellerId)
                 .onItem().ifNull().failWith(() -> new RuntimeException("Seller not found"))
                 .chain(seller -> paymentNotificationRepository.findByConfirmedByAndDateRange(
                         sellerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                        .map(payments -> buildFinancialResponse(seller, payments, startDate, endDate, 
-                                include, currency, commissionRate)));
+                        .map(payments -> calculateStats(payments, request)));
     }
     
-    private SellerFinancialResponse buildFinancialResponse(Seller seller, List<PaymentNotification> payments,
-                                                          LocalDate startDate, LocalDate endDate,
-                                                          String include, String currency, Double commissionRate) {
-        var confirmedPayments = payments.stream()
-                .filter(payment -> CONFIRMED_STATUS.equals(payment.status))
+    @Override
+    protected void validateInput(List<PaymentNotification> payments, SellerFinancialRequest request) {
+        validateDateRange(request.startDate(), request.endDate());
+        if (payments == null) {
+            throw new IllegalArgumentException("Los pagos no pueden ser null");
+        }
+    }
+    
+    @Override
+    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, SellerFinancialRequest request) {
+        // Para seller financial, filtramos solo pagos confirmados del vendedor específico
+        return payments.stream()
+                .filter(payment -> "CONFIRMED".equals(payment.status))
+                .filter(payment -> request.sellerId().equals(payment.confirmedBy))
                 .toList();
+    }
+    
+    @Override
+    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, SellerFinancialRequest request) {
+        // Métricas específicas para seller financial: comisiones
+        var totalSales = salesStrategy.calculate(payments);
+        var finalCommissionRate = getCommissionRate(request.commissionRate());
+        var commissionAmount = calculateCommission(totalSales, finalCommissionRate);
+        var netAmount = totalSales - commissionAmount;
         
-        var totalSales = calculateTotalSales(confirmedPayments);
-        var finalCommissionRate = getCommissionRate(commissionRate);
-        var commissionAmount = totalSales * finalCommissionRate;
-        
-        return new SellerFinancialResponse(
-                seller.id,
-                getSellerName(seller),
-                totalSales,
-                getCurrency(currency),
-                finalCommissionRate,
-                commissionAmount,
-                totalSales - commissionAmount,
-                new SellerFinancialResponse.Period(startDate.toString(), endDate.toString()),
-                include,
-                payments.size(),
-                (long) confirmedPayments.size(),
-                calculateAverageTransactionValue(payments)
+        return new SellerFinancialSpecificMetrics(
+            totalSales,
+            finalCommissionRate,
+            commissionAmount,
+            netAmount,
+            getCurrency(request.currency())
         );
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
-        return confirmedPayments.stream()
-                .mapToDouble(payment -> payment.amount)
-                .sum();
-    }
-    
-    private double calculateAverageTransactionValue(List<PaymentNotification> payments) {
-        return payments.stream()
-                .mapToDouble(payment -> payment.amount)
-                .average()
-                .orElse(0.0);
+    @Override
+    protected SellerFinancialResponse buildResponse(Double totalSales, Long totalTransactions, 
+                                                  Double averageTransactionValue, Double claimRate,
+                                                  Object specificMetrics, List<PaymentNotification> payments, 
+                                                  SellerFinancialRequest request) {
+        var sellerFinancialMetrics = (SellerFinancialSpecificMetrics) specificMetrics;
+        
+        // Para evitar bloqueo, usamos el ID del request directamente
+        // En un entorno reactivo, la validación del seller se haría en el endpoint
+        return new SellerFinancialResponse(
+                request.sellerId(),
+                sellerFinancialMetrics.totalSales(),
+                sellerFinancialMetrics.commissionAmount(),
+                sellerFinancialMetrics.netAmount(),
+                totalTransactions.intValue(),
+                averageTransactionValue,
+                List.of(), // dailySales
+                sellerFinancialMetrics.commissionRate(),
+                calculateProfitMargin(sellerFinancialMetrics.totalSales(), sellerFinancialMetrics.commissionAmount()),
+                new SellerFinancialResponse.Period(request.startDate().toString(), request.endDate().toString())
+        );
     }
     
     private double getCommissionRate(Double commissionRate) {
         return commissionRate != null ? commissionRate : DEFAULT_COMMISSION_RATE;
     }
     
+    private double calculateProfitMargin(Double totalSales, Double commissionAmount) {
+        if (totalSales == null || totalSales == 0) return 0.0;
+        return ((totalSales - commissionAmount) / totalSales) * 100.0;
+    }
+    
     private String getCurrency(String currency) {
         return currency != null ? currency : DEFAULT_CURRENCY;
     }
     
-    private String getSellerName(Seller seller) {
-        return seller.sellerName != null ? seller.sellerName : DEFAULT_SELLER_NAME;
-    }
+    /**
+     * Métricas específicas para seller financial
+     */
+    private record SellerFinancialSpecificMetrics(
+        Double totalSales,
+        Double commissionRate,
+        Double commissionAmount,
+        Double netAmount,
+        String currency
+    ) {}
 }

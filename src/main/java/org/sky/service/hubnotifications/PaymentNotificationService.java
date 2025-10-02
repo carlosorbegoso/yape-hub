@@ -8,7 +8,7 @@ import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.dto.payment.PendingPaymentsResponse;
 import org.sky.dto.payment.AdminPaymentManagementResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -188,7 +188,7 @@ public class PaymentNotificationService {
     }
 
 
-    private Uni<PaymentNotificationResponse> sendNotificationToAllSellers(PaymentNotificationRequest request, List<Seller> sellers) {
+    private Uni<PaymentNotificationResponse> sendNotificationToAllSellers(PaymentNotificationRequest request, List<SellerEntity> sellers) {
         // Create notification for each seller asynchronously
         List<Uni<Void>> notificationTasks = sellers.stream()
             .map(seller -> createNotificationForSeller(request, seller).replaceWithVoid())
@@ -203,7 +203,7 @@ public class PaymentNotificationService {
             });
     }
 
-    private Uni<PaymentNotificationResponse> createNotificationForSeller(PaymentNotificationRequest request, Seller seller) {
+    private Uni<PaymentNotificationResponse> createNotificationForSeller(PaymentNotificationRequest request, SellerEntity seller) {
         return PaymentNotificationValidator.validateSeller().apply(seller)
             .chain(validSeller -> dataService.createPaymentForSeller(request, validSeller))
             .chain(savedPayment -> {
@@ -228,14 +228,14 @@ public class PaymentNotificationService {
         return dataService.findSellersByAdminId(adminId)
             .onItem().transform(sellers -> {
                 Map<Long, Boolean> result = new java.util.HashMap<>();
-                for (Seller seller : sellers) {
+                for (SellerEntity seller : sellers) {
                     result.put(seller.id, true); // Simplified for now
                 }
                 return result;
             });
     }
 
-    public Uni<List<Seller>> getAllSellersStatusForAdmin(Long adminId) {
+    public Uni<List<SellerEntity>> getAllSellersStatusForAdmin(Long adminId) {
         return dataService.findSellersByAdminId(adminId);
     }
 

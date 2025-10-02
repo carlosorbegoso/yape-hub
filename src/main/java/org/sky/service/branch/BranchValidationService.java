@@ -4,8 +4,9 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.exception.ValidationException;
-import org.sky.model.Admin;
-import org.sky.model.Branch;
+import org.sky.model.AdminEntity;
+import org.sky.model.BusinessType;
+import org.sky.model.BranchEntity;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.BranchRepository;
 
@@ -18,7 +19,7 @@ public class BranchValidationService {
     @Inject
     BranchRepository branchRepository;
 
-    public Uni<Admin> validateAdminExists(Long adminId) {
+    public Uni<AdminEntity> validateAdminExists(Long adminId) {
         return adminRepository.findById(adminId)
                 .chain(admin -> {
                     if (admin == null) {
@@ -30,7 +31,7 @@ public class BranchValidationService {
                 });
     }
 
-    public Uni<Branch> validateBranchExists(Long adminId, Long branchId) {
+    public Uni<BranchEntity> validateBranchExists(Long adminId, Long branchId) {
         return branchRepository.findByAdminIdAndBranchId(adminId, branchId)
                 .chain(branch -> {
                     if (branch == null) {

@@ -1,6 +1,7 @@
 package org.sky.dto.admin;
 
-import org.sky.model.Admin;
+import org.sky.model.AdminEntity;
+import org.sky.model.BusinessType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,7 +10,7 @@ public record AdminProfileResponse(
     Long id,
     String email,
     String businessName,
-    Admin.BusinessType businessType,
+    BusinessType businessType,
     String ruc,
     String phone,
     String address,

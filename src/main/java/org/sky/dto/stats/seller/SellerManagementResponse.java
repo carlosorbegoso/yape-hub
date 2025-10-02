@@ -1,33 +1,15 @@
 package org.sky.dto.stats.seller;
 
+import org.sky.dto.stats.SellerActivity;
+import org.sky.dto.stats.SellerOverview;
+import org.sky.dto.stats.SellerPerformanceDistribution;
+
 public record SellerManagementResponse(
     SellerOverview sellerOverview,
     SellerPerformanceDistribution sellerPerformanceDistribution,
     SellerActivity sellerActivity
 ) {
-    
-    public record SellerOverview(
-        Long totalSellers,
-        Long activeSellers,
-        Long inactiveSellers,
-        Long newSellersThisMonth,
-        Long sellersWithZeroSales,
-        Long topPerformers,
-        Long underPerformers
-    ) {}
-    
-    public record SellerPerformanceDistribution(
-        Long excellent,
-        Long good,
-        Long average,
-        Long poor
-    ) {}
-    
-    public record SellerActivity(
-        Long dailyActiveSellers,
-        Long weeklyActiveSellers,
-        Long monthlyActiveSellers,
-        Double averageSessionDuration,
-        Double averageTransactionsPerSeller
-    ) {}
+
+
+
 }

@@ -6,7 +6,8 @@ import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 import org.sky.service.auth.LoginStrategy;
 
 @ApplicationScoped
@@ -28,7 +29,7 @@ public class CachedLoginStrategy implements LoginStrategy {
                 .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
     }
 
-    public Uni<ApiResponse<LoginResponse>> executeWithCachedUser(User cachedUser, LoginRequest request) {
+    public Uni<ApiResponse<LoginResponse>> executeWithCachedUser(UserEntity cachedUser, LoginRequest request) {
         return userValidationService.validateUserCredentials(cachedUser, request)
                 .chain(user -> tokenService.generateTokens(user))
                 .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));

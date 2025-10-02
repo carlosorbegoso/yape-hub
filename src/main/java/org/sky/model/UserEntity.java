@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
-public class User extends PanacheEntityBase {
+public class UserEntity extends PanacheEntityBase {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   public Long id;
@@ -53,14 +53,11 @@ public class User extends PanacheEntityBase {
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
     
-    public enum UserRole {
-        ADMIN, SELLER
-    }
     
     // Constructors
-    public User() {}
+    public UserEntity() {}
     
-    public User(String email, String password, UserRole role) {
+    public UserEntity(String email, String password, UserRole role) {
         this.email = email;
         this.password = password;
         this.role = role;

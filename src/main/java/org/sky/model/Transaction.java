@@ -49,11 +49,11 @@ public class Transaction extends PanacheEntityBase {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id", nullable = false)
-    public Branch branch;
+    public BranchEntity branch;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id")
-    public Seller seller;
+    public SellerEntity seller;
     
     @CreationTimestamp
     @Column(name = "created_at")

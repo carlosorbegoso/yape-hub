@@ -12,6 +12,4 @@ public record AdminAnalyticsRequest(
     String granularity,
     Double confidence,
     Integer days
-) {
-    // Los campos del record son automáticamente públicos y finales
-}
+) {}

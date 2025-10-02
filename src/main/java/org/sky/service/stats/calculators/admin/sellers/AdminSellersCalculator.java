@@ -1,9 +1,9 @@
 package org.sky.service.stats.calculators.admin.sellers;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.stats.*;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,22 +14,22 @@ public class AdminSellersCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public List<AnalyticsSummaryResponse.TopSellerData> calculateTopSellers(List<PaymentNotification> payments, 
-                                                                          List<Seller> sellers) {
+    public List<TopSellerData> calculateTopSellers(List<PaymentNotification> payments,
+                                                   List<SellerEntity> sellers) {
         if (sellers.isEmpty()) {
             return new ArrayList<>();
         }
         
         var sellerStats = sellers.stream()
                 .map(seller -> calculateSellerStats(payments, seller))
-                .sorted(Comparator.comparing(AnalyticsSummaryResponse.TopSellerData::totalSales).reversed())
+                .sorted(Comparator.comparing(TopSellerData::totalSales).reversed())
                 .limit(10)
                 .collect(Collectors.toList());
         
         // Asignar rankings
         for (int i = 0; i < sellerStats.size(); i++) {
             var stats = sellerStats.get(i);
-            sellerStats.set(i, new AnalyticsSummaryResponse.TopSellerData(
+            sellerStats.set(i, new TopSellerData(
                     i + 1,
                     stats.sellerId(),
                     stats.sellerName(),
@@ -42,7 +42,7 @@ public class AdminSellersCalculator {
         return sellerStats;
     }
     
-    public AnalyticsSummaryResponse.SellerComparisons calculateComparisons(List<PaymentNotification> payments, 
+    public SellerComparisons calculateComparisons(List<PaymentNotification> payments, 
                                                                          java.time.LocalDate startDate, 
                                                                          java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -54,18 +54,18 @@ public class AdminSellersCalculator {
         var transactionChange = calculateTransactionChange(totalTransactions, startDate, endDate);
         var percentageChange = calculatePercentageChange(salesChange, totalSales);
         
-        var comparisonData = new AnalyticsSummaryResponse.ComparisonData(salesChange, (long) transactionChange, percentageChange);
+        var comparisonData = new ComparisonData(salesChange, (long) transactionChange, percentageChange);
         
-        return new AnalyticsSummaryResponse.SellerComparisons(
+        return new  SellerComparisons(
                 comparisonData, comparisonData, comparisonData, comparisonData
         );
     }
     
-    public AnalyticsSummaryResponse.SellerTrends calculateTrends(List<PaymentNotification> payments, 
+    public  SellerTrends calculateTrends(List<PaymentNotification> payments, 
                                                                java.time.LocalDate startDate, 
                                                                java.time.LocalDate endDate) {
         if (payments.isEmpty()) {
-            return new AnalyticsSummaryResponse.SellerTrends(
+            return new  SellerTrends(
                 "stable", "stable", 0.0, "neutral", "flat", 0.0, "none"
             );
         }
@@ -79,13 +79,13 @@ public class AdminSellersCalculator {
         var volatility = calculateVolatility(confirmedPayments);
         var seasonality = determineSeasonality(confirmedPayments);
         
-        return new AnalyticsSummaryResponse.SellerTrends(
+        return new  SellerTrends(
                 salesTrend, transactionTrend, growthRate, momentum, trendDirection, volatility, seasonality
         );
     }
     
-    public AnalyticsSummaryResponse.SellerAchievements calculateAchievements(List<PaymentNotification> payments, 
-                                                                           List<Seller> sellers, 
+    public  SellerAchievements calculateAchievements(List<PaymentNotification> payments, 
+                                                                           List<SellerEntity> sellers, 
                                                                            java.time.LocalDate startDate, 
                                                                            java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -97,10 +97,10 @@ public class AdminSellersCalculator {
         var milestones = createMilestones(confirmedPayments);
         var badges = createBadges(confirmedPayments, sellers);
         
-        return new AnalyticsSummaryResponse.SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
+        return new  SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
     }
     
-    private AnalyticsSummaryResponse.TopSellerData calculateSellerStats(List<PaymentNotification> payments, Seller seller) {
+    private  TopSellerData calculateSellerStats(List<PaymentNotification> payments, SellerEntity seller) {
         var sellerPayments = filterPaymentsBySeller(payments, seller.id);
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);
         
@@ -108,7 +108,7 @@ public class AdminSellersCalculator {
         var transactionCount = (long) sellerPayments.size();
         var branchName = "Sin sucursal"; // Simplificado
         
-        return new AnalyticsSummaryResponse.TopSellerData(
+        return new  TopSellerData(
                 0, // Ranking se asigna después
                 seller.id,
                 seller.sellerName != null ? seller.sellerName : "Sin nombre",
@@ -270,8 +270,8 @@ public class AdminSellersCalculator {
         return Math.max(activeDays / 7, 1L);
     }
     
-    private List<AnalyticsSummaryResponse.Milestone> createMilestones(List<PaymentNotification> payments) {
-        var milestones = new ArrayList<AnalyticsSummaryResponse.Milestone>();
+    private List<Milestone> createMilestones(List<PaymentNotification> payments) {
+        var milestones = new ArrayList<Milestone>();
         
         if (payments.size() >= 1) {
             var firstPayment = payments.stream()
@@ -279,7 +279,7 @@ public class AdminSellersCalculator {
                     .orElse(null);
             
             if (firstPayment != null) {
-                milestones.add(new AnalyticsSummaryResponse.Milestone(
+                milestones.add(new  Milestone(
                         "first_sale",
                         firstPayment.createdAt.toLocalDate().toString(),
                         true,
@@ -289,7 +289,7 @@ public class AdminSellersCalculator {
         }
         
         if (payments.size() >= 100) {
-            milestones.add(new AnalyticsSummaryResponse.Milestone(
+            milestones.add(new Milestone(
                     "hundred_sales",
                     java.time.LocalDate.now().toString(),
                     true,
@@ -300,11 +300,11 @@ public class AdminSellersCalculator {
         return milestones;
     }
     
-    private List<AnalyticsSummaryResponse.Badge> createBadges(List<PaymentNotification> payments, List<Seller> sellers) {
-        var badges = new ArrayList<AnalyticsSummaryResponse.Badge>();
+    private List<Badge> createBadges(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        var badges = new ArrayList<Badge>();
         
         if (payments.size() >= 1) {
-            badges.add(new AnalyticsSummaryResponse.Badge(
+            badges.add(new Badge(
                     "Primera Venta",
                     "🎉",
                     "Completaste tu primera venta",
@@ -314,7 +314,7 @@ public class AdminSellersCalculator {
         }
         
         if (sellers.size() >= 5) {
-            badges.add(new AnalyticsSummaryResponse.Badge(
+            badges.add(new  Badge(
                     "Equipo Grande",
                     "👥",
                     "Tienes 5 o más vendedores",

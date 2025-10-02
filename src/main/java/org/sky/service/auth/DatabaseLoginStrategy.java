@@ -6,7 +6,8 @@ import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 import org.sky.service.cache.CacheService;
 
 @ApplicationScoped
@@ -32,7 +33,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
         return userLoginService.getUserForLogin(request)
                 .chain(user -> userValidationService.validateUserCredentials(user, request))
                 .chain(user -> {
-                    if (user.role == User.UserRole.SELLER) {
+                    if (user.role == UserRole.SELLER) {
                         return userLoginService.getSellerForUser(user)
                                 .chain(seller -> Uni.combine().all()
                                         .unis(
@@ -41,7 +42,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
                                         )
                                         .asTuple()
                                         .chain(tuple -> {
-                                            User updatedUser = tuple.getItem1();
+                                            UserEntity updatedUser = tuple.getItem1();
                                             JwtTokenService.TokenData tokenData = tuple.getItem2();
 
                                             return cacheService.cacheUser(request.email(), request.role().toString(), updatedUser)
@@ -55,7 +56,7 @@ public class DatabaseLoginStrategy implements LoginStrategy {
                                 )
                                 .asTuple()
                                 .chain(tuple -> {
-                                    User updatedUser = tuple.getItem1();
+                                    UserEntity updatedUser = tuple.getItem1();
                                     JwtTokenService.TokenData tokenData = tuple.getItem2();
 
                                     return cacheService.cacheUser(request.email(), request.role().toString(), updatedUser)

@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.PaymentRejectionRepository;
 import org.sky.repository.SellerRepository;
@@ -30,7 +30,7 @@ public class PaymentNotificationDataService {
     }
 
     @WithTransaction
-    public Uni<List<Seller>> findSellersByAdminId(Long adminId) {
+    public Uni<List<SellerEntity>> findSellersByAdminId(Long adminId) {
         return sellerRepository.findByAdminId(adminId);
     }
 
@@ -62,7 +62,7 @@ public class PaymentNotificationDataService {
         return rejectionRepository.persist(rejection);
     }
 
-    public Uni<PaymentNotification> createPaymentForSeller(PaymentNotificationRequest request, Seller seller) {
+    public Uni<PaymentNotification> createPaymentForSeller(PaymentNotificationRequest request, SellerEntity seller) {
         PaymentNotification payment = PaymentNotificationMapper.REQUEST_WITH_SELLER_TO_ENTITY.apply(request).apply(seller);
         return savePaymentNotification(payment);
     }

@@ -146,7 +146,7 @@ public class PaymentControllerService {
                 .chain(userId -> paymentNotificationService.getConnectedSellersForAdmin(adminId));
     }
 
-    public Uni<java.util.List<org.sky.model.Seller>> getAllSellersStatusForAdmin(Long adminId, String authorization) {
+    public Uni<java.util.List<org.sky.model.SellerEntity>> getAllSellersStatusForAdmin(Long adminId, String authorization) {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> paymentNotificationService.getAllSellersStatusForAdmin(adminId));
     }

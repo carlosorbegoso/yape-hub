@@ -8,7 +8,7 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.qr.*;
 import org.sky.exception.ValidationException;
 import org.sky.model.AffiliationCode;
-import org.sky.model.Branch;
+import org.sky.model.BranchEntity;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.AffiliationCodeRepository;
 
@@ -48,7 +48,7 @@ public class QrService {
                                                                            Integer maxUses,
                                                                            Long branchId,
                                                                            String notes) {
-    Uni<Branch> branchUni;
+    Uni<BranchEntity> branchUni;
 
     if (branchId != null) {
       branchUni = branchRepository.findById(branchId)

@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.achievements;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -14,11 +32,11 @@ public class SellerAchievementsCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerAnalyticsResponse.SellerAchievements calculateSellerAchievements(List<PaymentNotification> sellerPayments, 
+    public SellerAchievements calculateSellerAchievements(List<PaymentNotification> sellerPayments, 
                                                                                    List<PaymentNotification> allPayments, 
                                                                                    SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
-            return new SellerAnalyticsResponse.SellerAchievements(0L, 0L, 0L, List.of(), List.of());
+            return new SellerAchievements(0L, 0L, 0L, List.of(), List.of());
         }
         
         // Calcular logros usando days y period
@@ -32,7 +50,7 @@ public class SellerAchievementsCalculator {
         // Crear badges usando include
         var badges = createBadges(sellerPayments, request.include());
         
-        return new SellerAnalyticsResponse.SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
+        return new SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
     }
     
     private long calculateStreakDays(List<PaymentNotification> payments, LocalDate endDate, Integer days) {
@@ -81,8 +99,8 @@ public class SellerAchievementsCalculator {
         return Math.max(activeDays / 7, 1L);
     }
     
-    private List<SellerAnalyticsResponse.Milestone> createMilestones(List<PaymentNotification> payments, String include, String metric) {
-        var milestones = new ArrayList<SellerAnalyticsResponse.Milestone>();
+    private List<Milestone> createMilestones(List<PaymentNotification> payments, String include, String metric) {
+        var milestones = new ArrayList<Milestone>();
         
         if (shouldIncludeMetric("milestones", include)) {
             var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -93,7 +111,7 @@ public class SellerAchievementsCalculator {
                     .orElse(null);
             
             if (firstPayment != null) {
-                milestones.add(new SellerAnalyticsResponse.Milestone(
+                milestones.add(new Milestone(
                         "first_sale",
                         firstPayment.createdAt.toLocalDate().toString(),
                         true,
@@ -110,7 +128,7 @@ public class SellerAchievementsCalculator {
                         .orElse(null);
                 
                 if (tenthPayment != null) {
-                    milestones.add(new SellerAnalyticsResponse.Milestone(
+                    milestones.add(new Milestone(
                             "ten_sales",
                             tenthPayment.createdAt.toLocalDate().toString(),
                             true,
@@ -128,7 +146,7 @@ public class SellerAchievementsCalculator {
                         .orElse(null);
                 
                 if (hundredthPayment != null) {
-                    milestones.add(new SellerAnalyticsResponse.Milestone(
+                    milestones.add(new Milestone(
                             "hundred_sales",
                             hundredthPayment.createdAt.toLocalDate().toString(),
                             true,
@@ -141,8 +159,8 @@ public class SellerAchievementsCalculator {
         return milestones;
     }
     
-    private List<SellerAnalyticsResponse.Badge> createBadges(List<PaymentNotification> payments, String include) {
-        var badges = new ArrayList<SellerAnalyticsResponse.Badge>();
+    private List<Badge> createBadges(List<PaymentNotification> payments, String include) {
+        var badges = new ArrayList<Badge>();
         
         if (shouldIncludeMetric("badges", include)) {
             var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -154,7 +172,7 @@ public class SellerAchievementsCalculator {
                         .orElse(null);
                 
                 if (firstPayment != null) {
-                    badges.add(new SellerAnalyticsResponse.Badge(
+                    badges.add(new Badge(
                             "Primera Venta",
                             "🎉",
                             "Completaste tu primera venta",
@@ -166,7 +184,7 @@ public class SellerAchievementsCalculator {
             
             // Badge: Vendedor Activo
             if (confirmedPayments.size() >= 10) {
-                badges.add(new SellerAnalyticsResponse.Badge(
+                badges.add(new Badge(
                         "Vendedor Activo",
                         "⭐",
                         "Has completado 10 ventas",
@@ -177,7 +195,7 @@ public class SellerAchievementsCalculator {
             
             // Badge: Experto en Ventas
             if (confirmedPayments.size() >= 50) {
-                badges.add(new SellerAnalyticsResponse.Badge(
+                badges.add(new Badge(
                         "Experto en Ventas",
                         "🏆",
                         "Has completado 50 ventas",
@@ -188,7 +206,7 @@ public class SellerAchievementsCalculator {
             
             // Badge: Maestro Vendedor
             if (confirmedPayments.size() >= 100) {
-                badges.add(new SellerAnalyticsResponse.Badge(
+                badges.add(new Badge(
                         "Maestro Vendedor",
                         "👑",
                         "Has completado 100 ventas",

@@ -2,6 +2,25 @@ package org.sky.service.stats.calculators.seller.daily;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
+import org.sky.dto.stats.DailySalesData;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -14,7 +33,7 @@ public class SellerDailyCalculator {
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public List<SellerAnalyticsResponse.DailySalesData> calculateDailySalesData(List<PaymentNotification> sellerPayments, 
+    public List<DailySalesData> calculateDailySalesData(List<PaymentNotification> sellerPayments, 
                                                                                List<PaymentNotification> allPayments,
                                                                                SellerAnalyticsRequest request) {
         // Usar granularity para determinar el nivel de detalle
@@ -25,7 +44,7 @@ public class SellerDailyCalculator {
                 .collect(Collectors.toList());
     }
     
-    private SellerAnalyticsResponse.DailySalesData calculateDailyStatForDate(List<PaymentNotification> sellerPayments, 
+    private DailySalesData calculateDailyStatForDate(List<PaymentNotification> sellerPayments, 
                                                                             List<PaymentNotification> allPayments,
                                                                             LocalDate date, String granularity, String include) {
         var daySellerPayments = filterPaymentsByDate(sellerPayments, date);
@@ -42,7 +61,7 @@ public class SellerDailyCalculator {
             // Lógica adicional basada en los parámetros
         }
         
-        return new SellerAnalyticsResponse.DailySalesData(
+        return new DailySalesData(
                 date.format(DATE_FORMATTER),
                 getDayName(date),
                 totalSales,

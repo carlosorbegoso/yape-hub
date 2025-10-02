@@ -3,25 +3,22 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.SalesStatsResponse;
+import org.sky.dto.stats.AdminStatsResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.admin.summary.SummaryStatsCalculator;
-import org.sky.service.stats.calculators.admin.daily.DailyStatsCalculator;
-import org.sky.service.stats.calculators.admin.seller.SellerStatsCalculator;
-import org.sky.service.stats.calculators.admin.period.PeriodInfoCalculator;
-import org.sky.service.stats.calculators.admin.validation.DateRangeValidator;
+import org.sky.service.stats.calculators.template.BaseStatsCalculator;
+import org.sky.service.stats.calculators.template.AdminStatsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @ApplicationScoped
-public class AdminStatsCalculator {
+public class AdminStatsCalculator extends BaseStatsCalculator<AdminStatsRequest, AdminStatsResponse> {
     
-    private static final int MAX_SELLERS_LIMIT = 100;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     @Inject
     PaymentNotificationRepository paymentNotificationRepository;
@@ -29,43 +26,46 @@ public class AdminStatsCalculator {
     @Inject
     SellerRepository sellerRepository;
     
-    @Inject
-    SummaryStatsCalculator summaryStatsCalculator;
-    
-    @Inject
-    DailyStatsCalculator dailyStatsCalculator;
-    
-    @Inject
-    SellerStatsCalculator sellerStatsCalculator;
-    
-    @Inject
-    PeriodInfoCalculator periodInfoCalculator;
-    
-    @Inject
-    DateRangeValidator dateRangeValidator;
-    
     @WithTransaction
-    public Uni<SalesStatsResponse> calculateAdminStats(Long adminId, LocalDate startDate, LocalDate endDate) {
-        return dateRangeValidator.validateDateRange(startDate, endDate)
-                .chain(() -> paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                        adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)))
-                .chain(payments -> sellerRepository.findByAdminId(adminId)
-                        .map(sellers -> {
-                            var activeSellers = sellers.stream()
-                                    .filter(seller -> Boolean.TRUE.equals(seller.isActive))
-                                    .limit(MAX_SELLERS_LIMIT)
-                                    .toList();
-                            return buildSalesStatsResponse(payments, activeSellers, startDate, endDate);
-                        }));
+    public Uni<AdminStatsResponse> calculateAdminStats(Long adminId, LocalDate startDate, LocalDate endDate) {
+        var request = new AdminStatsRequest(adminId, startDate, endDate);
+        
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                .map(payments -> calculateStats(payments, request));
     }
     
-    private SalesStatsResponse buildSalesStatsResponse(List<PaymentNotification> payments, List<Seller> sellers,
-                                                      LocalDate startDate, LocalDate endDate) {
-        var summary = summaryStatsCalculator.calculateSummaryStats(payments);
-        var dailyStats = dailyStatsCalculator.calculateDailyStats(payments, startDate, endDate);
-        var sellerStats = sellerStatsCalculator.calculateSellerStats(payments, sellers);
-        var period = periodInfoCalculator.createPeriodInfo(startDate, endDate);
-        
-        return new SalesStatsResponse(period, summary, dailyStats, sellerStats);
+    @Override
+    protected void validateInput(List<PaymentNotification> payments, AdminStatsRequest request) {
+        validateDateRange(request.startDate(), request.endDate());
+        if (payments == null) {
+            throw new IllegalArgumentException("Los pagos no pueden ser null");
+        }
+    }
+    
+    @Override
+    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, AdminStatsRequest request) {
+        return payments.stream()
+                .filter(payment -> payment.adminId.equals(request.adminId()))
+                .toList();
+    }
+    
+    @Override
+    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, AdminStatsRequest request) {
+        return null; // No specific metrics for admin stats
+    }
+    
+    @Override
+    protected AdminStatsResponse buildResponse(Double totalSales, Long totalTransactions, 
+                                             Double averageTransactionValue, Double claimRate,
+                                             Object specificMetrics, List<PaymentNotification> payments, AdminStatsRequest request) {
+        return new AdminStatsResponse(
+            request.adminId(),
+            totalSales,
+            totalTransactions,
+            averageTransactionValue,
+            request.startDate(),
+            request.endDate()
+        );
     }
 }

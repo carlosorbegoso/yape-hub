@@ -3,20 +3,18 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.FinancialAnalyticsRequest;
 import org.sky.dto.stats.FinancialAnalyticsResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
+import org.sky.service.stats.calculators.template.BaseStatsCalculator;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.util.List;
 
 @ApplicationScoped
-public class FinancialAnalyticsCalculator {
+public class FinancialAnalyticsCalculator extends BaseStatsCalculator<org.sky.service.stats.calculators.template.FinancialAnalyticsRequest, FinancialAnalyticsResponse> {
 
-    private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final String DEFAULT_CURRENCY = "PEN";
     private static final double DEFAULT_TAX_RATE = 0.18;
 
@@ -27,73 +25,98 @@ public class FinancialAnalyticsCalculator {
     SellerRepository sellerRepository;
 
     @WithTransaction
-    public Uni<FinancialAnalyticsResponse> calculateFinancialAnalytics(FinancialAnalyticsRequest request) {
+    public Uni<FinancialAnalyticsResponse> calculateFinancialAnalytics(org.sky.dto.stats.FinancialAnalyticsRequest request) {
+        var templateRequest = new org.sky.service.stats.calculators.template.FinancialAnalyticsRequest(
+            request.adminId(), 
+            request.startDate(), 
+            request.endDate(),
+            request.currency(),
+            request.taxRate(),
+            request.include()
+        );
+        
         return paymentNotificationRepository.findByAdminIdAndDateRange(
                 request.adminId(), request.startDate().atStartOfDay(), request.endDate().atTime(23, 59, 59))
                 .chain(payments -> sellerRepository.findByAdminId(request.adminId())
-                        .map(sellers -> buildFinancialAnalyticsResponse(payments, sellers, request)));
+                        .map(sellers -> calculateStats(payments, templateRequest)));
     }
 
-    private FinancialAnalyticsResponse buildFinancialAnalyticsResponse(List<PaymentNotification> payments, 
-                                                                      List<Seller> sellers, 
-                                                                      FinancialAnalyticsRequest request) {
-        var confirmedPayments = filterConfirmedPayments(payments);
-        var totalRevenue = calculateTotalRevenue(confirmedPayments);
-        var currency = getCurrency(request.currency());
-        var taxRate = getTaxRate(request.taxRate());
-        var taxAmount = calculateTaxAmount(totalRevenue, taxRate);
-        var netRevenue = calculateNetRevenue(totalRevenue, taxAmount);
-        var period = createPeriod(request.startDate(), request.endDate());
-        var transactions = (long) payments.size();
-        var confirmedTransactions = (long) confirmedPayments.size();
-        var averageTransactionValue = calculateAverageTransactionValue(payments);
-
-        return new FinancialAnalyticsResponse(
-                totalRevenue, currency, taxRate, taxAmount, netRevenue,
-                period, request.include(), transactions, confirmedTransactions, averageTransactionValue
-        );
+    @Override
+    protected void validateInput(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+        validateDateRange(request.startDate(), request.endDate());
+        if (payments == null) {
+            throw new IllegalArgumentException("Los pagos no pueden ser null");
+        }
     }
-
-    private List<PaymentNotification> filterConfirmedPayments(List<PaymentNotification> payments) {
+    
+    @Override
+    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+        // Para financial analytics, filtramos solo pagos confirmados
         return payments.stream()
-                .filter(payment -> CONFIRMED_STATUS.equals(payment.status))
+                .filter(payment -> "CONFIRMED".equals(payment.status))
                 .toList();
     }
-
-    private double calculateTotalRevenue(List<PaymentNotification> confirmedPayments) {
-        return confirmedPayments.stream()
-                .mapToDouble(payment -> payment.amount)
-                .sum();
+    
+    @Override
+    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+        // Métricas específicas para financial analytics: cálculos de impuestos
+        var totalRevenue = salesStrategy.calculate(payments);
+        var taxRate = getTaxRate(request.taxRate());
+        var taxAmount = calculateTax(totalRevenue, taxRate);
+        var netRevenue = totalRevenue - taxAmount;
+        
+        return new FinancialSpecificMetrics(
+            totalRevenue,
+            taxRate,
+            taxAmount,
+            netRevenue,
+            getCurrency(request.currency())
+        );
     }
-
+    
+    @Override
+    protected FinancialAnalyticsResponse buildResponse(Double totalSales, Long totalTransactions, 
+                                                     Double averageTransactionValue, Double claimRate,
+                                                     Object specificMetrics, List<PaymentNotification> payments, 
+                                                     org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+        var financialMetrics = (FinancialSpecificMetrics) specificMetrics;
+        
+        var period = new FinancialAnalyticsResponse.Period(
+                request.startDate().toString(),
+                request.endDate().toString()
+        );
+        
+        return new FinancialAnalyticsResponse(
+                financialMetrics.totalRevenue(),
+                financialMetrics.currency(),
+                financialMetrics.taxRate(),
+                financialMetrics.taxAmount(),
+                financialMetrics.netRevenue(),
+                period,
+                request.include(),
+                totalTransactions,
+                countPaymentsByStatus(payments, "CONFIRMED"),
+                averageTransactionValue
+        );
+    }
+    
     private String getCurrency(String currency) {
         return currency != null ? currency : DEFAULT_CURRENCY;
     }
-
+    
     private double getTaxRate(Double taxRate) {
         return taxRate != null ? taxRate : DEFAULT_TAX_RATE;
     }
-
-    private double calculateTaxAmount(double totalRevenue, double taxRate) {
-        return totalRevenue * taxRate;
-    }
-
-    private double calculateNetRevenue(double totalRevenue, double taxAmount) {
-        return totalRevenue - taxAmount;
-    }
-
-    private FinancialAnalyticsResponse.Period createPeriod(java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        return new FinancialAnalyticsResponse.Period(
-                startDate.toString(),
-                endDate.toString()
-        );
-    }
-
-    private double calculateAverageTransactionValue(List<PaymentNotification> payments) {
-        return payments.stream()
-                .mapToDouble(payment -> payment.amount)
-                .average()
-                .orElse(0.0);
-    }
+    
+    /**
+     * Métricas específicas para financial analytics
+     */
+    private record FinancialSpecificMetrics(
+        Double totalRevenue,
+        Double taxRate,
+        Double taxAmount,
+        Double netRevenue,
+        String currency
+    ) {}
 }
 

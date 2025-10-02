@@ -1,5 +1,8 @@
 package org.sky.dto.stats.admin;
 
+import org.sky.dto.stats.GrowthOpportunities;
+import org.sky.dto.stats.ManagementAlert;
+
 import java.util.List;
 
 public record AdministrativeInsightsResponse(
@@ -8,19 +11,5 @@ public record AdministrativeInsightsResponse(
     GrowthOpportunities growthOpportunities
 ) {
     
-    public record ManagementAlert(
-        String type,
-        String severity,
-        String message,
-        String affectedBranch,
-        List<String> affectedSellers,
-        String recommendation
-    ) {}
-    
-    public record GrowthOpportunities(
-        Long potentialNewBranches,
-        String marketExpansion,
-        Long sellerRecruitment,
-        Double revenueProjection
-    ) {}
+
 }

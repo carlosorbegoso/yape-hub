@@ -2,8 +2,16 @@ package org.sky.service.stats.calculators.admin.insights;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.PredictedSale;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,12 +21,12 @@ public class AdminInsightsCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public AnalyticsSummaryResponse.SellerInsights calculateInsights(List<PaymentNotification> payments, 
-                                                                   List<Seller> sellers, 
+    public SellerInsights calculateInsights(List<PaymentNotification> payments, 
+                                                                   List<SellerEntity> sellers, 
                                                                    java.time.LocalDate startDate, 
                                                                    java.time.LocalDate endDate) {
         if (payments.isEmpty()) {
-            return new AnalyticsSummaryResponse.SellerInsights(
+            return new SellerInsights(
                 null, null, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
             );
         }
@@ -35,19 +43,19 @@ public class AdminInsightsCalculator {
         var conversionRate = calculateConversionRate(confirmedPayments.size(), payments.size());
         var satisfactionScore = calculateSatisfactionScore(conversionRate);
         
-        return new AnalyticsSummaryResponse.SellerInsights(
+        return new SellerInsights(
                 peakPerformanceDay, peakPerformanceHour, averageTransactionValue,
                 customerRetentionRate, repeatCustomerRate, newCustomerRate,
                 conversionRate, satisfactionScore
         );
     }
     
-    public AnalyticsSummaryResponse.SellerForecasting calculateForecasting(List<PaymentNotification> payments, 
+    public SellerForecasting calculateForecasting(List<PaymentNotification> payments, 
                                                                          java.time.LocalDate startDate, 
                                                                          java.time.LocalDate endDate) {
         if (payments.isEmpty()) {
-            var emptyTrend = new AnalyticsSummaryResponse.TrendAnalysis("stable", 0.0, 0.0, 0.0);
-            return new AnalyticsSummaryResponse.SellerForecasting(List.of(), emptyTrend, List.of());
+            var emptyTrend = new TrendAnalysis("stable", 0.0, 0.0, 0.0);
+            return new SellerForecasting(List.of(), emptyTrend, List.of());
         }
         
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -55,11 +63,11 @@ public class AdminInsightsCalculator {
         var trendAnalysis = createTrendAnalysis(confirmedPayments, startDate, endDate);
         var recommendations = createRecommendations(confirmedPayments);
         
-        return new AnalyticsSummaryResponse.SellerForecasting(predictedSales, trendAnalysis, recommendations);
+        return new SellerForecasting(predictedSales, trendAnalysis, recommendations);
     }
     
-    public AnalyticsSummaryResponse.SellerAnalytics calculateAnalytics(List<PaymentNotification> payments, 
-                                                                     List<Seller> sellers, 
+    public SellerAnalytics calculateAnalytics(List<PaymentNotification> payments, 
+                                                                     List<SellerEntity> sellers, 
                                                                      java.time.LocalDate startDate, 
                                                                      java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -68,7 +76,7 @@ public class AdminInsightsCalculator {
         var transactionPatterns = calculateTransactionPatterns(confirmedPayments);
         var performanceIndicators = calculatePerformanceIndicators(confirmedPayments, payments);
         
-        return new AnalyticsSummaryResponse.SellerAnalytics(salesDistribution, transactionPatterns, performanceIndicators);
+        return new SellerAnalytics(salesDistribution, transactionPatterns, performanceIndicators);
     }
     
     private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
@@ -130,7 +138,7 @@ public class AdminInsightsCalculator {
         return Math.min(100.0, conversionRate + 10.0);
     }
     
-    private List<AnalyticsSummaryResponse.PredictedSale> createPredictedSales(List<PaymentNotification> payments, 
+    private List<PredictedSale> createPredictedSales(List<PaymentNotification> payments, 
                                                                            java.time.LocalDate startDate, 
                                                                            java.time.LocalDate endDate) {
         var predictedCount = 7; // Próximos 7 días
@@ -139,7 +147,7 @@ public class AdminInsightsCalculator {
         var avgDaily = daysDiff > 0 ? totalSales / daysDiff : 0.0;
         
         return java.time.LocalDate.now().plusDays(1).datesUntil(java.time.LocalDate.now().plusDays(predictedCount + 1))
-                .map(date -> new AnalyticsSummaryResponse.PredictedSale(
+                .map(date -> new PredictedSale(
                         date.toString(),
                         avgDaily * (0.8 + Math.random() * 0.4),
                         Math.max(0.5, 1.0 - (date.toEpochDay() / 365.0) * 0.3)
@@ -147,7 +155,7 @@ public class AdminInsightsCalculator {
                 .collect(Collectors.toList());
     }
     
-    private AnalyticsSummaryResponse.TrendAnalysis createTrendAnalysis(List<PaymentNotification> payments, 
+    private TrendAnalysis createTrendAnalysis(List<PaymentNotification> payments, 
                                                                      java.time.LocalDate startDate, 
                                                                      java.time.LocalDate endDate) {
         var trend = calculateTrend(payments, startDate, endDate);
@@ -155,7 +163,7 @@ public class AdminInsightsCalculator {
         var r2 = 0.7;
         var accuracy = 0.8;
         
-        return new AnalyticsSummaryResponse.TrendAnalysis(trend, slope, r2, accuracy);
+        return new TrendAnalysis(trend, slope, r2, accuracy);
     }
     
     private String calculateTrend(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
@@ -198,7 +206,7 @@ public class AdminInsightsCalculator {
         return recommendations;
     }
     
-    private AnalyticsSummaryResponse.SalesDistribution calculateSalesDistribution(List<PaymentNotification> payments) {
+    private SalesDistribution calculateSalesDistribution(List<PaymentNotification> payments) {
         var weekdaySales = payments.stream()
                 .filter(p -> p.createdAt.getDayOfWeek().getValue() < 6)
                 .mapToDouble(p -> p.amount).sum();
@@ -219,29 +227,29 @@ public class AdminInsightsCalculator {
                 .filter(p -> p.createdAt.getHour() >= 18 && p.createdAt.getHour() < 24)
                 .mapToDouble(p -> p.amount).sum();
         
-        return new AnalyticsSummaryResponse.SalesDistribution(
+        return new SalesDistribution(
                 weekdaySales, weekendSales, 
                 morningSales, afternoonSales, eveningSales
         );
     }
     
-    private AnalyticsSummaryResponse.TransactionPatterns calculateTransactionPatterns(List<PaymentNotification> payments) {
+    private TransactionPatterns calculateTransactionPatterns(List<PaymentNotification> payments) {
         var avgPerDay = payments.size() > 0 ? payments.stream().mapToDouble(p -> p.amount).average().orElse(0.0) : 0.0;
         var mostActiveDay = calculatePeakPerformanceDay(payments);
         var mostActiveHour = calculatePeakPerformanceHour(payments);
         var frequency = payments.size() > 100 ? "high" : payments.size() > 50 ? "medium" : "low";
         
-        return new AnalyticsSummaryResponse.TransactionPatterns(avgPerDay, mostActiveDay, mostActiveHour, frequency);
+        return new TransactionPatterns(avgPerDay, mostActiveDay, mostActiveHour, frequency);
     }
     
-    private AnalyticsSummaryResponse.PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotification> confirmedPayments, 
+    private PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotification> confirmedPayments, 
                                                                                         List<PaymentNotification> allPayments) {
         var salesVelocity = confirmedPayments.stream().mapToDouble(p -> p.amount).sum() / Math.max(1, allPayments.size());
         var transactionVelocity = allPayments.size() / 7.0; // por semana
         var efficiencyIndex = 0.8;
         var consistencyIndex = calculateConsistencyIndex(confirmedPayments);
         
-        return new AnalyticsSummaryResponse.PerformanceIndicators(
+        return new PerformanceIndicators(
                 salesVelocity, transactionVelocity, efficiencyIndex, consistencyIndex
         );
     }

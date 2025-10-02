@@ -10,8 +10,9 @@ import org.sky.dto.seller.AffiliateSellerRequest;
 import org.sky.dto.seller.SellerListResponse;
 import org.sky.dto.seller.SellerResponse;
 import org.sky.dto.seller.SellerRegistrationResponse;
-import org.sky.model.Seller;
-import org.sky.model.User;
+import org.sky.model.SellerEntity;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 import org.sky.repository.AffiliationCodeRepository;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
@@ -104,16 +105,16 @@ public class SellerService {
                                             }
                                             
                                             // Create user with auto-generated credentials
-                                            User user = new User();
+                                            UserEntity user = new UserEntity();
                                             user.email = autoEmail;
                                             user.password = BCrypt.hashpw("auto_password_" + request.phone(), BCrypt.gensalt());
-                                            user.role = User.UserRole.SELLER;
+                                            user.role = UserRole.SELLER;
                                             user.isVerified = true;
                                             
                                             return userRepository.persist(user)
                                                     .chain(persistedUser -> {
                                                         // Create seller
-                                                        Seller seller = new Seller();
+                                                        SellerEntity seller = new SellerEntity();
                                                         seller.user = persistedUser;
                                                         seller.sellerName = request.sellerName();
                                                         seller.email = autoEmail;
@@ -131,7 +132,7 @@ public class SellerService {
                                                                                 // Generar token JWT para el seller
                                                                                 String token = jwtGenerator.generateAccessToken(
                                                                                     persistedUser.id,
-                                                                                    User.UserRole.SELLER,
+                                                                                    UserRole.SELLER,
                                                                                     persistedSeller.id
                                                                                 );
                                                                                 
@@ -157,7 +158,7 @@ public class SellerService {
     }
     
     public Uni<ApiResponse<SellerListResponse>> listSellers(Long adminId, int page, int limit, Long branchId, String status) {
-        Uni<List<Seller>> sellersUni;
+        Uni<List<SellerEntity>> sellersUni;
         
         if (branchId != null) {
             sellersUni = sellerRepository.findByBranchId(branchId);
@@ -180,7 +181,7 @@ public class SellerService {
             int startIndex = (page - 1) * limit;
             int endIndex = Math.min(startIndex + limit, totalItems);
             
-            List<Seller> paginatedSellers = sellers.subList(startIndex, endIndex);
+            List<SellerEntity> paginatedSellers = sellers.subList(startIndex, endIndex);
             
             List<SellerResponse> sellerResponses = paginatedSellers.stream()
                     .map(seller -> new SellerResponse(

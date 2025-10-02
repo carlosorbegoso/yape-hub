@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.exception.ValidationException;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.util.function.Function;
 import java.util.function.LongFunction;
@@ -34,7 +34,7 @@ public class PaymentNotificationValidator {
         });
     }
 
-    public static Function<Seller, Uni<Seller>> validateSeller() {
+    public static Function<SellerEntity, Uni<SellerEntity>> validateSeller() {
         return seller -> Uni.createFrom().item(() -> {
             if (seller == null) {
                 throw ValidationException.requiredField("seller");

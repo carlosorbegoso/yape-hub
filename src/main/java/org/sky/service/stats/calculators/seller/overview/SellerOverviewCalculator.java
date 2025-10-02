@@ -2,6 +2,25 @@ package org.sky.service.stats.calculators.seller.overview;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
+import org.sky.dto.stats.OverviewMetrics;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -9,7 +28,7 @@ import java.util.List;
 @ApplicationScoped
 public class SellerOverviewCalculator {
     
-    public SellerAnalyticsResponse.OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> sellerPayments, 
+    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> sellerPayments, 
                                                                            List<PaymentNotification> allPayments, 
                                                                            SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, "CONFIRMED");
@@ -34,7 +53,7 @@ public class SellerOverviewCalculator {
             // Los parámetros se están usando correctamente y se puede aplicar lógica adicional
         }
         
-        return new SellerAnalyticsResponse.OverviewMetrics(
+        return new OverviewMetrics(
                 totalSales, (long) totalTransactions, averageTransactionValue,
                 salesGrowth, transactionGrowth, averageGrowth
         );

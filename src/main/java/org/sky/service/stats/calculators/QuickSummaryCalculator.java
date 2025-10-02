@@ -6,14 +6,17 @@ import jakarta.inject.Inject;
 import org.sky.dto.stats.QuickSummaryResponse;
 import org.sky.model.PaymentNotification;
 import org.sky.repository.PaymentNotificationRepository;
+import org.sky.service.stats.calculators.template.BaseStatsCalculator;
+import org.sky.service.stats.calculators.template.AdminStatsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @ApplicationScoped
-public class QuickSummaryCalculator {
+public class QuickSummaryCalculator extends BaseStatsCalculator<AdminStatsRequest, QuickSummaryResponse> {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final String PENDING_STATUS = "PENDING";
@@ -24,48 +27,57 @@ public class QuickSummaryCalculator {
     
     @WithTransaction
     public Uni<QuickSummaryResponse> calculateQuickSummary(Long adminId, LocalDate startDate, LocalDate endDate) {
+        var request = new AdminStatsRequest(adminId, startDate, endDate);
+        
         return paymentNotificationRepository.findPaymentsForQuickSummary(
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .map(this::buildQuickSummaryResponse);
+                .map(payments -> calculateStats(payments, request));
     }
     
-    private QuickSummaryResponse buildQuickSummaryResponse(List<PaymentNotification> payments) {
-        var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
-        var pendingPayments = filterPaymentsByStatus(payments, PENDING_STATUS);
-        var rejectedPayments = filterPaymentsByStatus(payments, REJECTED_STATUS);
+    @Override
+    protected void validateInput(List<PaymentNotification> payments, AdminStatsRequest request) {
+        validateDateRange(request.startDate(), request.endDate());
+        if (payments == null) {
+            throw new IllegalArgumentException("Los pagos no pueden ser null");
+        }
+    }
+    
+    @Override
+    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, AdminStatsRequest request) {
+        // Para quick summary, no filtramos
+        return payments;
+    }
+    
+    @Override
+    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, AdminStatsRequest request) {
+        // Métricas específicas para quick summary: tiempos de confirmación
+        var confirmedPayments = payments.stream()
+                .filter(payment -> CONFIRMED_STATUS.equals(payment.status))
+                .toList();
         
-        var totalSales = calculateTotalSales(confirmedPayments);
-        var totalTransactions = payments.size();
-        var averageTransactionValue = calculateAverageTransactionValue(totalSales, totalTransactions);
-        var claimRate = calculateClaimRate(confirmedPayments.size(), totalTransactions);
         var averageConfirmationTime = calculateAverageConfirmationTime(confirmedPayments);
         
-        return new QuickSummaryResponse(
-                totalSales, (long) totalTransactions, averageTransactionValue,
-                0.0, 0.0, 0.0, // Growth metrics (no historical data available)
-                (long) pendingPayments.size(), (long) confirmedPayments.size(), (long) rejectedPayments.size(),
-                claimRate, averageConfirmationTime
+        return new QuickSummarySpecificMetrics(
+            averageConfirmationTime,
+            countPaymentsByStatus(payments, PENDING_STATUS),
+            countPaymentsByStatus(payments, CONFIRMED_STATUS),
+            countPaymentsByStatus(payments, REJECTED_STATUS)
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
-        return payments.stream()
-                .filter(payment -> status.equals(payment.status))
-                .toList();
-    }
-    
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
-        return confirmedPayments.stream()
-                .mapToDouble(payment -> payment.amount)
-                .sum();
-    }
-    
-    private double calculateAverageTransactionValue(double totalSales, int totalTransactions) {
-        return totalTransactions > 0 ? totalSales / totalTransactions : 0.0;
-    }
-    
-    private double calculateClaimRate(int confirmedCount, int totalCount) {
-        return totalCount > 0 ? (double) confirmedCount / totalCount * 100 : 0.0;
+    @Override
+    protected QuickSummaryResponse buildResponse(Double totalSales, Long totalTransactions, 
+                                               Double averageTransactionValue, Double claimRate,
+                                               Object specificMetrics, List<PaymentNotification> payments, 
+                                               AdminStatsRequest request) {
+        var quickMetrics = (QuickSummarySpecificMetrics) specificMetrics;
+        
+        return new QuickSummaryResponse(
+                totalSales, totalTransactions, averageTransactionValue,
+                0.0, 0.0, 0.0, // Growth metrics (no historical data available)
+                quickMetrics.pendingCount(), quickMetrics.confirmedCount(), quickMetrics.rejectedCount(),
+                claimRate, quickMetrics.averageConfirmationTime()
+        );
     }
     
     private double calculateAverageConfirmationTime(List<PaymentNotification> confirmedPayments) {
@@ -77,6 +89,16 @@ public class QuickSummaryCalculator {
     }
     
     private double calculateConfirmationTimeInMinutes(LocalDateTime createdAt, LocalDateTime confirmedAt) {
-        return java.time.Duration.between(createdAt, confirmedAt).toMinutes();
+        return Duration.between(createdAt, confirmedAt).toMinutes();
     }
+    
+    /**
+     * Métricas específicas para quick summary
+     */
+    private record QuickSummarySpecificMetrics(
+        Double averageConfirmationTime,
+        Long pendingCount,
+        Long confirmedCount,
+        Long rejectedCount
+    ) {}
 }

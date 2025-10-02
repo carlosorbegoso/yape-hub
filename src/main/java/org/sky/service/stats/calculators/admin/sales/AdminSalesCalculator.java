@@ -2,6 +2,10 @@ package org.sky.service.stats.calculators.admin.sales;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.HourlySalesData;
+import org.sky.dto.stats.WeeklySalesData;
+import org.sky.dto.stats.MonthlySalesData;
 import org.sky.model.PaymentNotification;
 
 import java.time.LocalDate;
@@ -15,10 +19,10 @@ public class AdminSalesCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public List<AnalyticsSummaryResponse.DailySalesData> calculateDailySalesData(List<PaymentNotification> payments, 
+    public List<DailySalesData> calculateDailySalesData(List<PaymentNotification> payments, 
                                                                                LocalDate startDate, 
                                                                                LocalDate endDate) {
-        List<AnalyticsSummaryResponse.DailySalesData> dailySales = new ArrayList<>();
+        List<DailySalesData> dailySales = new ArrayList<>();
         
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {
@@ -31,7 +35,7 @@ public class AdminSalesCalculator {
             var sales = calculateTotalSales(confirmedPayments);
             var dayName = getDayName(date);
             
-            dailySales.add(new AnalyticsSummaryResponse.DailySalesData(
+            dailySales.add(new DailySalesData(
                 date.toString(),
                 dayName,
                 sales,
@@ -44,10 +48,10 @@ public class AdminSalesCalculator {
         return dailySales;
     }
     
-    public List<AnalyticsSummaryResponse.HourlySalesData> calculateHourlySalesData(List<PaymentNotification> payments, 
+    public List<HourlySalesData> calculateHourlySalesData(List<PaymentNotification> payments, 
                                                                                  LocalDate startDate, 
                                                                                  LocalDate endDate) {
-        List<AnalyticsSummaryResponse.HourlySalesData> hourlySales = new ArrayList<>();
+        List<HourlySalesData> hourlySales = new ArrayList<>();
         
         for (int hour = 0; hour < 24; hour++) {
             final int currentHour = hour;
@@ -58,7 +62,7 @@ public class AdminSalesCalculator {
             var transactions = (long) hourPayments.size();
             var sales = calculateTotalSales(confirmedPayments);
             
-            hourlySales.add(new AnalyticsSummaryResponse.HourlySalesData(
+            hourlySales.add(new HourlySalesData(
                 String.format("%02d:00", hour),
                 sales,
                 transactions
@@ -68,10 +72,10 @@ public class AdminSalesCalculator {
         return hourlySales;
     }
     
-    public List<AnalyticsSummaryResponse.WeeklySalesData> calculateWeeklySalesData(List<PaymentNotification> payments, 
+    public List<WeeklySalesData> calculateWeeklySalesData(List<PaymentNotification> payments, 
                                                                                  LocalDate startDate, 
                                                                                  LocalDate endDate) {
-        List<AnalyticsSummaryResponse.WeeklySalesData> weeklySales = new ArrayList<>();
+        List<WeeklySalesData> weeklySales = new ArrayList<>();
         
         // Calcular semanas en el período
         var currentWeek = startDate.with(java.time.DayOfWeek.MONDAY);
@@ -89,7 +93,7 @@ public class AdminSalesCalculator {
             var sales = calculateTotalSales(confirmedPayments);
             var weekNumber = getWeekNumber(currentWeek);
             
-            weeklySales.add(new AnalyticsSummaryResponse.WeeklySalesData(
+            weeklySales.add(new WeeklySalesData(
                 String.format("Semana %d", weekNumber),
                 sales,
                 transactions
@@ -101,10 +105,10 @@ public class AdminSalesCalculator {
         return weeklySales;
     }
     
-    public List<AnalyticsSummaryResponse.MonthlySalesData> calculateMonthlySalesData(List<PaymentNotification> payments, 
+    public List<MonthlySalesData> calculateMonthlySalesData(List<PaymentNotification> payments, 
                                                                                    LocalDate startDate, 
                                                                                    LocalDate endDate) {
-        List<AnalyticsSummaryResponse.MonthlySalesData> monthlySales = new ArrayList<>();
+        List<MonthlySalesData> monthlySales = new ArrayList<>();
         
         var currentMonth = startDate.withDayOfMonth(1);
         
@@ -121,7 +125,7 @@ public class AdminSalesCalculator {
             var sales = calculateTotalSales(confirmedPayments);
             var monthName = getMonthName(currentMonth);
             
-            monthlySales.add(new AnalyticsSummaryResponse.MonthlySalesData(
+            monthlySales.add(new MonthlySalesData(
                 monthName,
                 sales,
                 transactions

@@ -4,7 +4,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 import org.sky.repository.UserRepository;
 
 import java.time.Duration;
@@ -34,12 +35,11 @@ public class CacheService {
     // CACHE DE USUARIOS OPTIMIZADO
     // ==================================================================================
     
-    public Uni<User> getUserByEmailCached(String email) {
+    public Uni<UserEntity> getUserByEmailCached(String email) {
+        String cacheKey = "user:email:" + email;
+        
         return Uni.createFrom().item(() -> {
-            String cacheKey = "user:email:" + email;
             long currentTime = System.currentTimeMillis();
-            
-            // Cleanup rápido si es necesario
             quickCleanupIfNeeded();
             
             CacheEntry cached = cache.get(cacheKey);
@@ -49,19 +49,25 @@ public class CacheService {
                 return cached.user;
             }
             
-            // Cache MISS - cargar de BD
             log.debug("💾 Cache MISS for user email: " + email);
-            User user = loadUserFromDB(email);
-            
-            if (user != null) {
-                cacheUser(cacheKey, user);
+            return null; // Cache miss, will be handled reactively
+        })
+        .chain(cachedUser -> {
+            if (cachedUser != null) {
+                return Uni.createFrom().item(cachedUser);
             }
-            
-            return user;
+            // Load from DB reactively
+            return userRepository.findByEmail(email)
+                .map(user -> {
+                    if (user != null) {
+                        cacheUser(cacheKey, user);
+                    }
+                    return user;
+                });
         });
     }
     
-    public Uni<User> getUserByIdCached(Long userId) {
+    public Uni<UserEntity> getUserByIdCached(Long userId) {
         String cacheKey = "user:id:" + userId;
         
         return Uni.createFrom().item(() -> {
@@ -76,13 +82,20 @@ public class CacheService {
             }
             
             log.debug("💾 Cache MISS for user ID: " + userId);
-            User user = loadUserByIdFromDB(userId);
-            
-            if (user != null) {
-                cacheUser(cacheKey, user);
+            return null; // Cache miss, will be handled reactively
+        })
+        .chain(cachedUser -> {
+            if (cachedUser != null) {
+                return Uni.createFrom().item(cachedUser);
             }
-            
-            return user;
+            // Load from DB reactively
+            return userRepository.findById(userId)
+                .map(user -> {
+                    if (user != null) {
+                        cacheUser(cacheKey, user);
+                    }
+                    return user;
+                });
         });
     }
     
@@ -90,31 +103,9 @@ public class CacheService {
     // HELPER METHODS OPTIMIZADOS
     // ==================================================================================
     
-    private User loadUserFromDB(String email) {
-        try {
-            log.debug("🔄 Loading user from DB: " + email);
-            return userRepository.findByEmail(email)
-                    .await().indefinitely();  // Espera indefinidamente pero reactivo
-        } catch (Exception e) {
-            log.error("❌ Error loading user: " + email, e);
-            return null;
-        }
-    }
+    // Métodos de carga de BD removidos - ahora se manejan reactivamente en los métodos principales
     
-    private User loadUserByIdFromDB(Long userId) {
-        try {
-            log.debug("🔄 Loading user by ID from DB: " + userId);
-
-
-            return userRepository.findById(userId)
-                    .await().indefinitely();  // Espera indefinidamente pero reactivo
-        } catch (Exception e) {
-            log.error("❌ Error loading user by ID: " + userId, e);
-            return null;
-        }
-    }
-    
-    private void cacheUser(String key, User user) {
+    private void cacheUser(String key, UserEntity user) {
         // LRU simple - eliminar entrada más antigua si alcanzamos límite
         if (cache.size() >= MAX_CACHE_SIZE) {
             String oldestKey = accessTimes.entrySet().stream()
@@ -185,7 +176,7 @@ public class CacheService {
     // Método público para compatibilidad con servicios existentes
     public Uni<Void> putInCacheDirect(String key, Object value, long ttlMs) {
         return Uni.createFrom().item(() -> {
-            if (value instanceof User user) {
+            if (value instanceof UserEntity user) {
                 cacheUser(key, user);
             } else {
                 log.debug("💾 Generic cached: " + key);
@@ -201,7 +192,7 @@ public class CacheService {
     /**
      * Obtener usuario cachead usando email y role (compatible con AuthService)
      */
-    public Uni<User> getCachedUser(String email, String role) {
+    public Uni<UserEntity> getCachedUser(String email, String role) {
         return getUserByEmailCached(email);
     }
     
@@ -243,7 +234,7 @@ public class CacheService {
     /**
      * Cache user con compatibilidad de email y role (compatible con DatabaseLoginStrategy)
      */
-    public Uni<Void> cacheUser(String email, String role, User user) {
+    public Uni<Void> cacheUser(String email, String role, UserEntity user) {
         // Solo usar email como clave, ignorar role duplicado
         String cacheKey = "user:email:" + email;
         return Uni.createFrom().item(() -> {
@@ -305,10 +296,10 @@ public class CacheService {
     // ==================================================================================
     
     private static class CacheEntry {
-        final User user;
+        final UserEntity user;
         final long timestamp;
         
-        CacheEntry(User user) {
+        CacheEntry(UserEntity user) {
             this.user = user;
             this.timestamp = System.currentTimeMillis();
         }

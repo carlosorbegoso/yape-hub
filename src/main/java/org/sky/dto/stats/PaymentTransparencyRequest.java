@@ -9,7 +9,4 @@ public record PaymentTransparencyRequest(
     Boolean includeFees,
     Boolean includeTaxes,
     Boolean includeCommissions
-) {
-    // Los campos del record son automáticamente públicos y finales
-}
-
+) {}

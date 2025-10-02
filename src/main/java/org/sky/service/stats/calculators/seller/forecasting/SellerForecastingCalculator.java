@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.forecasting;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -16,12 +34,12 @@ public class SellerForecastingCalculator {
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public SellerAnalyticsResponse.SellerForecasting calculateSellerForecasting(List<PaymentNotification> sellerPayments, 
+    public SellerForecasting calculateSellerForecasting(List<PaymentNotification> sellerPayments, 
                                                                                List<PaymentNotification> allPayments, 
                                                                                SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
-            var emptyTrend = new SellerAnalyticsResponse.TrendAnalysis("stable", 0.0, 0.0, 0.0);
-            return new SellerAnalyticsResponse.SellerForecasting(List.of(), emptyTrend, List.of());
+            var emptyTrend = new TrendAnalysis("stable", 0.0, 0.0, 0.0);
+            return new SellerForecasting(List.of(), emptyTrend, List.of());
         }
         
         // Calcular pronósticos usando period y days
@@ -29,7 +47,7 @@ public class SellerForecastingCalculator {
         var trendAnalysis = createTrendAnalysis(sellerPayments, request.period(), request.confidence());
         createRecommendations(sellerPayments, request.include(), request.metric());
         
-        return new SellerAnalyticsResponse.SellerForecasting(
+        return new SellerForecasting(
                 List.of(), 
                 trendAnalysis, 
                 List.of()
@@ -71,7 +89,7 @@ public class SellerForecastingCalculator {
         return predictions;
     }
     
-    private SellerAnalyticsResponse.TrendAnalysis createTrendAnalysis(List<PaymentNotification> payments, 
+    private TrendAnalysis createTrendAnalysis(List<PaymentNotification> payments, 
                                                                      String period, Double confidence) {
         var historicalData = calculateHistoricalData(payments, 
                 payments.stream().map(p -> p.createdAt.toLocalDate()).min(LocalDate::compareTo).orElse(LocalDate.now().minusDays(30)),
@@ -87,7 +105,7 @@ public class SellerForecastingCalculator {
         var adjustedVolatility = volatility * confidenceFactor;
         var adjustedMomentum = momentum * confidenceFactor;
         
-        return new SellerAnalyticsResponse.TrendAnalysis(
+        return new TrendAnalysis(
                 determineTrendDirection(adjustedTrend),
                 adjustedTrend,
                 adjustedVolatility,

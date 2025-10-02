@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.trends;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -13,11 +31,11 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class SellerTrendsCalculator {
     
-    public SellerAnalyticsResponse.SellerTrends calculateSellerTrends(List<PaymentNotification> sellerPayments, 
+    public SellerTrends calculateSellerTrends(List<PaymentNotification> sellerPayments, 
                                                                      List<PaymentNotification> allPayments, 
                                                                      SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
-            return new SellerAnalyticsResponse.SellerTrends(
+            return new SellerTrends(
                 "stable", "stable", 0.0, "neutral", "flat", 0.0, "none"
             );
         }
@@ -31,7 +49,7 @@ public class SellerTrendsCalculator {
         var volatility = calculateVolatility(sellerPayments, request.granularity());
         var seasonality = determineSeasonality(sellerPayments, request.period());
         
-        return new SellerAnalyticsResponse.SellerTrends(
+        return new SellerTrends(
                 salesTrend, transactionTrend, growthRate, momentum, trendDirection, volatility, seasonality
         );
     }

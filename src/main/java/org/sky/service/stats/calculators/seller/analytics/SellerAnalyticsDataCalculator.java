@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.analytics;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -13,7 +31,7 @@ public class SellerAnalyticsDataCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerAnalyticsResponse.SellerAnalytics calculateSellerAnalytics(List<PaymentNotification> sellerPayments, 
+    public SellerAnalytics calculateSellerAnalytics(List<PaymentNotification> sellerPayments, 
                                                                             List<PaymentNotification> allPayments, 
                                                                             SellerAnalyticsRequest request) {
         // Calcular analytics usando granularity y metric
@@ -21,10 +39,10 @@ public class SellerAnalyticsDataCalculator {
         var transactionPatterns = calculateTransactionPatterns(sellerPayments, request.metric(), request.granularity());
         var performanceIndicators = calculatePerformanceIndicators(sellerPayments, request.metric(), request.confidence());
         
-        return new SellerAnalyticsResponse.SellerAnalytics(salesDistribution, transactionPatterns, performanceIndicators);
+        return new SellerAnalytics(salesDistribution, transactionPatterns, performanceIndicators);
     }
     
-    private SellerAnalyticsResponse.SalesDistribution calculateSalesDistribution(List<PaymentNotification> payments, String granularity) {
+    private SalesDistribution calculateSalesDistribution(List<PaymentNotification> payments, String granularity) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         
         // Calcular distribución por días de la semana
@@ -49,13 +67,13 @@ public class SellerAnalyticsDataCalculator {
                 .filter(p -> p.createdAt.getHour() >= 18 && p.createdAt.getHour() < 24)
                 .mapToDouble(p -> p.amount).sum();
         
-        return new SellerAnalyticsResponse.SalesDistribution(
+        return new SalesDistribution(
                 weekdaySales, weekendSales, 
                 morningSales, afternoonSales, eveningSales
         );
     }
     
-    private SellerAnalyticsResponse.TransactionPatterns calculateTransactionPatterns(List<PaymentNotification> payments, 
+    private TransactionPatterns calculateTransactionPatterns(List<PaymentNotification> payments, 
                                                                                    String metric, String granularity) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -72,10 +90,10 @@ public class SellerAnalyticsDataCalculator {
         // Determinar frecuencia basada en métricas
         var frequency = determineFrequency(totalTransactions, metric);
         
-        return new SellerAnalyticsResponse.TransactionPatterns(avgPerDay, mostActiveDay, mostActiveHour, frequency);
+        return new TransactionPatterns(avgPerDay, mostActiveDay, mostActiveHour, frequency);
     }
     
-    private SellerAnalyticsResponse.PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotification> payments, 
+    private PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotification> payments, 
                                                                                         String metric, Double confidence) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -93,7 +111,7 @@ public class SellerAnalyticsDataCalculator {
         // Calcular índice de consistencia
         var consistencyIndex = calculateConsistencyIndex(confirmedPayments, confidence);
         
-        return new SellerAnalyticsResponse.PerformanceIndicators(
+        return new PerformanceIndicators(
                 salesVelocity, transactionVelocity, efficiencyIndex, consistencyIndex
         );
     }

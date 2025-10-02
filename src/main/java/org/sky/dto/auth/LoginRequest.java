@@ -3,7 +3,8 @@ package org.sky.dto.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 
 public record LoginRequest(
     @NotBlank(message = "Email is required")
@@ -17,5 +18,5 @@ public record LoginRequest(
     String deviceFingerprint,
     
     @NotNull(message = "Role is required")
-    User.UserRole role
+    UserRole role
 ) {}

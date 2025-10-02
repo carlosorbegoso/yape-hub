@@ -6,16 +6,16 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.exception.ValidationException;
 import org.sky.model.AffiliationCode;
-import org.sky.model.Branch;
-import org.sky.model.Seller;
-import org.sky.model.User;
+import org.sky.model.BranchEntity;
+import org.sky.model.SellerEntity;
+import org.sky.model.UserEntity;
 
 import java.time.LocalDateTime;
 
 @ApplicationScoped
 public  class UserValidations {
 
-  public static Uni<Seller> validateSeller(Seller seller, String phone) {
+  public static Uni<SellerEntity> validateSeller(SellerEntity seller, String phone) {
     if (seller == null) {
       return Uni.createFrom().failure(
         ValidationException.invalidField("phone", phone, "Vendedor no encontrado con este número de teléfono")
@@ -29,7 +29,7 @@ public  class UserValidations {
     return Uni.createFrom().item(seller);
   }
 
-  public static Uni<Branch> validateBranch(Branch branch) {
+  public static Uni<BranchEntity> validateBranch(BranchEntity branch) {
     if (branch == null || !branch.isActive) {
       return Uni.createFrom().failure(
         ValidationException.invalidField("branch", "null", "La sucursal está inactiva o no existe")
@@ -38,7 +38,7 @@ public  class UserValidations {
     return Uni.createFrom().item(branch);
   }
 
-  public static Uni<AffiliationCode> validateAffiliationCode(AffiliationCode code, String affiliationCode, Branch sellerBranch) {
+  public static Uni<AffiliationCode> validateAffiliationCode(AffiliationCode code, String affiliationCode, BranchEntity sellerBranch) {
     if (code == null || !code.isActive) {
       return Uni.createFrom().failure(
         ValidationException.invalidField("affiliationCode", affiliationCode, "Código inválido")
@@ -61,7 +61,7 @@ public  class UserValidations {
     }
     return Uni.createFrom().item(code);
   }
-  public Uni<User> validateUserCredentials(User user, LoginRequest request) {
+  public Uni<UserEntity> validateUserCredentials(UserEntity user, LoginRequest request) {
     if (user == null) {
       return Uni.createFrom().failure(
           ValidationException.invalidField("credentials", request.email(), "Invalid email or password")

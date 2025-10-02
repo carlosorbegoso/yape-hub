@@ -4,7 +4,8 @@ import io.smallrye.jwt.build.Jwt;
 import io.smallrye.jwt.build.JwtClaimsBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -34,13 +35,13 @@ public class JwtGenerator {
         .issuedAt(Instant.now());
   }
 
-  public String generateAccessToken(Long userId, User.UserRole role, Long sellerId) {
+  public String generateAccessToken(Long userId, UserRole role, Long sellerId) {
     JwtClaimsBuilder builder = baseClaims(userId)
         .expiresAt(Instant.now().plus(accessDuration))
         .groups(role.name())
         .claim("type", "access");
 
-    if (role == User.UserRole.SELLER && sellerId != null) {
+    if (role == UserRole.SELLER && sellerId != null) {
       builder.claim("sellerId", sellerId);
     }
     return builder.sign();

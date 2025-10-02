@@ -2,6 +2,7 @@ package org.sky.service.stats.calculators.admin.overview;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.stats.OverviewMetrics;
 import org.sky.model.PaymentNotification;
 
 import java.time.LocalDate;
@@ -12,7 +13,7 @@ public class AdminOverviewCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public AnalyticsSummaryResponse.OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> payments, 
+    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> payments, 
                                                                            LocalDate startDate, 
                                                                            LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -26,7 +27,7 @@ public class AdminOverviewCalculator {
         var transactionGrowth = calculateTransactionGrowth(totalTransactions, startDate, endDate);
         var averageGrowth = calculateAverageGrowth(averageTransactionValue, startDate, endDate);
         
-        return new AnalyticsSummaryResponse.OverviewMetrics(
+        return new OverviewMetrics(
                 totalSales, totalTransactions, averageTransactionValue,
                 salesGrowth, transactionGrowth, averageGrowth
         );

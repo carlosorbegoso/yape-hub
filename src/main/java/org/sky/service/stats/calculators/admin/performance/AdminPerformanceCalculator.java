@@ -2,6 +2,9 @@ package org.sky.service.stats.calculators.admin.performance;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerPerformance;
 import org.sky.model.PaymentNotification;
 
 import java.time.Duration;
@@ -14,7 +17,7 @@ public class AdminPerformanceCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public AnalyticsSummaryResponse.PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> payments) {
+    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> payments) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var pendingPayments = filterPaymentsByStatus(payments, PENDING_STATUS);
         var rejectedPayments = filterPaymentsByStatus(payments, REJECTED_BY_SELLER_STATUS);
@@ -24,13 +27,13 @@ public class AdminPerformanceCalculator {
         var claimRate = calculateClaimRate(confirmedPayments.size(), totalPayments);
         var rejectionRate = calculateRejectionRate(rejectedPayments.size(), totalPayments);
         
-        return new AnalyticsSummaryResponse.PerformanceMetrics(
+        return new PerformanceMetrics(
                 averageConfirmationTime, claimRate, rejectionRate,
                 (long) pendingPayments.size(), (long) confirmedPayments.size(), (long) rejectedPayments.size()
         );
     }
     
-    public AnalyticsSummaryResponse.SellerGoals calculateGoals(List<PaymentNotification> payments, 
+    public SellerGoals calculateGoals(List<PaymentNotification> payments, 
                                                              java.time.LocalDate startDate, 
                                                              java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -47,18 +50,18 @@ public class AdminPerformanceCalculator {
         var weeklyProgress = calculateProgressRate(totalSales, weeklyTarget, Math.max(1, daysDiff / 7));
         var monthlyProgress = calculateProgressRate(totalSales, monthlyTarget, Math.max(1, daysDiff / 30));
         
-        return new AnalyticsSummaryResponse.SellerGoals(
+        return new SellerGoals(
                 dailyTarget, weeklyTarget, monthlyTarget, yearlyTarget,
                 achievementRate, dailyProgress, weeklyProgress, monthlyProgress
         );
     }
     
-    public AnalyticsSummaryResponse.SellerPerformance calculateSellerPerformance(List<PaymentNotification> payments, 
-                                                                               List<org.sky.model.Seller> sellers, 
+    public SellerPerformance calculateSellerPerformance(List<PaymentNotification> payments, 
+                                                                               List<org.sky.model.SellerEntity> sellers, 
                                                                                java.time.LocalDate startDate, 
                                                                                java.time.LocalDate endDate) {
         if (sellers.isEmpty()) {
-            return new AnalyticsSummaryResponse.SellerPerformance(
+            return new SellerPerformance(
                 null, null, 0.0, 0.0, List.of(), 0.0, 0.0, 0.0
             );
         }
@@ -75,7 +78,7 @@ public class AdminPerformanceCalculator {
         var efficiencyRate = calculateEfficiencyRate(confirmedPayments.size(), payments.size());
         var responseTime = calculateAverageConfirmationTime(confirmedPayments);
         
-        return new AnalyticsSummaryResponse.SellerPerformance(
+        return new SellerPerformance(
                 bestDay, worstDay, averageDailySales, consistencyScore,
                 peakHours, productivityScore, efficiencyRate, responseTime
         );

@@ -11,14 +11,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "branches")
-public class Branch extends PanacheEntityBase {
+public class BranchEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "admin_id", nullable = false)
-    public Admin admin;
+    public AdminEntity admin;
     
     @NotBlank
     @Column(nullable = false)
@@ -36,7 +36,7 @@ public class Branch extends PanacheEntityBase {
     public Boolean isActive = true;
     
     @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public List<Seller> sellers;
+    public List<SellerEntity> sellers;
     
     @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     public List<Transaction> transactions;
@@ -50,9 +50,9 @@ public class Branch extends PanacheEntityBase {
     public LocalDateTime updatedAt;
     
     // Constructors
-    public Branch() {}
+    public BranchEntity() {}
     
-    public Branch(Admin admin, String name, String code, String address) {
+    public BranchEntity(AdminEntity admin, String name, String code, String address) {
         this.admin = admin;
         this.name = name;
         this.code = code;

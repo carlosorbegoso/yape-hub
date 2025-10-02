@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.comparisons;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -11,7 +29,7 @@ public class SellerComparisonsCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerAnalyticsResponse.SellerComparisons calculateSellerComparisons(List<PaymentNotification> sellerPayments, 
+    public SellerComparisons calculateSellerComparisons(List<PaymentNotification> sellerPayments, 
                                                                                List<PaymentNotification> allPayments, 
                                                                                SellerAnalyticsRequest request) {
         var currentSales = calculateTotalSales(filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS));
@@ -22,14 +40,14 @@ public class SellerComparisonsCalculator {
         var transactionChange = calculateTransactionChange((long) currentTransactions, request.period(), request.days());
         var percentageChange = calculatePercentageChange(salesChange, currentSales);
         
-        var comparisonData = new SellerAnalyticsResponse.ComparisonData(salesChange, transactionChange, percentageChange);
+        var comparisonData = new ComparisonData(salesChange, transactionChange, percentageChange);
         
         // Calcular comparaciones para diferentes períodos
         var dailyComparison = calculatePeriodComparison(sellerPayments, "daily", request);
         var weeklyComparison = calculatePeriodComparison(sellerPayments, "weekly", request);
         var monthlyComparison = calculatePeriodComparison(sellerPayments, "monthly", request);
         
-        return new SellerAnalyticsResponse.SellerComparisons(
+        return new SellerComparisons(
                 comparisonData, dailyComparison, weeklyComparison, monthlyComparison
         );
     }
@@ -76,7 +94,7 @@ public class SellerComparisonsCalculator {
         return current > 0 ? (change / current) * 100 : 0.0;
     }
     
-    private SellerAnalyticsResponse.ComparisonData calculatePeriodComparison(List<PaymentNotification> sellerPayments, 
+    private ComparisonData calculatePeriodComparison(List<PaymentNotification> sellerPayments, 
                                                                            String period, 
                                                                            SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);
@@ -88,7 +106,7 @@ public class SellerComparisonsCalculator {
         var periodTransactionChange = calculatePeriodSpecificTransactionChange(currentTransactions, period, request.days());
         var periodPercentageChange = calculatePercentageChange(periodSalesChange, currentSales);
         
-        return new SellerAnalyticsResponse.ComparisonData(
+        return new ComparisonData(
                 periodSalesChange, (long) periodTransactionChange, periodPercentageChange
         );
     }

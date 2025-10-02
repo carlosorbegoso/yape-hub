@@ -11,11 +11,13 @@ import org.sky.dto.auth.LoginRequest;
 import org.sky.dto.auth.LoginResponse;
 import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
 import org.sky.exception.ValidationException;
-import org.sky.model.Admin;
+import org.sky.model.AdminEntity;
+import org.sky.model.BusinessType;
 import org.sky.model.AffiliationCode;
-import org.sky.model.Branch;
-import org.sky.model.Seller;
-import org.sky.model.User;
+import org.sky.model.BranchEntity;
+import org.sky.model.SellerEntity;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.AffiliationCodeRepository;
 import org.sky.repository.BranchRepository;
@@ -97,19 +99,19 @@ public class AuthService {
     private Uni<ApiResponse<LoginResponse>> createAdminAndUser(AdminRegisterRequest request) {
         return Uni.createFrom().item(() -> {
             // Create user
-            User user = new User();
+            UserEntity user = new UserEntity();
             user.email = request.email();
             user.password = BCrypt.hashpw(request.password(), BCrypt.gensalt());
-            user.role = User.UserRole.ADMIN;
+            user.role = UserRole.ADMIN;
             user.isVerified = false;
             return user;
         })
         .chain(user -> userRepository.persist(user)
                 .chain(persistedUser -> {
-                    Admin admin = new Admin();
+                    AdminEntity admin = new AdminEntity();
                     admin.user = persistedUser;
                     admin.businessName = request.businessName();
-                    admin.businessType = Admin.BusinessType.valueOf(request.businessType());
+                    admin.businessType = BusinessType.valueOf(request.businessType());
                     admin.ruc = request.ruc();
                     admin.contactName = request.contactName();
                     admin.phone = request.phone();
@@ -118,7 +120,7 @@ public class AuthService {
                 })
                 .chain(persistedAdmin -> {
                     // Create default branch
-                    Branch branch = new Branch();
+                    BranchEntity branch = new BranchEntity();
                     branch.admin = persistedAdmin;
                     branch.name = "Sucursal Principal";
                     branch.code = "MAIN_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -205,7 +207,7 @@ public class AuthService {
                 .chain(seller -> generateLoginResponse(seller, affiliationCode));
     }
 
-    private Uni<Seller> validateSellerBranch(Seller seller, String phone) {
+    private Uni<SellerEntity> validateSellerBranch(SellerEntity seller, String phone) {
         if (seller.branch == null) {
             return Uni.createFrom().failure(
                 ValidationException.invalidField("branch", phone, "Vendedor no tiene sucursal asignada")
@@ -215,7 +217,7 @@ public class AuthService {
                 .map(validatedBranch -> seller);
     }
 
-    private Uni<Seller> validateAndProcessAffiliationCode(Seller seller, String affiliationCode) {
+    private Uni<SellerEntity> validateAndProcessAffiliationCode(SellerEntity seller, String affiliationCode) {
         return Uni.combine()
                 .all()
                 .unis(
@@ -224,7 +226,7 @@ public class AuthService {
                 )
                 .asTuple()
                 .chain(tuple -> {
-                    Branch branch = tuple.getItem1();
+                    BranchEntity branch = tuple.getItem1();
                     AffiliationCode code = tuple.getItem2();
                     
                     return UserValidations.validateAffiliationCode(code, affiliationCode, branch)
@@ -236,8 +238,8 @@ public class AuthService {
                 });
     }
 
-    private Uni<Seller> updateUserLastLogin(Seller seller) {
-        User user = seller.user;
+    private Uni<SellerEntity> updateUserLastLogin(SellerEntity seller) {
+        UserEntity user = seller.user;
         if (user == null) {
             return Uni.createFrom().failure(
                 ValidationException.invalidField("user", seller.phone, "Usuario no encontrado")
@@ -249,8 +251,8 @@ public class AuthService {
                 .map(updatedUser -> seller);
     }
 
-    private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(Seller seller, String affiliationCode) {
-        User user = seller.user;
+    private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(SellerEntity seller, String affiliationCode) {
+        UserEntity user = seller.user;
         String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, seller.id);
         
         SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(

@@ -16,14 +16,7 @@ import org.sky.dto.stats.PaymentTransparencyRequest;
 import org.sky.dto.stats.PaymentTransparencyResponse;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.SellerFinancialCalculator;
-import org.sky.service.stats.calculators.AdminStatsCalculator;
-import org.sky.service.stats.calculators.SellerStatsCalculator;
-import org.sky.service.stats.calculators.AdminAnalyticsCalculator;
-import org.sky.service.stats.calculators.QuickSummaryCalculator;
-import org.sky.service.stats.calculators.SellerAnalyticsCalculator;
-import org.sky.service.stats.calculators.FinancialAnalyticsCalculator;
-import org.sky.service.stats.calculators.PaymentTransparencyCalculator;
+import org.sky.service.stats.calculators.factory.CalculatorFactory;
 import org.sky.dto.stats.AdminAnalyticsRequest;
 import org.sky.dto.stats.SellerAnalyticsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
@@ -40,28 +33,7 @@ public class StatsService {
     SellerRepository sellerRepository;
     
     @Inject
-    SellerFinancialCalculator sellerFinancialCalculator;
-    
-    @Inject
-    AdminStatsCalculator adminStatsCalculator;
-    
-    @Inject
-    SellerStatsCalculator sellerStatsCalculator;
-    
-    @Inject
-    AdminAnalyticsCalculator adminAnalyticsCalculator;
-    
-    @Inject
-    QuickSummaryCalculator quickSummaryCalculator;
-    
-    @Inject
-    SellerAnalyticsCalculator sellerAnalyticsCalculator;
-    
-    @Inject
-    FinancialAnalyticsCalculator financialAnalyticsCalculator;
-    
-    @Inject
-    PaymentTransparencyCalculator paymentTransparencyCalculator;
+    CalculatorFactory calculatorFactory;
 
     
     private static final Logger log = Logger.getLogger(StatsService.class);
@@ -71,7 +43,24 @@ public class StatsService {
      */
     @WithTransaction
     public Uni<SalesStatsResponse> getAdminStats(Long adminId, LocalDate startDate, LocalDate endDate) {
-        return adminStatsCalculator.calculateAdminStats(adminId, startDate, endDate);
+        return calculatorFactory.getAdminStatsCalculator().calculateAdminStats(adminId, startDate, endDate)
+                .map(adminStats -> new SalesStatsResponse(
+                    new SalesStatsResponse.PeriodInfo(
+                        adminStats.startDate().toString(),
+                        adminStats.endDate().toString(),
+                        (int) java.time.temporal.ChronoUnit.DAYS.between(adminStats.startDate(), adminStats.endDate())
+                    ),
+                    new SalesStatsResponse.SummaryStats(
+                        adminStats.totalSales(),
+                        adminStats.totalTransactions(),
+                        adminStats.averageTransactionValue(),
+                        0L, // pendingPayments
+                        0L, // confirmedPayments
+                        0L  // rejectedPayments
+                    ),
+                    java.util.List.of(), // dailyStats
+                    java.util.List.of()  // sellerStats
+                ));
     }
     
     /**
@@ -79,7 +68,7 @@ public class StatsService {
      */
     @WithTransaction
     public Uni<SellerStatsResponse> getSellerStats(Long sellerId, LocalDate startDate, LocalDate endDate) {
-        return sellerStatsCalculator.calculateSellerStats(sellerId, startDate, endDate);
+        return calculatorFactory.getSellerStatsCalculator().calculateSellerStats(sellerId, startDate, endDate);
     }
 
     /**
@@ -90,7 +79,7 @@ public class StatsService {
                                                            String include, String period, String metric, 
                                                            String granularity, Double confidence, Integer days) {
         var request = new AdminAnalyticsRequest(adminId, startDate, endDate, include, period, metric, granularity, confidence, days);
-        return adminAnalyticsCalculator.calculateAnalyticsSummary(request);
+        return calculatorFactory.getAdminAnalyticsCalculator().calculateAnalyticsSummary(request);
     }
     
     /**
@@ -98,10 +87,10 @@ public class StatsService {
      */
     @WithTransaction
     public Uni<QuickSummaryResponse> getQuickSummary(Long adminId, LocalDate startDate, LocalDate endDate) {
-        return quickSummaryCalculator.calculateQuickSummary(adminId, startDate, endDate);
+        return calculatorFactory.getQuickSummaryCalculator().calculateQuickSummary(adminId, startDate, endDate);
     }
 
-  /**
+    /**
      * Obtiene analytics completos para un vendedor específico
      */
     @WithTransaction
@@ -109,15 +98,15 @@ public class StatsService {
                                                                 String include, String period, String metric,
                                                                 String granularity, Double confidence, Integer days) {
         var request = new SellerAnalyticsRequest(sellerId, startDate, endDate, include, period, metric, granularity, confidence, days);
-        return sellerAnalyticsCalculator.calculateSellerAnalyticsSummary(request);
+        return calculatorFactory.getSellerAnalyticsCalculator().calculateSellerAnalyticsSummary(request);
     }
 
 
     @WithTransaction
     public Uni<FinancialAnalyticsResponse> getFinancialAnalytics(Long adminId, LocalDate startDate, LocalDate endDate, 
                                             String include, String currency, Double taxRate) {
-        var request = new FinancialAnalyticsRequest(adminId, startDate, endDate, include, currency, taxRate);
-        return financialAnalyticsCalculator.calculateFinancialAnalytics(request);
+        var request = new FinancialAnalyticsRequest(adminId, startDate, endDate, include, currency, 0.05, taxRate);
+        return calculatorFactory.getFinancialAnalyticsCalculator().calculateFinancialAnalytics(request);
     }
     
     /**
@@ -127,7 +116,7 @@ public class StatsService {
     public Uni<SellerFinancialResponse> getSellerFinancialAnalytics(Long sellerId, LocalDate startDate, LocalDate endDate,
                                                   String include, String currency, Double commissionRate) {
         log.info("💰 StatsService.getSellerFinancialAnalytics() - Delegando a SellerFinancialCalculator");
-        return sellerFinancialCalculator.calculateSellerFinancialAnalytics(sellerId, startDate, endDate, include, currency, commissionRate);
+        return calculatorFactory.getSellerFinancialCalculator().calculateSellerFinancialAnalytics(sellerId, startDate, endDate, include, currency, commissionRate);
     }
     
     /**
@@ -137,7 +126,7 @@ public class StatsService {
     public Uni<PaymentTransparencyResponse> getPaymentTransparencyReport(Long adminId, LocalDate startDate, LocalDate endDate,
                                                    Boolean includeFees, Boolean includeTaxes, Boolean includeCommissions) {
         var request = new PaymentTransparencyRequest(adminId, startDate, endDate, includeFees, includeTaxes, includeCommissions);
-        return paymentTransparencyCalculator.calculatePaymentTransparencyReport(request);
+        return calculatorFactory.getPaymentTransparencyCalculator().calculatePaymentTransparencyReport(request);
     }
     
 

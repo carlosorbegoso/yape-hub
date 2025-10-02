@@ -12,14 +12,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "admins")
-public class Admin extends PanacheEntityBase {
+public class AdminEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
     
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    public User user;
+    public UserEntity user;
     
     @NotBlank
     @Column(name = "business_name", nullable = false)
@@ -47,7 +47,7 @@ public class Admin extends PanacheEntityBase {
     public String address;
     
     @OneToMany(mappedBy = "admin", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public List<Branch> branches;
+    public List<BranchEntity> branches;
     
     @CreationTimestamp
     @Column(name = "created_at")
@@ -57,14 +57,11 @@ public class Admin extends PanacheEntityBase {
     @Column(name = "updated_at")
     public LocalDateTime updatedAt;
     
-    public enum BusinessType {
-        RESTAURANT, RETAIL, SERVICES, OTHER
-    }
     
     // Constructors
-    public Admin() {}
+    public AdminEntity() {}
     
-    public Admin(User user, String businessName, BusinessType businessType, String ruc, 
+    public AdminEntity(UserEntity user, String businessName, BusinessType businessType, String ruc, 
                  String contactName, String phone, String address) {
         this.user = user;
         this.businessName = businessName;

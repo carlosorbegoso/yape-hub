@@ -4,7 +4,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import org.sky.model.Admin;
+import org.sky.model.AdminEntity;
+import org.sky.model.BusinessType;
 
 public record AdminRegisterRequest(
     @NotBlank(message = "Business name is required")

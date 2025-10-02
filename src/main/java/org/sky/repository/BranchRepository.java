@@ -3,26 +3,26 @@ package org.sky.repository;
 import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.Branch;
+import org.sky.model.BranchEntity;
 
 import java.util.List;
 
 @ApplicationScoped
-public class BranchRepository implements PanacheRepository<Branch> {
+public class BranchRepository implements PanacheRepository<BranchEntity> {
     
-    public Uni<List<Branch>> findByAdminId(Long adminId) {
+    public Uni<List<BranchEntity>> findByAdminId(Long adminId) {
         return find("admin.id = ?1 ORDER BY id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
     
-    public Uni<Branch> findByCode(String code) {
+    public Uni<BranchEntity> findByCode(String code) {
         return find("code", code).firstResult();
     }
     
-    public Uni<Branch> findByAdminIdAndBranchId(Long adminId, Long branchId) {
+    public Uni<BranchEntity> findByAdminIdAndBranchId(Long adminId, Long branchId) {
         return find("id = ?1 and admin.id = ?2", branchId, adminId).firstResult();
     }
     
-    public Uni<Branch> findByCodeExcludingId(String code, Long branchId) {
+    public Uni<BranchEntity> findByCodeExcludingId(String code, Long branchId) {
         return find("code = ?1 and id != ?2", code, branchId).firstResult();
     }
     
@@ -50,5 +50,5 @@ public class BranchRepository implements PanacheRepository<Branch> {
                 );
     }
     
-    public record BranchPaginationResult(List<Branch> branches, Long totalCount) {}
+    public record BranchPaginationResult(List<BranchEntity> branches, Long totalCount) {}
 }

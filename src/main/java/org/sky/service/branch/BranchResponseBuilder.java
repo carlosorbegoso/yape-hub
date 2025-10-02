@@ -6,8 +6,8 @@ import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.branch.BranchListResponse;
 import org.sky.dto.branch.BranchResponse;
-import org.sky.model.Branch;
-import org.sky.model.Seller;
+import org.sky.model.BranchEntity;
+import org.sky.model.SellerEntity;
 import org.sky.repository.SellerRepository;
 
 import java.util.List;
@@ -20,7 +20,7 @@ public class BranchResponseBuilder {
     @Inject
     SellerRepository sellerRepository;
 
-    public BranchResponse buildBasicResponse(Branch branch) {
+    public BranchResponse buildBasicResponse(BranchEntity branch) {
         return new BranchResponse(
             branch.id,
             branch.name,
@@ -33,7 +33,7 @@ public class BranchResponseBuilder {
         );
     }
 
-    public Uni<ApiResponse<BranchResponse>> buildResponseWithSellersCount(Branch branch, String message) {
+    public Uni<ApiResponse<BranchResponse>> buildResponseWithSellersCount(BranchEntity branch, String message) {
         return sellerRepository.countActiveByBranchId(branch.id)
                 .map(sellersCount -> {
                     BranchResponse response = new BranchResponse(
@@ -51,13 +51,13 @@ public class BranchResponseBuilder {
                 });
     }
 
-    public List<BranchResponse> buildListResponse(List<Branch> branches) {
+    public List<BranchResponse> buildListResponse(List<BranchEntity> branches) {
         return branches.stream()
                 .map(this::buildBasicResponse)
                 .toList();
     }
 
-    public Map<String, Object> buildSellersResponse(Branch branch, List<Seller> sellers,
+    public Map<String, Object> buildSellersResponse(BranchEntity branch, List<SellerEntity> sellers,
                                                    BranchListResponse.PaginationInfo paginationInfo) {
         BranchResponse branchInfo = new BranchResponse(
             branch.id,

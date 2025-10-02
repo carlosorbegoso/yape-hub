@@ -8,8 +8,6 @@ public record FinancialAnalyticsRequest(
     LocalDate endDate,
     String include,
     String currency,
+    Double commissionRate,
     Double taxRate
-) {
-    // Los campos del record son automáticamente públicos y finales
-}
-
+) {}

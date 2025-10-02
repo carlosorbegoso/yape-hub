@@ -27,7 +27,7 @@ public class QrCode extends PanacheEntityBase {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "branch_id")
-    public Branch branch;
+    public BranchEntity branch;
     
     @Column(name = "expires_at")
     public LocalDateTime expiresAt;
@@ -55,7 +55,7 @@ public class QrCode extends PanacheEntityBase {
     // Constructors
     public QrCode() {}
     
-    public QrCode(String qrData, QrType type, Branch branch, LocalDateTime expiresAt, Integer maxUses) {
+    public QrCode(String qrData, QrType type, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
         this.qrData = qrData;
         this.type = type;
         this.branch = branch;

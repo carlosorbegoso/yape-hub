@@ -3,7 +3,7 @@ package org.sky.service.stats.calculators.admin.seller;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SalesStatsResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.util.List;
 @ApplicationScoped
@@ -13,13 +13,13 @@ public class SellerStatsCalculator {
     private static final String PENDING_STATUS = "PENDING";
     
     public List<SalesStatsResponse.SellerStats> calculateSellerStats(List<PaymentNotification> payments,
-                                                                    List<Seller> sellers) {
+                                                                    List<SellerEntity> sellers) {
         return sellers.stream()
                 .map(seller -> calculateSellerStat(payments, seller))
                 .toList();
     }
     
-    private SalesStatsResponse.SellerStats calculateSellerStat(List<PaymentNotification> payments, Seller seller) {
+    private SalesStatsResponse.SellerStats calculateSellerStat(List<PaymentNotification> payments, SellerEntity seller) {
         var sellerPayments = filterPaymentsBySeller(payments, seller.id);
         
         var sellerSales = calculateSellerSales(sellerPayments);
@@ -60,7 +60,7 @@ public class SellerStatsCalculator {
                 .count();
     }
     
-    private String getSellerName(Seller seller) {
+    private String getSellerName(SellerEntity seller) {
         return seller.sellerName != null ? seller.sellerName : "Sin nombre";
     }
 }

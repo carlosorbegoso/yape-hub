@@ -2,7 +2,8 @@ package org.sky.service.stats.calculators.seller.goals;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerAnalyticsResponse;
+import org.sky.dto.stats.SellerGoals;
+
 import org.sky.model.PaymentNotification;
 
 import java.time.LocalDate;
@@ -10,7 +11,7 @@ import java.util.List;
 @ApplicationScoped
 public class SellerGoalsCalculator {
     
-    public SellerAnalyticsResponse.SellerGoals calculateSellerGoals(List<PaymentNotification> sellerPayments, 
+    public SellerGoals calculateSellerGoals(List<PaymentNotification> sellerPayments, 
                                                                     List<PaymentNotification> allPayments, 
                                                                     SellerAnalyticsRequest request) {
         var totalSales = calculateTotalSales(filterPaymentsByStatus(sellerPayments, "CONFIRMED"));
@@ -29,7 +30,7 @@ public class SellerGoalsCalculator {
         var monthlyProgress = calculateProgressRate(totalSales, monthlyTarget, Math.max(1, daysInPeriod / 30));
         var achievementRate = Math.min(Math.max(dailyProgress, weeklyProgress), monthlyProgress);
         
-        return new SellerAnalyticsResponse.SellerGoals(
+        return new SellerGoals(
                 dailyTarget, weeklyTarget, monthlyTarget, yearlyTarget,
                 achievementRate, dailyProgress, weeklyProgress, monthlyProgress
         );

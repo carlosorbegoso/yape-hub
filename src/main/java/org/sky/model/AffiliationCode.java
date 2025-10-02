@@ -21,7 +21,7 @@ public class AffiliationCode extends PanacheEntityBase {
     
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "branch_id", nullable = false)
-    public Branch branch;
+    public BranchEntity branch;
     
     @Column(name = "expires_at")
     public LocalDateTime expiresAt;
@@ -45,7 +45,7 @@ public class AffiliationCode extends PanacheEntityBase {
     // Constructors
     public AffiliationCode() {}
     
-    public AffiliationCode(String affiliationCode, Branch branch, LocalDateTime expiresAt, Integer maxUses) {
+    public AffiliationCode(String affiliationCode, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
         this.affiliationCode = affiliationCode;
         this.branch = branch;
         this.expiresAt = expiresAt;

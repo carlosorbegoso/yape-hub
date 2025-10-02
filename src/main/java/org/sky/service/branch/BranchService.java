@@ -9,7 +9,7 @@ import org.sky.dto.branch.BranchCreateRequest;
 import org.sky.dto.branch.BranchUpdateRequest;
 import org.sky.dto.branch.BranchResponse;
 import org.sky.dto.branch.BranchListResponse;
-import org.sky.model.Branch;
+import org.sky.model.BranchEntity;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
 
@@ -36,7 +36,7 @@ public class BranchService {
         return validationService.validateAdminExists(adminId)
                 .chain(admin -> validationService.validateCodeNotExists(request.code())
                         .chain(v -> {
-                            Branch branch = new Branch();
+                            BranchEntity branch = new BranchEntity();
                             branch.admin = admin;
                             branch.name = request.name();
                             branch.code = request.code();
@@ -144,7 +144,7 @@ public class BranchService {
       );
     }
 
-    private Uni<ApiResponse<BranchResponse>> updateAndPersistBranch(Branch branch, BranchUpdateRequest request) {
+    private Uni<ApiResponse<BranchResponse>> updateAndPersistBranch(BranchEntity branch, BranchUpdateRequest request) {
         updateBranchFields(branch, request);
         
         return branchRepository.persist(branch)
@@ -152,7 +152,7 @@ public class BranchService {
                     "Branch updated successfully"));
     }
 
-    private void updateBranchFields(Branch branch, BranchUpdateRequest request) {
+    private void updateBranchFields(BranchEntity branch, BranchUpdateRequest request) {
         if (request.name() != null) branch.name = request.name();
         if (request.code() != null) branch.code = request.code();
         if (request.address() != null) branch.address = request.address();

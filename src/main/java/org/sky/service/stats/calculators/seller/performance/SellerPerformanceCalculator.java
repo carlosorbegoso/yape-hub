@@ -2,6 +2,26 @@ package org.sky.service.stats.calculators.seller.performance;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -15,7 +35,7 @@ public class SellerPerformanceCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public SellerAnalyticsResponse.PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> sellerPayments, 
+    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> sellerPayments, 
                                                                                  SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);
         var pendingPayments = filterPaymentsByStatus(sellerPayments, PENDING_STATUS);
@@ -25,17 +45,17 @@ public class SellerPerformanceCalculator {
         var rejectionRate = calculateRejectionRate(rejectedPayments.size(), sellerPayments.size());
         var averageConfirmationTime = calculateAverageConfirmationTime(confirmedPayments);
         
-        return new SellerAnalyticsResponse.PerformanceMetrics(
+        return new PerformanceMetrics(
                 averageConfirmationTime, claimRate, rejectionRate,
                 (long) pendingPayments.size(), (long) confirmedPayments.size(), (long) rejectedPayments.size()
         );
     }
     
-    public SellerAnalyticsResponse.SellerPerformance calculateSellerPerformance(List<PaymentNotification> sellerPayments, 
+    public SellerPerformance calculateSellerPerformance(List<PaymentNotification> sellerPayments, 
                                                                                List<PaymentNotification> allPayments, 
                                                                                SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
-            return new SellerAnalyticsResponse.SellerPerformance(
+            return new SellerPerformance(
                 null, null, 0.0, 0.0, List.of(), 0.0, 0.0, 0.0
             );
         }
@@ -59,7 +79,7 @@ public class SellerPerformanceCalculator {
         var efficiencyRate = calculateEfficiencyRate(sellerPayments, request.confidence());
         var responseTime = calculateAverageConfirmationTime(filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS));
         
-        return new SellerAnalyticsResponse.SellerPerformance(
+        return new SellerPerformance(
                 bestDay, worstDay, averageDailySales, consistencyScore,
                 peakHours, productivityScore, efficiencyRate, responseTime
         );

@@ -2,6 +2,24 @@ package org.sky.service.stats.calculators.seller.insights;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.stats.OverviewMetrics;
+import org.sky.dto.stats.DailySalesData;
+import org.sky.dto.stats.PerformanceMetrics;
+import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.stats.SellerGoals;
+import org.sky.dto.stats.SellerComparisons;
+import org.sky.dto.stats.ComparisonData;
+import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.stats.SellerAchievements;
+import org.sky.dto.stats.Milestone;
+import org.sky.dto.stats.Badge;
+import org.sky.dto.stats.SellerInsights;
+import org.sky.dto.stats.SellerForecasting;
+import org.sky.dto.stats.TrendAnalysis;
+import org.sky.dto.stats.SellerAnalytics;
+import org.sky.dto.stats.SalesDistribution;
+import org.sky.dto.stats.TransactionPatterns;
+import org.sky.dto.stats.PerformanceIndicators;
 import org.sky.dto.stats.SellerAnalyticsResponse;
 import org.sky.model.PaymentNotification;
 
@@ -12,11 +30,11 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class SellerInsightsCalculator {
     
-    public SellerAnalyticsResponse.SellerInsights calculateSellerInsights(List<PaymentNotification> sellerPayments, 
+    public SellerInsights calculateSellerInsights(List<PaymentNotification> sellerPayments, 
                                                                           List<PaymentNotification> allPayments, 
                                                                           SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
-            return new SellerAnalyticsResponse.SellerInsights(null, null, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            return new SellerInsights(null, null, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         }
         
         // Calcular insights usando metric y granularity
@@ -34,7 +52,7 @@ public class SellerInsightsCalculator {
         var conversionRate = calculateClaimRate(filterPaymentsByStatus(sellerPayments, "CONFIRMED").size(), sellerPayments.size());
         var satisfactionScore = calculateSatisfactionScore(conversionRate, request.confidence());
         
-        return new SellerAnalyticsResponse.SellerInsights(
+        return new SellerInsights(
                 peakPerformanceDay, peakPerformanceHour, averageTransactionValue,
                 customerRetentionRate, repeatCustomerRate, newCustomerRate,
                 conversionRate, satisfactionScore

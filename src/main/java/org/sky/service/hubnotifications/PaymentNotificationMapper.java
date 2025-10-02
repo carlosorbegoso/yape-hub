@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.model.PaymentNotification;
-import org.sky.model.Seller;
+import org.sky.model.SellerEntity;
 
 import java.util.function.Function;
 
@@ -37,7 +37,7 @@ public class PaymentNotificationMapper {
         );
 
 
-    public static final Function<PaymentNotificationRequest, Function<Seller, PaymentNotification>> REQUEST_WITH_SELLER_TO_ENTITY = 
+    public static final Function<PaymentNotificationRequest, Function<SellerEntity, PaymentNotification>> REQUEST_WITH_SELLER_TO_ENTITY = 
         request -> seller -> {
             PaymentNotification payment = REQUEST_TO_ENTITY.apply(request);
             return payment;

@@ -1,6 +1,7 @@
 package org.sky.dto.auth;
 
-import org.sky.model.User;
+import org.sky.model.UserEntity;
+import org.sky.model.UserRole;
 
 public record LoginResponse(
     String accessToken,
@@ -11,7 +12,7 @@ public record LoginResponse(
     public record UserInfo(
         Long id,
         String email,
-        User.UserRole role,
+        UserRole role,
         Long businessId,
         String businessName,
         Boolean isVerified,
