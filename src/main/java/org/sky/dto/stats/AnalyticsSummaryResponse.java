@@ -50,22 +50,22 @@ public record AnalyticsSummaryResponse(
     SellerAnalytics sellerAnalytics,
     
     @JsonProperty("branchAnalytics")
-    BranchAnalytics branchAnalytics,
+    org.sky.dto.stats.branch.BranchAnalyticsResponse branchAnalytics,
     
     @JsonProperty("sellerManagement")
-    SellerManagement sellerManagement,
+    org.sky.dto.stats.seller.SellerManagementResponse sellerManagement,
     
     @JsonProperty("systemMetrics")
-    SystemMetrics systemMetrics,
+    org.sky.dto.stats.system.SystemMetricsResponse systemMetrics,
     
     @JsonProperty("administrativeInsights")
-    AdministrativeInsights administrativeInsights,
+    org.sky.dto.stats.admin.AdministrativeInsightsResponse administrativeInsights,
     
     @JsonProperty("financialOverview")
-    FinancialOverview financialOverview,
+    org.sky.dto.stats.financial.FinancialOverviewResponse financialOverview,
     
     @JsonProperty("complianceAndSecurity")
-    ComplianceAndSecurity complianceAndSecurity
+    org.sky.dto.stats.security.ComplianceAndSecurityResponse complianceAndSecurity
 ) {
     public record OverviewMetrics(
         @JsonProperty("totalSales")

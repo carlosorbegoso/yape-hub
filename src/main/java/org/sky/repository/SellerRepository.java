@@ -21,6 +21,12 @@ public class SellerRepository implements PanacheRepository<Seller> {
     public Uni<List<Seller>> findByAdminId(Long adminId) {
         return find("SELECT s FROM Seller s JOIN FETCH s.branch b WHERE b.admin.id = ?1 ORDER BY s.id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
+    
+    public Uni<List<Seller>> findActiveSellersByAdminId(Long adminId) {
+        return find("branch.admin.id = ?1 and isActive = true", adminId)
+                .page(0, 100)  // LÍMITE: máximo 100 sellers
+                .list();
+    }
 
     public Uni<Seller> findByUserId(Long userId) {
         return find("user.id", userId).firstResult();

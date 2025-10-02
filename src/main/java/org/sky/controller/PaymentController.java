@@ -51,7 +51,7 @@ public class PaymentController {
         return securityService.validateJwtToken(authorization)
                 .chain(userId -> hubNotificationControllerService.claimPayment(request, userId, null))
                 .map(response -> Response.ok(ApiResponse.success("Payment claimed successfully", response)).build())
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @POST
@@ -139,7 +139,7 @@ public class PaymentController {
                     return Uni.createFrom().item(stats);
                 })
                 .map(stats -> Response.ok(ApiResponse.success("Notification statistics retrieved", stats)).build())
-                .onFailure().recoverWithItem(throwable -> ControllerErrorHandler.handleControllerError(throwable));
+                .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
     }
     
     @GET

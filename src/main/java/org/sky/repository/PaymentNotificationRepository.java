@@ -6,11 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.PaymentNotification;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-
-import jakarta.persistence.EntityManager;
-import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class PaymentNotificationRepository implements PanacheRepository<PaymentNotification> {
@@ -139,6 +135,23 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
         return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
                 sellerId, startDateTime, endDateTime)
                 .page(0, 2000)  // Límite específico para vendedor
+                .list();
+    }
+    
+    /**
+     * Find payments confirmed by seller within date range for financial analytics
+     */
+    public Uni<List<PaymentNotification>> findByConfirmedByAndDateRange(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
+                sellerId, startDateTime, endDateTime)
+                .page(0, 2000)  // Límite para análisis financiero
+                .list();
+    }
+    
+    public Uni<List<PaymentNotification>> findByAdminIdAndDateRange(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
+                adminId, startDateTime, endDateTime)
+                .page(0, 5000)  // Límite para analytics
                 .list();
     }
     
