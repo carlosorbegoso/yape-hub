@@ -1,8 +1,9 @@
 package org.sky.service.stats.calculators.seller.goals;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerGoals;
+
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerGoals;
 
 import org.sky.model.PaymentNotificationEntity;
 

@@ -3,7 +3,7 @@ package org.sky.service.auth;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.mindrot.jbcrypt.BCrypt;
-import org.sky.dto.auth.LoginRequest;
+import org.sky.dto.request.auth.LoginRequest;
 import org.sky.exception.ValidationException;
 import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;

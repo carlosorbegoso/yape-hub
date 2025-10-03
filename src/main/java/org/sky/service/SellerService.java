@@ -5,11 +5,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.mindrot.jbcrypt.BCrypt;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.seller.AffiliateSellerRequest;
-import org.sky.dto.seller.SellerListResponse;
-import org.sky.dto.seller.SellerResponse;
-import org.sky.dto.seller.SellerRegistrationResponse;
+
+import org.sky.dto.request.seller.AffiliateSellerRequest;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.common.PaginationInfo;
+import org.sky.dto.response.seller.SellerListResponse;
+import org.sky.dto.response.seller.SellerResponse;
+import org.sky.dto.response.seller.SellerRegistrationResponse;
 import org.sky.model.SellerEntity;
 import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
@@ -204,8 +206,8 @@ public class SellerService {
                     ))
                     .collect(Collectors.toList());
             
-            SellerListResponse.PaginationInfo pagination = new SellerListResponse.PaginationInfo(
-                    page, totalPages, totalItems, limit
+              PaginationInfo pagination = new   PaginationInfo(
+                    page, totalPages, totalItems, limit, page < totalPages, page > 1
             );
             
             SellerListResponse response = new SellerListResponse(sellerResponses, pagination);
@@ -334,11 +336,13 @@ public class SellerService {
                                         ))
                                         .collect(Collectors.toList());
                     
-                                SellerListResponse.PaginationInfo pagination = new SellerListResponse.PaginationInfo(
+                                PaginationInfo pagination = new PaginationInfo(
                                         finalPage, // currentPage
                                         totalPages, // totalPages
-                                        totalCount.intValue(), // totalItems - CORREGIDO
-                                        finalLimit // itemsPerPage
+                                        totalCount, // totalItems - CORREGIDO
+                                        finalLimit, // itemsPerPage
+                                        finalPage < totalPages, // hasNext
+                                        finalPage > 1 // hasPrevious
                                 );
                     
                                 SellerListResponse listResponse = new SellerListResponse(

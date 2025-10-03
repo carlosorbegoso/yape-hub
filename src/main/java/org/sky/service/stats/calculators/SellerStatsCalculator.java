@@ -3,12 +3,15 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.SellerStatsResponse;
+import org.sky.dto.request.stats.SellerStatsRequest;
+import org.sky.dto.response.common.PeriodInfo;
+import org.sky.dto.response.seller.SellerSpecificMetrics;
+import org.sky.dto.response.seller.SellerSummaryStats;
+import org.sky.dto.response.stats.DailyStats;
+import org.sky.dto.response.stats.SellerStatsResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
-import org.sky.service.stats.calculators.template.SellerStatsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
@@ -73,7 +76,7 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
         var claimRateForSeller = !payments.isEmpty() ? 
             (double) payments.size() / Math.max(payments.size(), 1) * 100 : 0.0;
         
-        var summary = new SellerStatsResponse.SellerSummaryStats(
+        var summary = new SellerSummaryStats(
                 totalSales, totalTransactions, averageTransactionValue,
                 countPaymentsByStatus(payments, "PENDING"),
                 countPaymentsByStatus(payments, "CONFIRMED"),
@@ -92,15 +95,15 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
         );
     }
     
-    private List<SellerStatsResponse.DailyStats> calculateSellerDailyStats(List<PaymentNotificationEntity> sellerPayments,
+    private List<DailyStats> calculateSellerDailyStats(List<PaymentNotificationEntity> sellerPayments,
                                                                           LocalDate startDate, LocalDate endDate) {
         return startDate.datesUntil(endDate.plusDays(1))
                 .map(date -> calculateDailyStatForDate(sellerPayments, date))
                 .toList();
     }
     
-    private SellerStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> sellerPayments,
-                                                                    LocalDate date) {
+    private DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> sellerPayments,
+                                                 LocalDate date) {
         var daySellerPayments = sellerPayments.stream()
                 .filter(payment -> payment.createdAt.toLocalDate().equals(date))
                 .toList();
@@ -115,29 +118,22 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
         var pendingCount = daySellerPayments.stream().filter(p -> "PENDING".equals(p.status)).count();
         var confirmedCount = daySellerPayments.stream().filter(p -> "CONFIRMED".equals(p.status)).count();
         
-        return new SellerStatsResponse.DailyStats(
+        return new DailyStats(
                 date.format(DATE_FORMATTER),
                 daySales,
                 transactionCount,
-                averageValue,
-                pendingCount,
-                confirmedCount
+                averageValue
         );
     }
     
-    private SellerStatsResponse.PeriodInfo createPeriodInfo(LocalDate startDate, LocalDate endDate) {
+    private PeriodInfo createPeriodInfo(LocalDate startDate, LocalDate endDate) {
         int daysDiff = startDate.until(endDate).getDays();
-        return new SellerStatsResponse.PeriodInfo(
+        return new PeriodInfo(
                 startDate.format(DATE_FORMATTER),
                 endDate.format(DATE_FORMATTER),
                 daysDiff + 1
         );
     }
-    
-    /**
-     * Métricas específicas para seller
-     */
-    private record SellerSpecificMetrics(
-        List<SellerStatsResponse.DailyStats> dailyStats
-    ) {}
+
+
 }

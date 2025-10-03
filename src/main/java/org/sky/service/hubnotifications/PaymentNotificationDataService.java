@@ -4,7 +4,7 @@ import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.payment.PaymentNotificationRequest;
+import org.sky.dto.request.payment.PaymentNotificationRequest;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;

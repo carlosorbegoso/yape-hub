@@ -9,10 +9,11 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.ErrorResponse;
-import org.sky.dto.auth.AdminRegisterRequest;
-import org.sky.dto.auth.LoginRequest;
+
+import org.sky.dto.request.admin.AdminRegisterRequest;
+import org.sky.dto.request.auth.LoginRequest;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.ErrorResponse;
 import org.sky.service.auth.AuthService;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;

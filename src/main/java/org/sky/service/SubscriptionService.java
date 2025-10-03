@@ -5,7 +5,7 @@ import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.billing.SubscriptionStatusResponse;
+import org.sky.dto.response.billing.SubscriptionStatusResponse;
 import org.sky.model.AdminSubscriptionEntity;
 import org.sky.repository.AdminSubscriptionRepository;
 import org.sky.repository.SubscriptionPlanRepository;

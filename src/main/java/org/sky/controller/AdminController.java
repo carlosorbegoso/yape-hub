@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.admin.UpdateAdminProfileRequest;
+import org.sky.dto.request.admin.UpdateAdminProfileRequest;
 import org.sky.service.AdminService;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;

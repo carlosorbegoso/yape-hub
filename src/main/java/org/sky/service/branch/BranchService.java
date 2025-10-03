@@ -4,11 +4,12 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.branch.BranchCreateRequest;
-import org.sky.dto.branch.BranchUpdateRequest;
-import org.sky.dto.branch.BranchResponse;
-import org.sky.dto.branch.BranchListResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.request.branch.BranchCreateRequest;
+import org.sky.dto.request.branch.BranchUpdateRequest;
+import org.sky.dto.response.branch.BranchResponse;
+import org.sky.dto.response.branch.BranchListResponse;
+import org.sky.dto.response.common.PaginationInfo;
 import org.sky.model.BranchEntity;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.SellerRepository;
@@ -62,12 +63,14 @@ public class BranchService {
                     
                     int totalPages = (int) Math.ceil((double) result.totalCount() / validatedSize);
                     
-                    BranchListResponse.PaginationInfo paginationInfo = 
-                        new BranchListResponse.PaginationInfo(
+                    PaginationInfo paginationInfo =
+                        new PaginationInfo(
                             validatedPage,
                             totalPages,
                             result.totalCount(),
-                            validatedSize
+                            validatedSize,
+                            validatedPage < totalPages,
+                            validatedPage > 1
                         );
                     
                     BranchListResponse response = new BranchListResponse(branchResponses, paginationInfo);
@@ -123,7 +126,7 @@ public class BranchService {
                     
                     return sellerRepository.findByBranchIdWithPagination(branchId, validatedPage, validatedSize)
                             .map(result -> {
-                                BranchListResponse.PaginationInfo paginationInfo = getPaginationInfo(result, validatedSize, validatedPage);
+                                PaginationInfo paginationInfo = getPaginationInfo(result, validatedSize, validatedPage);
                                 
                                 Map<String, Object> responseData = responseBuilder.buildSellersResponse(
                                     branch, result.sellers(), paginationInfo);
@@ -133,14 +136,16 @@ public class BranchService {
                 });
     }
 
-    private static BranchListResponse.PaginationInfo getPaginationInfo(SellerRepository.SellerPaginationResult result, int validatedSize, int validatedPage) {
+    private static PaginationInfo getPaginationInfo(SellerRepository.SellerPaginationResult result, int validatedSize, int validatedPage) {
         int totalPages = (int) Math.ceil((double) result.totalCount() / validatedSize);
 
-      return new BranchListResponse.PaginationInfo(
+      return new PaginationInfo(
           validatedPage,
           totalPages,
           result.totalCount(),
-          validatedSize
+          validatedSize,
+          validatedPage < totalPages,
+          validatedPage > 1
       );
     }
 

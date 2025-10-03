@@ -1,7 +1,8 @@
 package org.sky.service.stats.calculators.admin.daily;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SalesStatsResponse;
+import org.sky.dto.response.stats.DailyStats;
+import org.sky.dto.response.stats.SalesStatsResponse;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
@@ -13,21 +14,21 @@ public class DailyStatsCalculator {
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public List<SalesStatsResponse.DailyStats> calculateDailyStats(List<PaymentNotificationEntity> payments,
-                                                                 LocalDate startDate, LocalDate endDate) {
+    public List<DailyStats> calculateDailyStats(List<PaymentNotificationEntity> payments,
+                                                LocalDate startDate, LocalDate endDate) {
         return startDate.datesUntil(endDate.plusDays(1))
                 .map(date -> calculateDailyStatForDate(payments, date))
                 .toList();
     }
     
-    private SalesStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> payments, LocalDate date) {
+    private DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> payments, LocalDate date) {
         var dayPayments = filterPaymentsByDate(payments, date);
         
         var daySales = calculateDaySales(dayPayments);
         var transactionCount = (long) dayPayments.size();
         var averageValue = calculateAverageValue(daySales, transactionCount);
         
-        return new SalesStatsResponse.DailyStats(
+        return new DailyStats(
                 date.format(DATE_FORMATTER),
                 daySales,
                 transactionCount,

@@ -3,7 +3,12 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
+import org.sky.dto.request.admin.AdminAnalyticsRequest;
+import org.sky.dto.response.admin.*;
+import org.sky.dto.response.branch.BranchAnalytics;
+import org.sky.dto.response.seller.SellerManagement;
+import org.sky.dto.response.stats.*;
+
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
@@ -13,13 +18,12 @@ import org.sky.service.stats.calculators.admin.performance.AdminPerformanceCalcu
 import org.sky.service.stats.calculators.admin.sellers.AdminSellersCalculator;
 import org.sky.service.stats.calculators.admin.insights.AdminInsightsCalculator;
 import org.sky.service.stats.calculators.admin.management.AdminManagementCalculator;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.util.List;
 
 @ApplicationScoped
-public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.service.stats.calculators.template.AdminAnalyticsRequest, AnalyticsSummaryResponse> {
+public class AdminAnalyticsCalculator extends BaseStatsCalculator<AdminAnalyticsRequest, AnalyticsSummaryResponse> {
     
     @Inject
     PaymentNotificationRepository paymentNotificationRepository;
@@ -46,27 +50,15 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     AdminManagementCalculator managementCalculator;
     
     @WithTransaction
-    public Uni<AnalyticsSummaryResponse> calculateAnalyticsSummary(org.sky.dto.stats.AdminAnalyticsRequest request) {
-        var templateRequest = new org.sky.service.stats.calculators.template.AdminAnalyticsRequest(
-            request.adminId(),
-            request.startDate(),
-            request.endDate(),
-            request.period(),
-            request.granularity(),
-            request.metric(),
-            request.confidence(),
-            request.days(),
-            request.include()
-        );
-        
+    public Uni<AnalyticsSummaryResponse> calculateAnalyticsSummary(AdminAnalyticsRequest request) {
         return paymentNotificationRepository.findPaymentsForAnalytics(
                 request.adminId(), request.startDate().atStartOfDay(), request.endDate().atTime(23, 59, 59))
                 .chain(payments -> sellerRepository.findActiveSellersByAdminId(request.adminId())
-                        .chain(sellers -> buildResponseReactive(payments, templateRequest, sellers)));
+                        .chain(sellers -> buildResponseReactive(payments, request, sellers)));
     }
     
     @Override
-    protected void validateInput(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments,  AdminAnalyticsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -74,13 +66,13 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     }
     
     @Override
-    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments,  AdminAnalyticsRequest request) {
         // Para admin analytics, no filtramos por vendedor específico
         return payments;
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments,  AdminAnalyticsRequest request) {
         // Calcular métricas específicas usando los calculadores inyectados
         var overview = overviewCalculator.calculateOverviewMetrics(payments, request.startDate(), request.endDate());
         var dailySales = salesCalculator.calculateDailySalesData(payments, request.startDate(), request.endDate());
@@ -98,7 +90,7 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     protected AnalyticsSummaryResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                    Double averageTransactionValue, Double claimRate,
                                                    Object specificMetrics, List<PaymentNotificationEntity> payments,
-                                                   org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+                                                    AdminAnalyticsRequest request) {
         // Este método ya no se usa en el flujo reactivo
         throw new UnsupportedOperationException("Use buildResponseReactive instead");
     }
@@ -107,7 +99,7 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
      * Método reactivo para construir la respuesta sin bloqueo
      */
     private Uni<AnalyticsSummaryResponse> buildResponseReactive(List<PaymentNotificationEntity> payments,
-                                                               org.sky.service.stats.calculators.template.AdminAnalyticsRequest request,
+                                                              AdminAnalyticsRequest request,
                                                                List<org.sky.model.SellerEntity> sellers) {
         // Calcular métricas específicas usando los calculadores
         var overview = overviewCalculator.calculateOverviewMetrics(payments, request.startDate(), request.endDate());
@@ -158,12 +150,12 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
                                                                                 sellerInsights, // sellerInsights
                                                                                 sellerForecasting, // sellerForecasting
                                                                                 sellerAnalytics, // sellerAnalytics
-                                                                                branchAnalytics, // branchAnalytics
-                                                                                sellerManagement, // sellerManagement
-                                                                                systemMetrics, // systemMetrics
-                                                                                administrativeInsights, // administrativeInsights
-                                                                                financialOverview, // financialOverview
-                                                                                complianceAndSecurity // complianceAndSecurity
+                                                                                new BranchAnalytics(branchAnalytics.branchPerformance(), branchAnalytics.branchComparison()), // branchAnalytics
+                                                                                new SellerManagement(sellerManagement.sellerOverview(), sellerManagement.sellerPerformanceDistribution(), sellerManagement.sellerActivity()), // sellerManagement
+                                                                                new SystemMetrics(systemMetrics.overallSystemHealth(), systemMetrics.paymentSystemMetrics(), systemMetrics.userEngagement()), // systemMetrics
+                                                                                new AdministrativeInsights(administrativeInsights.managementAlerts(), administrativeInsights.recommendations(), administrativeInsights.growthOpportunities()), // administrativeInsights
+                                                                                new FinancialOverview(financialOverview.revenueBreakdown(), financialOverview.costAnalysis()), // financialOverview
+                                                                                new ComplianceAndSecurity(complianceAndSecurity.securityMetrics(), complianceAndSecurity.complianceStatus()) // complianceAndSecurity
                                                                             ))
                                                                 )
                                                     )
@@ -176,11 +168,11 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
      * Métricas específicas para admin analytics
      */
     private record AdminAnalyticsSpecificMetrics(
-        org.sky.dto.stats.OverviewMetrics overview,
-        java.util.List<org.sky.dto.stats.DailySalesData> dailySales,
-        java.util.List<org.sky.dto.stats.HourlySalesData> hourlySales,
-        java.util.List<org.sky.dto.stats.WeeklySalesData> weeklySales,
-        java.util.List<org.sky.dto.stats.MonthlySalesData> monthlySales,
-        org.sky.dto.stats.PerformanceMetrics performance
+        OverviewMetrics overview,
+        List<DailySalesData> dailySales,
+        List<HourlySalesData> hourlySales,
+        List<WeeklySalesData> weeklySales,
+        List<MonthlySalesData> monthlySales,
+        PerformanceMetrics performance
     ) {}
 }

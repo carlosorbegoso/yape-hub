@@ -6,9 +6,10 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.payment.PaymentClaimRequest;
-import org.sky.dto.payment.PaymentRejectRequest;
+import org.sky.dto.request.payment.PaymentClaimRequest;
+
+import org.sky.dto.request.payment.PaymentRejectRequest;
+import org.sky.dto.response.ApiResponse;
 import org.sky.service.hubnotifications.HubNotificationControllerService;
 import org.sky.service.security.SecurityService;
 import org.sky.util.ControllerErrorHandler;

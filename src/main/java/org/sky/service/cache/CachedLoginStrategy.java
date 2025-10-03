@@ -3,9 +3,9 @@ package org.sky.service.cache;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.auth.LoginRequest;
-import org.sky.dto.auth.LoginResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.request.auth.LoginRequest;
+import org.sky.dto.response.auth.LoginResponse;
 import org.sky.model.UserEntityEntity;
 import org.sky.service.auth.LoginStrategy;
 

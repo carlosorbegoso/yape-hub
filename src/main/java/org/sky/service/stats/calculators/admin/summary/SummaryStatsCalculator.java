@@ -1,7 +1,8 @@
 package org.sky.service.stats.calculators.admin.summary;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SalesStatsResponse;
+import org.sky.dto.response.stats.SalesStatsResponse;
+import org.sky.dto.response.stats.SummaryStats;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;
@@ -12,7 +13,7 @@ public class SummaryStatsCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public SalesStatsResponse.SummaryStats calculateSummaryStats(List<PaymentNotificationEntity> payments) {
+    public SummaryStats calculateSummaryStats(List<PaymentNotificationEntity> payments) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -22,7 +23,7 @@ public class SummaryStatsCalculator {
         var pendingPayments = countPaymentsByStatus(payments, PENDING_STATUS);
         var rejectedPayments = countPaymentsByStatus(payments, REJECTED_BY_SELLER_STATUS);
         
-        return new SalesStatsResponse.SummaryStats(
+        return new SummaryStats(
                 totalSales, totalTransactions, averageTransactionValue, 
                 pendingPayments, confirmedTransactions, rejectedPayments
         );

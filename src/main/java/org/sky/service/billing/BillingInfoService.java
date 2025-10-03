@@ -3,7 +3,7 @@ package org.sky.service.billing;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
+import org.sky.dto.response.ApiResponse;
 import org.sky.service.SubscriptionService;
 import org.sky.service.subscription.PaymentHistoryService;
 

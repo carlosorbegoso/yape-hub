@@ -4,8 +4,8 @@ import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.billing.PaymentCodeResponse;
-import org.sky.dto.billing.PaymentStatusResponse;
+import org.sky.dto.response.billing.PaymentCodeResponse;
+import org.sky.dto.response.billing.PaymentStatusResponse;
 import org.sky.model.PaymentCodeEntity;
 import org.sky.repository.PaymentCodeRepository;
 

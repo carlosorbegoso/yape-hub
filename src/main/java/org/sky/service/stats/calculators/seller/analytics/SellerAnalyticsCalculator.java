@@ -1,11 +1,11 @@
 package org.sky.service.stats.calculators.seller.analytics;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerAnalytics;
+import org.sky.dto.response.stats.SalesDistribution;
+import org.sky.dto.response.stats.TransactionPatterns;
+import org.sky.dto.response.stats.PerformanceIndicators;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;

@@ -2,7 +2,7 @@ package org.sky.service.hubnotifications;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.payment.PaymentNotificationRequest;
+import org.sky.dto.request.payment.PaymentNotificationRequest;
 import org.sky.exception.ValidationException;
 import org.sky.model.SellerEntity;
 

@@ -1,9 +1,10 @@
 package org.sky.service.stats.calculators.seller.forecasting;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
+
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerForecasting;
+import org.sky.dto.response.stats.TrendAnalysis;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;

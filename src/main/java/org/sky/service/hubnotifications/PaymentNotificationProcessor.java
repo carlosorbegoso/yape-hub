@@ -3,7 +3,7 @@ package org.sky.service.hubnotifications;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.service.websocket.WebSocketNotificationService;
 
 import java.util.List;

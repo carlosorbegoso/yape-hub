@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import org.sky.dto.ApiResponse;
+import org.sky.dto.response.ApiResponse;
 import org.sky.repository.ManualPaymentRepository;
 import org.sky.repository.PaymentCodeRepository;
 import org.sky.service.security.SecurityService;

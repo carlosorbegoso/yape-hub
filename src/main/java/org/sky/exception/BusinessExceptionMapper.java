@@ -4,7 +4,8 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 import org.jboss.logging.Logger;
-import org.sky.dto.ErrorResponse;
+import org.sky.dto.response.ErrorResponse;
+
 
 import java.time.Instant;
 

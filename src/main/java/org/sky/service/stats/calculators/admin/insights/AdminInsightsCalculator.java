@@ -1,14 +1,14 @@
 package org.sky.service.stats.calculators.admin.insights;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.PredictedSale;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
+import org.sky.dto.response.seller.SellerInsights;
+import org.sky.dto.response.seller.SellerForecasting;
+import org.sky.dto.response.seller.SellerAnalytics;
+import org.sky.dto.response.stats.PredictedSale;
+import org.sky.dto.response.stats.TrendAnalysis;
+import org.sky.dto.response.stats.SalesDistribution;
+import org.sky.dto.response.stats.TransactionPatterns;
+import org.sky.dto.response.stats.PerformanceIndicators;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 

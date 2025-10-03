@@ -1,0 +1,12 @@
+package org.sky.dto.response.seller;
+
+import org.sky.dto.response.stats.PredictedSale;
+import org.sky.dto.response.stats.TrendAnalysis;
+
+import java.util.List;
+
+public record SellerForecasting(
+    List<PredictedSale> predictedSales,
+    TrendAnalysis trendAnalysis,
+    List<String> recommendations
+) {}

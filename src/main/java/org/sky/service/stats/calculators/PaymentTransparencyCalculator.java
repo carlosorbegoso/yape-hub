@@ -3,19 +3,20 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.PaymentTransparencyRequest;
-import org.sky.dto.stats.PaymentTransparencyResponse;
+import org.sky.dto.request.payment.PaymentTransparencyRequest;
+import org.sky.dto.response.payment.PaymentTransparencyResponse;
+import org.sky.dto.response.common.Period;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
+
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.Instant;
 import java.util.List;
 
 @ApplicationScoped
-public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.service.stats.calculators.template.PaymentTransparencyRequest, PaymentTransparencyResponse> {
+public class PaymentTransparencyCalculator extends BaseStatsCalculator<PaymentTransparencyRequest, PaymentTransparencyResponse> {
 
     private static final double PROCESSING_FEE_RATE = 0.02; // 2%
     private static final double PLATFORM_FEE_RATE = 0.01; // 1%
@@ -31,23 +32,14 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
 
     @WithTransaction
     public Uni<PaymentTransparencyResponse> calculatePaymentTransparencyReport(PaymentTransparencyRequest request) {
-        var templateRequest = new org.sky.service.stats.calculators.template.PaymentTransparencyRequest(
-            request.adminId(),
-            request.startDate(),
-            request.endDate(),
-            request.includeFees(),
-            request.includeTaxes(),
-            request.includeCommissions()
-        );
-        
         return paymentNotificationRepository.findByAdminIdAndDateRange(
                 request.adminId(), request.startDate().atStartOfDay(), request.endDate().atTime(23, 59, 59))
                 .chain(payments -> sellerRepository.findByAdminId(request.adminId())
-                        .map(sellers -> calculateStats(payments, templateRequest)));
+                        .map(sellers -> calculateStats(payments, request)));
     }
 
     @Override
-    protected void validateInput(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, PaymentTransparencyRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -55,7 +47,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     }
     
     @Override
-    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, PaymentTransparencyRequest request) {
         // Para transparency, filtramos solo pagos confirmados
         return payments.stream()
                 .filter(payment -> "CONFIRMED".equals(payment.status))
@@ -63,7 +55,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, PaymentTransparencyRequest request) {
         // Métricas específicas para transparency: fees, taxes, comisiones
         var totalRevenue = salesStrategy.calculate(payments);
         
@@ -98,10 +90,10 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     protected PaymentTransparencyResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                       Double averageTransactionValue, Double claimRate,
                                                       Object specificMetrics, List<PaymentNotificationEntity> payments,
-                                                      org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+                                                      PaymentTransparencyRequest request) {
         var transparencyMetrics = (TransparencySpecificMetrics) specificMetrics;
         
-        var period = new PaymentTransparencyResponse.Period(
+        var period = new Period(
                 request.startDate().toString(),
                 request.endDate().toString()
         );
@@ -127,7 +119,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
         return includeCommissions != null && includeCommissions;
     }
     
-    private double calculateTransparencyScore(org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    private double calculateTransparencyScore(PaymentTransparencyRequest request) {
         var score = TRANSPARENCY_SCORE;
         
         // Ajustar score basado en qué información se incluye

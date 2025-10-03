@@ -3,11 +3,11 @@ package org.sky.service.billing;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.billing.BillingDashboardResponse;
-import org.sky.dto.billing.BillingSummaryResponse;
-import org.sky.dto.billing.MonthlyUsageResponse;
-import org.sky.dto.billing.SubscriptionStatusResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.billing.BillingDashboardResponse;
+import org.sky.dto.response.billing.BillingSummaryResponse;
+import org.sky.dto.response.billing.MonthlyUsageResponse;
+import org.sky.dto.response.billing.SubscriptionStatusResponse;
 import org.sky.service.SubscriptionService;
 
 import java.util.List;

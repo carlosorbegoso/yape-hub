@@ -6,9 +6,14 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.PermitAll;
-import org.sky.dto.qr.*;
-import org.sky.dto.ErrorResponse;
-import org.sky.dto.seller.AffiliateSellerRequest;
+
+
+import org.sky.dto.request.qr.QrLoginRequest;
+import org.sky.dto.request.qr.ValidateAffiliationCodeRequest;
+import org.sky.dto.request.seller.AffiliateSellerRequest;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.ErrorResponse;
+import org.sky.exception.ValidationException;
 import org.sky.service.QrService;
 import org.sky.service.security.SecurityService;
 import org.sky.service.SellerService;
@@ -37,7 +42,7 @@ public class QrController {
     /**
      * Convierte un ApiResponse de error a ErrorResponse
      */
-    private ErrorResponse convertToErrorResponse(org.sky.dto.ApiResponse<?> apiResponse) {
+    private ErrorResponse convertToErrorResponse(ApiResponse<?> apiResponse) {
         return new ErrorResponse(
             apiResponse.message(),
             "INVALID_FIELD",
@@ -143,9 +148,9 @@ public class QrController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.error("❌ Error en validateAffiliationCode: " + throwable.getMessage());
-                    if (throwable instanceof org.sky.exception.ValidationException) {
-                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                    if (throwable instanceof ValidationException) {
+                        ValidationException validationException = (org.sky.exception.ValidationException) throwable;
+                        ErrorResponse errorResponse = new ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -153,7 +158,7 @@ public class QrController {
                         );
                         return Response.status(validationException.getStatus()).entity(errorResponse).build();
                     }
-                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                    return Response.status(400).entity(new   ErrorResponse(
                         "Error interno del servidor",
                         "INTERNAL_ERROR",
                         java.util.Map.of("error", throwable.getMessage()),
@@ -250,7 +255,7 @@ public class QrController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.error("❌ Error generando QR Base64: " + throwable.getMessage());
-                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                    return Response.status(400).entity(new   ErrorResponse(
                         "Error generando QR: " + throwable.getMessage(),
                         "QR_GENERATION_ERROR",
                         java.util.Map.of("error", throwable.getMessage()),
@@ -280,7 +285,7 @@ public class QrController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.error("❌ Error en login con QR: " + throwable.getMessage());
-                    return Response.status(400).entity(new org.sky.dto.ErrorResponse(
+                    return Response.status(400).entity(new ErrorResponse(
                         "Error en login: " + throwable.getMessage(),
                         "QR_LOGIN_ERROR",
                         java.util.Map.of("error", throwable.getMessage()),

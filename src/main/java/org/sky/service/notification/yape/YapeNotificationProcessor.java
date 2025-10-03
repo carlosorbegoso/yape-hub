@@ -4,11 +4,11 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.notification.YapeNotificationRequest;
-import org.sky.dto.notification.YapeNotificationResponse;
-import org.sky.dto.payment.PaymentNotificationRequest;
-import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.request.notification.YapeNotificationRequest;
+import org.sky.dto.response.notification.YapeNotificationResponse;
+import org.sky.dto.request.payment.PaymentNotificationRequest;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.model.YapeNotificationAuditEntity;
 import org.sky.repository.YapeNotificationAuditRepository;
 import org.sky.service.DeviceFingerprintService;
@@ -103,7 +103,7 @@ public class YapeNotificationProcessor {
 
     private Uni<ApiResponse<YapeNotificationResponse>> processPaymentAndUpdateAudit(
             YapeNotificationRequest request, 
-            org.sky.dto.notification.YapeNotificationResponse decryptedResponse, 
+            YapeNotificationResponse decryptedResponse, 
             YapeNotificationAuditEntity auditRecord) {
         
         return updateAuditWithDecryptedData(auditRecord, decryptedResponse)
@@ -112,7 +112,7 @@ public class YapeNotificationProcessor {
     }
 
     private Uni<YapeNotificationAuditEntity> updateAuditWithDecryptedData(YapeNotificationAuditEntity auditRecord,
-                                                                          org.sky.dto.notification.YapeNotificationResponse decryptedResponse) {
+                                                                          YapeNotificationResponse decryptedResponse) {
         auditRecord.decryptionStatus = "SUCCESS";
         auditRecord.extractedAmount = decryptedResponse.amount();
         auditRecord.extractedSenderName = decryptedResponse.senderName();
@@ -139,8 +139,8 @@ public class YapeNotificationProcessor {
 
     private Uni<ApiResponse<YapeNotificationResponse>> finalizeAuditAndCreateResponse(
             YapeNotificationAuditEntity auditRecord,
-            org.sky.dto.payment.PaymentNotificationResponse paymentResponse, 
-            org.sky.dto.notification.YapeNotificationResponse decryptedResponse) {
+            PaymentNotificationResponse paymentResponse, 
+            YapeNotificationResponse decryptedResponse) {
         
         auditRecord.paymentNotificationId = paymentResponse.paymentId();
         

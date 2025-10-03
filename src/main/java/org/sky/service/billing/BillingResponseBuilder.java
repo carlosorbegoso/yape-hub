@@ -1,6 +1,6 @@
 package org.sky.service.billing;
 
-import org.sky.dto.ApiResponse;
+import org.sky.dto.response.ApiResponse;
 import org.sky.model.SubscriptionPlanEntity;
 
 import java.util.List;

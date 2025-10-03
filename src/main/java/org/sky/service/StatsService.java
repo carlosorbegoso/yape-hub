@@ -4,21 +4,16 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.sky.dto.stats.SalesStatsResponse;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.dto.stats.SellerStatsResponse;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
-import org.sky.dto.stats.QuickSummaryResponse;
-import org.sky.dto.stats.SellerFinancialResponse;
-import org.sky.dto.stats.FinancialAnalyticsRequest;
-import org.sky.dto.stats.FinancialAnalyticsResponse;
-import org.sky.dto.stats.PaymentTransparencyRequest;
-import org.sky.dto.stats.PaymentTransparencyResponse;
+import org.sky.dto.request.admin.AdminAnalyticsRequest;
+import org.sky.dto.response.common.PeriodInfo;
+import org.sky.dto.response.stats.*;
+import org.sky.dto.request.stats.FinancialAnalyticsRequest;
+import org.sky.dto.request.payment.PaymentTransparencyRequest;
+import org.sky.dto.response.payment.PaymentTransparencyResponse;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.factory.CalculatorFactory;
-import org.sky.dto.stats.AdminAnalyticsRequest;
-import org.sky.dto.stats.SellerAnalyticsRequest;
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
@@ -45,12 +40,12 @@ public class StatsService {
     public Uni<SalesStatsResponse> getAdminStats(Long adminId, LocalDate startDate, LocalDate endDate) {
         return calculatorFactory.getAdminStatsCalculator().calculateAdminStats(adminId, startDate, endDate)
                 .map(adminStats -> new SalesStatsResponse(
-                    new SalesStatsResponse.PeriodInfo(
+                    new PeriodInfo(
                         adminStats.startDate().toString(),
                         adminStats.endDate().toString(),
                         (int) java.time.temporal.ChronoUnit.DAYS.between(adminStats.startDate(), adminStats.endDate())
                     ),
-                    new SalesStatsResponse.SummaryStats(
+                    new SummaryStats(
                         adminStats.totalSales(),
                         adminStats.totalTransactions(),
                         adminStats.averageTransactionValue(),

@@ -2,7 +2,7 @@ package org.sky.service.security;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.ErrorResponse;
+import org.sky.dto.response.ErrorResponse;
 
 import java.time.Instant;
 import java.util.Map;

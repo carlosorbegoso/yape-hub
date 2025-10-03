@@ -6,8 +6,8 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.stats.SellerAnalyticsResponse;
+
+import org.sky.dto.response.ApiResponse;
 import org.sky.service.security.SecurityService;
 import org.sky.service.StatsService;
 import org.eclipse.microprofile.openapi.annotations.Operation;

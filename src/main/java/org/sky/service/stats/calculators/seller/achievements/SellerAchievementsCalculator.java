@@ -1,10 +1,11 @@
 package org.sky.service.stats.calculators.seller.achievements;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
+
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerAchievements;
+import org.sky.dto.response.seller.Milestone;
+import org.sky.dto.response.seller.Badge;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;

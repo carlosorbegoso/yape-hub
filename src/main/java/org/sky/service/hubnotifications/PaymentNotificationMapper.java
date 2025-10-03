@@ -1,8 +1,8 @@
 package org.sky.service.hubnotifications;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.payment.PaymentNotificationRequest;
-import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.request.payment.PaymentNotificationRequest;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 

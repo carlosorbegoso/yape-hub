@@ -2,13 +2,10 @@ package org.sky.service.stats.calculators.admin.management;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.*;
-import org.sky.dto.stats.admin.AdministrativeInsightsResponse;
-import org.sky.dto.stats.branch.BranchAnalyticsResponse;
-import org.sky.dto.stats.financial.FinancialOverviewResponse;
-import org.sky.dto.stats.security.ComplianceAndSecurityResponse;
-import org.sky.dto.stats.seller.SellerManagementResponse;
-import org.sky.dto.stats.system.SystemMetricsResponse;
+import org.sky.dto.response.admin.*;
+import org.sky.dto.response.branch.*;
+import org.sky.dto.response.stats.*;
+import org.sky.dto.response.seller.*;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
@@ -44,9 +41,9 @@ public class AdminManagementCalculator {
         payment -> payment.amount > SUSPICIOUS_AMOUNT_THRESHOLD;
     
     public Uni<BranchAnalyticsResponse> calculateBranchAnalytics(List<PaymentNotificationEntity> payments,
-                                                                           List<SellerEntity> sellers, 
-                                                                           LocalDate startDate, 
-                                                                           LocalDate endDate) {
+                                                                 List<SellerEntity> sellers,
+                                                                 LocalDate startDate,
+                                                                 LocalDate endDate) {
         return Uni.createFrom().item(() -> {
             var filteredPayments = filterPaymentsByDateRange(payments, startDate, endDate);
             var branchPerformance = calculateBranchPerformance(filteredPayments, sellers);
@@ -71,7 +68,7 @@ public class AdminManagementCalculator {
             .orElse(false);
     }
     
-    private List< BranchPerformanceData> calculateBranchPerformance(
+    private List<BranchPerformanceData> calculateBranchPerformance(
         List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var branchGroups = groupSellersByBranch(sellers);
@@ -152,7 +149,7 @@ public class AdminManagementCalculator {
             .orElse("N/A");
     }
     
-    private  BranchComparison calculateBranchComparison(
+    private BranchComparison calculateBranchComparison(
             List< BranchPerformanceData> branchPerformance) {
         
         if (branchPerformance.isEmpty()) {
@@ -166,7 +163,7 @@ public class AdminManagementCalculator {
         return new  BranchComparison(topBranch, lowestBranch, averagePerformance);
     }
     
-    private  BranchSummary findTopPerformingBranch(
+    private BranchSummary findTopPerformingBranch(
             List< BranchPerformanceData> branchPerformance) {
         
         return branchPerformance.stream()
@@ -188,7 +185,7 @@ public class AdminManagementCalculator {
             .orElse(null);
     }
     
-    private  AverageBranchPerformance calculateAverageBranchPerformance(
+    private AverageBranchPerformance calculateAverageBranchPerformance(
             List< BranchPerformanceData> branchPerformance) {
         
         var averageSales = branchPerformance.stream()
@@ -211,9 +208,9 @@ public class AdminManagementCalculator {
     }
     
     public Uni<SellerManagementResponse> calculateSellerManagement(List<PaymentNotificationEntity> payments,
-                                                                             List<SellerEntity> sellers, 
-                                                                             LocalDate startDate, 
-                                                                             LocalDate endDate) {
+                                                                                                     List<SellerEntity> sellers,
+                                                                                                     LocalDate startDate,
+                                                                                                     LocalDate endDate) {
         return Uni.createFrom().item(() -> {
             var filteredPayments = filterPaymentsByDateRange(payments, startDate, endDate);
             var sellerOverview = calculateSellerOverview(filteredPayments, sellers);
@@ -701,7 +698,7 @@ public class AdminManagementCalculator {
         });
     }
     
-    private org.sky.dto.stats.financial.RevenueBreakdown calculateRevenueBreakdown(
+    private  RevenueBreakdown calculateRevenueBreakdown(
         List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var confirmedPayments = payments.stream().filter(isConfirmed::apply).toList();
@@ -709,10 +706,10 @@ public class AdminManagementCalculator {
         var revenueByBranch = calculateRevenueByBranch(confirmedPayments, sellers);
         var revenueGrowth = calculateRevenueGrowth(payments);
         
-        return new org.sky.dto.stats.financial.RevenueBreakdown(totalRevenue, revenueByBranch, revenueGrowth);
+        return new  RevenueBreakdown(totalRevenue, revenueByBranch, revenueGrowth);
     }
     
-    private List<org.sky.dto.stats.financial.RevenueByBranch> calculateRevenueByBranch(
+    private List< RevenueByBranch> calculateRevenueByBranch(
         List<PaymentNotificationEntity> confirmedPayments, List<SellerEntity> sellers) {
         
         var branchGroups = groupSellersByBranch(sellers);
@@ -726,20 +723,20 @@ public class AdminManagementCalculator {
                 var branchRevenue = calculateTotalSales(branchPayments);
                 var percentage = totalRevenue > 0 ? (branchRevenue / totalRevenue) * 100.0 : 0.0;
                 
-                return new org.sky.dto.stats.financial.RevenueByBranch(
-                    null, branchName, branchRevenue, 0L, 0.0);
+                return new  RevenueByBranch(
+                    null, branchName, branchRevenue, percentage);
             })
             .toList();
     }
     
-    private org.sky.dto.stats.financial.RevenueGrowth calculateRevenueGrowth(List<PaymentNotificationEntity> payments) {
+    private  RevenueGrowth calculateRevenueGrowth(List<PaymentNotificationEntity> payments) {
         // Simplified growth calculation based on date range
         var dailyGrowth = calculateDailyGrowth(payments);
         var weeklyGrowth = dailyGrowth * 7;
         var monthlyGrowth = dailyGrowth * 30;
         var yearlyGrowth = dailyGrowth * 365;
         
-        return new org.sky.dto.stats.financial.RevenueGrowth(
+        return new  RevenueGrowth(
             dailyGrowth, weeklyGrowth, monthlyGrowth, yearlyGrowth);
     }
     
@@ -748,7 +745,7 @@ public class AdminManagementCalculator {
         return payments.isEmpty() ? 0.0 : 5.0; // percentage
     }
     
-    private org.sky.dto.stats.financial.CostAnalysis calculateCostAnalysis(List<PaymentNotificationEntity> payments) {
+    private  CostAnalysis calculateCostAnalysis(List<PaymentNotificationEntity> payments) {
         var totalRevenue = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         var operationalCosts = calculateOperationalCosts(payments);
         var sellerCommissions = calculateSellerCommissions(totalRevenue);
@@ -757,8 +754,8 @@ public class AdminManagementCalculator {
         var profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100.0 : 0.0;
         
         var totalCosts = operationalCosts + sellerCommissions + systemMaintenance;
-        return new org.sky.dto.stats.financial.CostAnalysis(
-            totalCosts, operationalCosts, sellerCommissions, profitMargin);
+        return new  CostAnalysis(
+            operationalCosts, sellerCommissions, systemMaintenance, netProfit, profitMargin);
     }
     
     private double calculateOperationalCosts(List<PaymentNotificationEntity> payments) {
@@ -786,13 +783,13 @@ public class AdminManagementCalculator {
             var securityMetrics = calculateSecurityMetrics(filteredPayments);
             var complianceStatus = calculateComplianceStatus(filteredPayments);
             
-            var securityMetricsConverted = new org.sky.dto.stats.security.SecurityMetrics(
-                securityMetrics.failedLoginAttempts().intValue(),
-                securityMetrics.suspiciousActivities().intValue(),
-                securityMetrics.securityScore(),
-                "COMPLIANT"
+            var securityMetricsConverted = new  SecurityMetrics(
+                securityMetrics.failedLoginAttempts(),
+                securityMetrics.suspiciousActivities(),
+                securityMetrics.dataBreaches(),
+                securityMetrics.securityScore()
             );
-            var complianceStatusConverted = new org.sky.dto.stats.security.ComplianceStatus(
+            var complianceStatusConverted = new  ComplianceStatus(
                 complianceStatus.dataProtection(),
                 complianceStatus.auditTrail(),
                 complianceStatus.backupStatus(),
@@ -802,7 +799,7 @@ public class AdminManagementCalculator {
         });
     }
     
-    private org.sky.dto.stats.SecurityMetrics calculateSecurityMetrics(
+    private  SecurityMetrics calculateSecurityMetrics(
             List<PaymentNotificationEntity> payments) {
         
         var failedLoginAttempts = 0L; // Would be tracked separately
@@ -810,7 +807,7 @@ public class AdminManagementCalculator {
         var dataBreaches = 0L; // Would be tracked separately
         var securityScore = calculateSecurityScore(payments, suspiciousActivities);
         
-        return new org.sky.dto.stats.SecurityMetrics(
+        return new  SecurityMetrics(
             failedLoginAttempts, suspiciousActivities, dataBreaches, securityScore);
     }
     
@@ -830,7 +827,7 @@ public class AdminManagementCalculator {
             .sum();
     }
     
-    private org.sky.dto.stats.ComplianceStatus calculateComplianceStatus(
+    private  ComplianceStatus calculateComplianceStatus(
             List<PaymentNotificationEntity> payments) {
         
         var dataProtection = evaluateDataProtection(payments);
@@ -838,7 +835,7 @@ public class AdminManagementCalculator {
         var backupStatus = evaluateBackupStatus();
         var lastAudit = LocalDate.now().toString();
         
-        return new org.sky.dto.stats.ComplianceStatus(
+        return new  ComplianceStatus(
             dataProtection, auditTrail, backupStatus, lastAudit);
     }
     

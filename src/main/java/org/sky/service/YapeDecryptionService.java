@@ -2,7 +2,7 @@ package org.sky.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
-import org.sky.dto.notification.YapeNotificationResponse;
+import org.sky.dto.response.notification.YapeNotificationResponse;
 import org.sky.exception.ValidationException;
 
 import java.util.Base64;

@@ -4,8 +4,9 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.qr.*;
+
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.qr.*;
 import org.sky.exception.ValidationException;
 import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Random;
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
-import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
+import org.sky.dto.response.auth.SellerLoginWithAffiliationResponse;
 
 // Imports para generar imagen QR
 import com.google.zxing.BarcodeFormat;

@@ -1,10 +1,10 @@
 package org.sky.service.stats.calculators.admin.sales;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.HourlySalesData;
-import org.sky.dto.stats.WeeklySalesData;
-import org.sky.dto.stats.MonthlySalesData;
+import org.sky.dto.response.stats.DailySalesData;
+import org.sky.dto.response.stats.HourlySalesData;
+import org.sky.dto.response.stats.WeeklySalesData;
+import org.sky.dto.response.stats.MonthlySalesData;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;

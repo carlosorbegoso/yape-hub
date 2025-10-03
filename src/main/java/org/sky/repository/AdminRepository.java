@@ -4,7 +4,6 @@ import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.AdminEntity;
-import org.sky.model.BusinessType;
 
 @ApplicationScoped
 public class AdminRepository implements PanacheRepository<AdminEntity> {

@@ -3,8 +3,10 @@ package org.sky.service.auth;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.auth.LoginResponse;
+
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.auth.LoginResponse;
+import org.sky.dto.response.common.UserInfo;
 import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
 import org.sky.repository.AdminRepository;
@@ -32,9 +34,8 @@ public class LoginResponseBuilder {
     public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(JwtTokenService.TokenData tokenData) {
         UserEntityEntity user = tokenData.user();
         
-        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-            user.id, user.email, user.role,
-            null, null, user.isVerified, null
+        UserInfo userInfo = new UserInfo(
+            user.id, user.email, null, user.role.toString(), user.isVerified
         );
         
         LoginResponse response = new LoginResponse(
@@ -50,9 +51,8 @@ public class LoginResponseBuilder {
                     Long businessId = admin != null ? admin.id : null;
                     String businessName = admin != null ? admin.businessName : null;
                     
-                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                        tokenData.user().id, tokenData.user().email, tokenData.user().role,
-                        businessId, businessName, tokenData.user().isVerified, null
+                    UserInfo userInfo = new UserInfo(
+                        tokenData.user().id, tokenData.user().email, businessName, tokenData.user().role.toString(), tokenData.user().isVerified
                     );
                     
                     LoginResponse response = new LoginResponse(
@@ -75,9 +75,8 @@ public class LoginResponseBuilder {
                         businessName = seller.branch.admin.businessName;
                     }
                     
-                    LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                        tokenData.user().id, tokenData.user().email, tokenData.user().role,
-                        businessId, businessName, tokenData.user().isVerified, sellerId
+                    UserInfo userInfo = new UserInfo(
+                        tokenData.user().id, tokenData.user().email, businessName, tokenData.user().role.toString(), tokenData.user().isVerified
                     );
                     
                     LoginResponse response = new LoginResponse(

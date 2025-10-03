@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.notification.YapeNotificationRequest;
+import org.sky.dto.request.notification.YapeNotificationRequest;
 import org.sky.service.notification.yape.NotificationQueryService;
 import org.sky.service.notification.yape.NotificationUpdateService;
 import org.sky.service.notification.yape.YapeNotificationProcessor;

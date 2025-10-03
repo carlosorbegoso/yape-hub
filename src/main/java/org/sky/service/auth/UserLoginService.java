@@ -3,7 +3,7 @@ package org.sky.service.auth;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.auth.LoginRequest;
+import org.sky.dto.request.auth.LoginRequest;
 import org.sky.model.SellerEntity;
 import org.sky.model.UserEntityEntity;
 import org.sky.repository.SellerRepository;

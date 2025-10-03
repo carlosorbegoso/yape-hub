@@ -1,7 +1,7 @@
 package org.sky.util;
 
 import jakarta.ws.rs.core.Response;
-import org.sky.dto.ErrorResponse;
+import org.sky.dto.response.ErrorResponse;
 import org.sky.exception.ValidationException;
 
 import java.util.Map;

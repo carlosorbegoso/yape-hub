@@ -1,8 +1,8 @@
 package org.sky.service.stats.calculators.seller.trends;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerTrends;
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerTrends;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;

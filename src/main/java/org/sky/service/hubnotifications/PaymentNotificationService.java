@@ -3,10 +3,13 @@ package org.sky.service.hubnotifications;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.payment.PaymentNotificationRequest;
-import org.sky.dto.payment.PaymentNotificationResponse;
-import org.sky.dto.payment.PendingPaymentsResponse;
-import org.sky.dto.payment.AdminPaymentManagementResponse;
+import org.sky.dto.request.payment.PaymentNotificationRequest;
+import org.sky.dto.response.common.PaginationInfo;
+import org.sky.dto.response.payment.PaymentDetail;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
+import org.sky.dto.response.payment.PaymentSummary;
+import org.sky.dto.response.payment.PendingPaymentsResponse;
+import org.sky.dto.response.admin.AdminPaymentManagementResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
@@ -73,11 +76,13 @@ public class PaymentNotificationService {
                 
                 return Uni.createFrom().item(new PendingPaymentsResponse(
                     responses,
-                    new PendingPaymentsResponse.PaginationInfo(
+                    new PaginationInfo(
                         page,
                         (int) Math.ceil((double) totalCount / size),
                         totalCount,
-                        size
+                        size,
+                        page < (int) Math.ceil((double) totalCount / size),
+                        page > 1
                     )
                 ));
             });
@@ -114,7 +119,7 @@ public class PaymentNotificationService {
                     .toList();
                 
                 return Uni.createFrom().item(new AdminPaymentManagementResponse(
-                    responses.stream().map(r -> new AdminPaymentManagementResponse.PaymentDetail(
+                    responses.stream().map(r -> new PaymentDetail(
                         r.paymentId(),
                         r.amount(),
                         r.senderName(),
@@ -129,7 +134,7 @@ public class PaymentNotificationService {
                         "Seller Name", // sellerName - would need to be fetched
                         "Branch Name"  // branchName - would need to be fetched
                     )).toList(),
-                    new AdminPaymentManagementResponse.PaymentSummary(
+                    new PaymentSummary(
                         totalCount,
                         totalCount, // pendingCount
                         0L, // confirmedCount
@@ -138,11 +143,13 @@ public class PaymentNotificationService {
                         0.0, // confirmedAmount
                         responses.stream().mapToDouble(PaymentNotificationResponse::amount).sum() // pendingAmount
                     ),
-                    new AdminPaymentManagementResponse.PaginationInfo(
+                    new PaginationInfo(
                         page,
                         (int) Math.ceil((double) totalCount / size),
                         totalCount,
-                        size
+                        size,
+                        page < (int) Math.ceil((double) totalCount / size),
+                        page > 1
                     )
                 ));
             });

@@ -1,9 +1,9 @@
 package org.sky.service.stats.calculators.admin.performance;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerPerformance;
+import org.sky.dto.response.stats.PerformanceMetrics;
+import org.sky.dto.response.seller.SellerGoals;
+import org.sky.dto.response.seller.SellerPerformance;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.Duration;

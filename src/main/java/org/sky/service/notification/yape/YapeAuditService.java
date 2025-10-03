@@ -4,8 +4,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.notification.YapeAuditResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.notification.YapeAuditResponse;
 import org.sky.model.YapeNotificationAuditEntity;
 import org.sky.repository.YapeNotificationAuditRepository;
 

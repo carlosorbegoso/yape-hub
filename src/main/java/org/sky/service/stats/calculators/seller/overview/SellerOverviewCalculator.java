@@ -1,8 +1,9 @@
 package org.sky.service.stats.calculators.seller.overview;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
+
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.stats.OverviewMetrics;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;

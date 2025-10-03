@@ -74,7 +74,7 @@ public class SellerController {
         } catch (DateTimeParseException e) {
             log.warn("❌ Fechas inválidas: " + e.getMessage());
             return Uni.createFrom().item(Response.status(400)
-                    .entity(org.sky.dto.ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
+                    .entity(org.sky.dto.response.ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
         }
         
         // Validar autorización de admin
@@ -97,7 +97,7 @@ public class SellerController {
                     // Si es una ValidationException, crear ErrorResponse manualmente
                     if (throwable instanceof org.sky.exception.ValidationException) {
                         org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                        org.sky.dto.response.ErrorResponse errorResponse = new org.sky.dto.response.ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -154,7 +154,7 @@ public class SellerController {
                     // Si es una ValidationException, crear ErrorResponse manualmente
                     if (throwable instanceof org.sky.exception.ValidationException) {
                         org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                        org.sky.dto.response.ErrorResponse errorResponse = new org.sky.dto.response.ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -194,7 +194,7 @@ public class SellerController {
                     // Si es una ValidationException, crear ErrorResponse manualmente
                     if (throwable instanceof org.sky.exception.ValidationException) {
                         org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.ErrorResponse errorResponse = new org.sky.dto.ErrorResponse(
+                        org.sky.dto.response.ErrorResponse errorResponse = new org.sky.dto.response.ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -239,7 +239,7 @@ public class SellerController {
                                     "timestamp", java.time.LocalDateTime.now()
                                 );
                                 
-                                return Response.ok(org.sky.dto.ApiResponse.success("Límites de vendedores obtenidos exitosamente", response)).build();
+                                return Response.ok(org.sky.dto.response.ApiResponse.success("Límites de vendedores obtenidos exitosamente", response)).build();
                             });
                 })
                 .onFailure().recoverWithItem(throwable -> {

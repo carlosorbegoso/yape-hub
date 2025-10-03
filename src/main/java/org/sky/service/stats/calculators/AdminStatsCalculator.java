@@ -3,12 +3,11 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.AdminStatsResponse;
+import org.sky.dto.request.stats.AdminStatsRequest;
+import org.sky.dto.response.admin.AdminStatsResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
-import org.sky.service.stats.calculators.template.AdminStatsRequest;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;

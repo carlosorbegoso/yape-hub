@@ -4,9 +4,10 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.admin.AdminProfileResponse;
-import org.sky.dto.admin.UpdateAdminProfileRequest;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.admin.AdminProfileResponse;
+import org.sky.dto.request.admin.UpdateAdminProfileRequest;
+import org.sky.dto.response.common.BranchInfo;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.BranchRepository;
 
@@ -30,10 +31,10 @@ public class AdminService {
                     
                     return branchRepository.findByAdminId(admin.id)
                             .map(branches -> {
-                                List<AdminProfileResponse.BranchInfo> branchInfos = branches.stream()
-                                        .map(branch -> new AdminProfileResponse.BranchInfo(
-                                                branch.id, branch.name, branch.code, branch.address, branch.isActive))
-                                        .toList();
+                                 List<BranchInfo> branchInfos = branches.stream()
+                                         .map(branch -> new BranchInfo(
+                                                 branch.id, branch.name, branch.address, null, branch.isActive, branch.createdAt))
+                                         .toList();
                                 
                                 AdminProfileResponse response = new AdminProfileResponse(
                                         admin.id, admin.user.email, admin.businessName, admin.businessType,

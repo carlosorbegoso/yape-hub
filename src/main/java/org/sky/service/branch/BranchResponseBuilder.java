@@ -3,16 +3,16 @@ package org.sky.service.branch;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.branch.BranchListResponse;
-import org.sky.dto.branch.BranchResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.branch.BranchListResponse;
+import org.sky.dto.response.branch.BranchResponse;
+import org.sky.dto.response.common.PaginationInfo;
 import org.sky.model.BranchEntity;
 import org.sky.model.SellerEntity;
 import org.sky.repository.SellerRepository;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class BranchResponseBuilder {
@@ -58,7 +58,7 @@ public class BranchResponseBuilder {
     }
 
     public Map<String, Object> buildSellersResponse(BranchEntity branch, List<SellerEntity> sellers,
-                                                   BranchListResponse.PaginationInfo paginationInfo) {
+                                                   PaginationInfo paginationInfo) {
         BranchResponse branchInfo = new BranchResponse(
             branch.id,
             branch.name,

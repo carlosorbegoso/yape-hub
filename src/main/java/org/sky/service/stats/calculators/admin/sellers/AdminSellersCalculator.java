@@ -1,7 +1,10 @@
 package org.sky.service.stats.calculators.admin.sellers;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.*;
+import org.sky.dto.response.*;
+import org.sky.dto.response.seller.*;
+import org.sky.dto.response.stats.ComparisonData;
+import org.sky.dto.response.stats.TopSellerData;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
@@ -43,8 +46,8 @@ public class AdminSellersCalculator {
     }
     
     public SellerComparisons calculateComparisons(List<PaymentNotificationEntity> payments,
-                                                                         java.time.LocalDate startDate, 
-                                                                         java.time.LocalDate endDate) {
+                                                  java.time.LocalDate startDate,
+                                                  java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var totalSales = calculateTotalSales(confirmedPayments);
         var totalTransactions = payments.size();
@@ -61,9 +64,9 @@ public class AdminSellersCalculator {
         );
     }
     
-    public  SellerTrends calculateTrends(List<PaymentNotificationEntity> payments,
-                                                               java.time.LocalDate startDate, 
-                                                               java.time.LocalDate endDate) {
+    public SellerTrends calculateTrends(List<PaymentNotificationEntity> payments,
+                                        java.time.LocalDate startDate,
+                                        java.time.LocalDate endDate) {
         if (payments.isEmpty()) {
             return new  SellerTrends(
                 "stable", "stable", 0.0, "neutral", "flat", 0.0, "none"
@@ -84,10 +87,10 @@ public class AdminSellersCalculator {
         );
     }
     
-    public  SellerAchievements calculateAchievements(List<PaymentNotificationEntity> payments,
-                                                                           List<SellerEntity> sellers, 
-                                                                           java.time.LocalDate startDate, 
-                                                                           java.time.LocalDate endDate) {
+    public SellerAchievements calculateAchievements(List<PaymentNotificationEntity> payments,
+                                                    List<SellerEntity> sellers,
+                                                    java.time.LocalDate startDate,
+                                                    java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         
         var streakDays = calculateStreakDays(confirmedPayments, endDate);

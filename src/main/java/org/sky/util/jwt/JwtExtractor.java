@@ -1,6 +1,5 @@
 package org.sky.util.jwt;
 
-import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.jwt.JsonWebToken;

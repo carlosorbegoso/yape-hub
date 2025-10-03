@@ -4,19 +4,17 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import org.sky.dto.payment.PaymentClaimRequest;
-import org.sky.dto.payment.PaymentRejectRequest;
-import org.sky.dto.payment.PendingPaymentsResponse;
-import org.sky.dto.payment.AdminPaymentManagementResponse;
-import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.request.payment.PaymentClaimRequest;
+import org.sky.dto.request.payment.PaymentRejectRequest;
+import org.sky.dto.response.payment.PendingPaymentsResponse;
+import org.sky.dto.response.admin.AdminPaymentManagementResponse;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.service.websocket.WebSocketNotificationService;
-import org.sky.service.hubnotifications.PaymentNotificationService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Map;
 
 @ApplicationScoped
 public class HubNotificationControllerService {

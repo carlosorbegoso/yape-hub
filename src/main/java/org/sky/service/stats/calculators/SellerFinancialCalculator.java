@@ -3,12 +3,15 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.SellerFinancialResponse;
+import org.sky.dto.request.stats.SellerFinancialRequest;
+import org.sky.dto.response.common.Period;
+import org.sky.dto.response.seller.SellerFinancialSpecificMetrics;
+import org.sky.dto.response.stats.SellerFinancialResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
-import org.sky.service.stats.calculators.template.SellerFinancialRequest;
+
+
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.time.LocalDate;
@@ -91,7 +94,7 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
                 List.of(), // dailySales
                 sellerFinancialMetrics.commissionRate(),
                 calculateProfitMargin(sellerFinancialMetrics.totalSales(), sellerFinancialMetrics.commissionAmount()),
-                new SellerFinancialResponse.Period(request.startDate().toString(), request.endDate().toString())
+                new Period(request.startDate().toString(), request.endDate().toString())
         );
     }
     
@@ -108,14 +111,6 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
         return currency != null ? currency : DEFAULT_CURRENCY;
     }
     
-    /**
-     * Métricas específicas para seller financial
-     */
-    private record SellerFinancialSpecificMetrics(
-        Double totalSales,
-        Double commissionRate,
-        Double commissionAmount,
-        Double netAmount,
-        String currency
-    ) {}
+
+
 }

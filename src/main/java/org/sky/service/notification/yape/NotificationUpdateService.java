@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import org.sky.dto.ApiResponse;
+import org.sky.dto.response.ApiResponse;
 import org.sky.repository.NotificationRepository;
 
 import java.time.LocalDateTime;

@@ -5,11 +5,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.mindrot.jbcrypt.BCrypt;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.auth.AdminRegisterRequest;
-import org.sky.dto.auth.LoginRequest;
-import org.sky.dto.auth.LoginResponse;
-import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
+
+import org.sky.dto.request.admin.AdminRegisterRequest;
+import org.sky.dto.request.auth.LoginRequest;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.auth.LoginResponse;
+import org.sky.dto.response.auth.SellerLoginWithAffiliationResponse;
+import org.sky.dto.response.common.UserInfo;
 import org.sky.exception.ValidationException;
 import org.sky.model.AdminEntity;
 import org.sky.model.BusinessType;
@@ -132,9 +134,8 @@ public class AuthService {
                             String accessToken = jwtGenerator.generateAccessToken(branch.admin.user.id, branch.admin.user.role, null);
                             String refreshToken = jwtGenerator.generateRefreshToken(branch.admin.user.id);
 
-                            LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
-                                    branch.admin.user.id, branch.admin.user.email, branch.admin.user.role,
-                                    branch.admin.id, branch.admin.businessName, branch.admin.user.isVerified, null
+                            UserInfo userInfo = new UserInfo(
+                                    branch.admin.user.id, branch.admin.user.email, branch.admin.businessName, branch.admin.user.role.toString(), branch.admin.user.isVerified
                             );
 
                             LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);

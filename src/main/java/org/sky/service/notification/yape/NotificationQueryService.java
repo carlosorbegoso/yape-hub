@@ -3,8 +3,8 @@ package org.sky.service.notification.yape;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.notification.NotificationResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.notification.NotificationResponse;
 import org.sky.model.NotificationEntity;
 import org.sky.repository.NotificationRepository;
 

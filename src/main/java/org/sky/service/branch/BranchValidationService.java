@@ -5,7 +5,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.exception.ValidationException;
 import org.sky.model.AdminEntity;
-import org.sky.model.BusinessType;
 import org.sky.model.BranchEntity;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.BranchRepository;

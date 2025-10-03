@@ -3,7 +3,9 @@ package org.sky.service.stats.calculators;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.stats.*;
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.*;
+import org.sky.dto.response.stats.*;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
@@ -17,7 +19,7 @@ import org.sky.service.stats.calculators.seller.forecasting.SellerForecastingCal
 import org.sky.service.stats.calculators.seller.comparisons.SellerComparisonsCalculator;
 import org.sky.service.stats.calculators.seller.achievements.SellerAchievementsCalculator;
 import org.sky.service.stats.calculators.seller.analytics.SellerAnalyticsDataCalculator;
-import org.sky.service.stats.calculators.template.BaseStatsCalculator;
+
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.util.List;

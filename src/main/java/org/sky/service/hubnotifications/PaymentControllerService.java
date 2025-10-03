@@ -3,12 +3,13 @@ package org.sky.service.hubnotifications;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.dto.ApiResponse;
-import org.sky.dto.payment.PaymentClaimRequest;
-import org.sky.dto.payment.PaymentRejectRequest;
-import org.sky.dto.payment.PendingPaymentsResponse;
-import org.sky.dto.payment.AdminPaymentManagementResponse;
-import org.sky.dto.payment.PaymentNotificationResponse;
+import org.sky.dto.response.ApiResponse;
+import org.sky.dto.request.payment.PaymentClaimRequest;
+import org.sky.dto.request.payment.PaymentRejectRequest;
+import org.sky.dto.response.common.PaginationInfo;
+import org.sky.dto.response.payment.PendingPaymentsResponse;
+import org.sky.dto.response.admin.AdminPaymentManagementResponse;
+import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.service.security.SecurityService;
 import org.sky.service.websocket.WebSocketNotificationService;
 import org.sky.service.hubnotifications.PaymentNotificationService;
@@ -95,15 +96,17 @@ public class PaymentControllerService {
                                                 // Convert AdminPaymentManagementResponse to PendingPaymentsResponse
                                                 return new PendingPaymentsResponse(
                                                     adminResponse.payments().stream()
-                                                        .map(p -> new org.sky.dto.payment.PaymentNotificationResponse(
+                                                        .map(p -> new PaymentNotificationResponse(
                                                             p.paymentId(), p.amount(), p.senderName(), 
                                                             p.yapeCode(), p.status(), p.createdAt(), "Pending payment"
                                                         )).toList(),
-                                                    new PendingPaymentsResponse.PaginationInfo(
+                                                    new PaginationInfo(
                                                         adminResponse.pagination().currentPage(),
                                                         adminResponse.pagination().totalPages(),
                                                         adminResponse.pagination().totalItems(),
-                                                        adminResponse.pagination().itemsPerPage()
+                                                        adminResponse.pagination().itemsPerPage(),
+                                                        adminResponse.pagination().hasNext(),
+                                                        adminResponse.pagination().hasPrevious()
                                                     )
                                                 );
                                             });

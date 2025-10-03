@@ -1,8 +1,9 @@
 package org.sky.service.stats.calculators.seller.insights;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.SellerInsights;
+
+import org.sky.dto.request.stats.SellerAnalyticsRequest;
+import org.sky.dto.response.seller.SellerInsights;
 import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;

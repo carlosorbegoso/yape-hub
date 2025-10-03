@@ -1,7 +1,8 @@
 package org.sky.service.stats.calculators.admin.seller;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.SalesStatsResponse;
+import org.sky.dto.response.seller.SellerStats;
+import org.sky.dto.response.stats.SalesStatsResponse;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
@@ -12,14 +13,14 @@ public class SellerStatsCalculator {
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final String PENDING_STATUS = "PENDING";
     
-    public List<SalesStatsResponse.SellerStats> calculateSellerStats(List<PaymentNotificationEntity> payments,
+    public List<SellerStats> calculateSellerStats(List<PaymentNotificationEntity> payments,
                                                                     List<SellerEntity> sellers) {
         return sellers.stream()
                 .map(seller -> calculateSellerStat(payments, seller))
                 .toList();
     }
     
-    private SalesStatsResponse.SellerStats calculateSellerStat(List<PaymentNotificationEntity> payments, SellerEntity seller) {
+    private SellerStats calculateSellerStat(List<PaymentNotificationEntity> payments, SellerEntity seller) {
         var sellerPayments = filterPaymentsBySeller(payments, seller.id);
         
         var sellerSales = calculateSellerSales(sellerPayments);
@@ -27,7 +28,7 @@ public class SellerStatsCalculator {
         var averageValue = calculateAverageValue(sellerSales, transactionCount);
         var pendingCount = countPendingPayments(sellerPayments);
         
-        return new SalesStatsResponse.SellerStats(
+        return new SellerStats(
                 seller.id,
                 getSellerName(seller),
                 sellerSales,
