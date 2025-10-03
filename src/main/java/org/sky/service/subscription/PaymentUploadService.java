@@ -5,8 +5,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.billing.PaymentUploadResponse;
-import org.sky.model.ManualPayment;
-import org.sky.model.PaymentCode;
+import org.sky.model.ManualPaymentEntity;
+import org.sky.model.PaymentCodeEntity;
 import org.sky.repository.ManualPaymentRepository;
 
 @ApplicationScoped
@@ -28,7 +28,7 @@ public class PaymentUploadService {
                 paymentCodeService.findValidCode(paymentCode)
         ).asTuple()
         .chain(tuple -> {
-            PaymentCode code = tuple.getItem2();
+            PaymentCodeEntity code = tuple.getItem2();
             if (code == null) {
                 return Uni.createFrom().failure(new RuntimeException("Invalid or expired payment code"));
             }
@@ -37,8 +37,8 @@ public class PaymentUploadService {
     }
 
 
-    private Uni<PaymentUploadResponse> createManualPayment(Long adminId, PaymentCode code, String imageBase64) {
-        ManualPayment payment = new ManualPayment();
+    private Uni<PaymentUploadResponse> createManualPayment(Long adminId, PaymentCodeEntity code, String imageBase64) {
+        ManualPaymentEntity payment = new ManualPaymentEntity();
         payment.paymentCodeId = code.id;
         payment.adminId = adminId;
         payment.imageBase64 = imageBase64;

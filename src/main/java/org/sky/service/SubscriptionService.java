@@ -6,7 +6,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.billing.SubscriptionStatusResponse;
-import org.sky.model.AdminSubscription;
+import org.sky.model.AdminSubscriptionEntity;
 import org.sky.repository.AdminSubscriptionRepository;
 import org.sky.repository.SubscriptionPlanRepository;
 
@@ -85,7 +85,7 @@ public class SubscriptionService {
                                 }
                                 
                                 // Crear nueva suscripción
-                                AdminSubscription subscription = new AdminSubscription();
+                                AdminSubscriptionEntity subscription = new AdminSubscriptionEntity();
                                 subscription.adminId = adminId;
                                 subscription.planId = planId;
                                 subscription.status = "active";
@@ -223,7 +223,7 @@ public class SubscriptionService {
                                 }
                                 
                                 // Crear nueva suscripción gratuita
-                                AdminSubscription subscription = new AdminSubscription();
+                                AdminSubscriptionEntity subscription = new AdminSubscriptionEntity();
                                 subscription.adminId = adminId;
                                 subscription.planId = freePlan.id;
                                 subscription.status = "active";

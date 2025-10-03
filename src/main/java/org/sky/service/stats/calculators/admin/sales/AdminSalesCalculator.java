@@ -1,12 +1,11 @@
 package org.sky.service.stats.calculators.admin.sales;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
 import org.sky.dto.stats.DailySalesData;
 import org.sky.dto.stats.HourlySalesData;
 import org.sky.dto.stats.WeeklySalesData;
 import org.sky.dto.stats.MonthlySalesData;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.time.format.TextStyle;
@@ -19,7 +18,7 @@ public class AdminSalesCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public List<DailySalesData> calculateDailySalesData(List<PaymentNotification> payments, 
+    public List<DailySalesData> calculateDailySalesData(List<PaymentNotificationEntity> payments,
                                                                                LocalDate startDate, 
                                                                                LocalDate endDate) {
         List<DailySalesData> dailySales = new ArrayList<>();
@@ -48,7 +47,7 @@ public class AdminSalesCalculator {
         return dailySales;
     }
     
-    public List<HourlySalesData> calculateHourlySalesData(List<PaymentNotification> payments, 
+    public List<HourlySalesData> calculateHourlySalesData(List<PaymentNotificationEntity> payments,
                                                                                  LocalDate startDate, 
                                                                                  LocalDate endDate) {
         List<HourlySalesData> hourlySales = new ArrayList<>();
@@ -72,7 +71,7 @@ public class AdminSalesCalculator {
         return hourlySales;
     }
     
-    public List<WeeklySalesData> calculateWeeklySalesData(List<PaymentNotification> payments, 
+    public List<WeeklySalesData> calculateWeeklySalesData(List<PaymentNotificationEntity> payments,
                                                                                  LocalDate startDate, 
                                                                                  LocalDate endDate) {
         List<WeeklySalesData> weeklySales = new ArrayList<>();
@@ -105,7 +104,7 @@ public class AdminSalesCalculator {
         return weeklySales;
     }
     
-    public List<MonthlySalesData> calculateMonthlySalesData(List<PaymentNotification> payments, 
+    public List<MonthlySalesData> calculateMonthlySalesData(List<PaymentNotificationEntity> payments,
                                                                                    LocalDate startDate, 
                                                                                    LocalDate endDate) {
         List<MonthlySalesData> monthlySales = new ArrayList<>();
@@ -137,14 +136,14 @@ public class AdminSalesCalculator {
         return monthlySales;
     }
     
-    private List<PaymentNotification> filterPaymentsByDate(List<PaymentNotification> payments, LocalDate date) {
+    private List<PaymentNotificationEntity> filterPaymentsByDate(List<PaymentNotificationEntity> payments, LocalDate date) {
         return payments.stream()
                 .filter(payment -> payment.createdAt.toLocalDate().equals(date))
                 .toList();
     }
     
-    private List<PaymentNotification> filterPaymentsByHour(List<PaymentNotification> payments, int hour, 
-                                                          LocalDate startDate, LocalDate endDate) {
+    private List<PaymentNotificationEntity> filterPaymentsByHour(List<PaymentNotificationEntity> payments, int hour,
+                                                                 LocalDate startDate, LocalDate endDate) {
         return payments.stream()
                 .filter(payment -> payment.createdAt.getHour() == hour)
                 .filter(payment -> !payment.createdAt.toLocalDate().isBefore(startDate))
@@ -152,21 +151,21 @@ public class AdminSalesCalculator {
                 .toList();
     }
     
-    private List<PaymentNotification> filterPaymentsByDateRange(List<PaymentNotification> payments, 
-                                                               LocalDate startDate, LocalDate endDate) {
+    private List<PaymentNotificationEntity> filterPaymentsByDateRange(List<PaymentNotificationEntity> payments,
+                                                                      LocalDate startDate, LocalDate endDate) {
         return payments.stream()
                 .filter(payment -> !payment.createdAt.toLocalDate().isBefore(startDate))
                 .filter(payment -> !payment.createdAt.toLocalDate().isAfter(endDate))
                 .toList();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();

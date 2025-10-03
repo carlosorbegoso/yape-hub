@@ -5,8 +5,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
-import org.sky.model.SubscriptionPlan;
-import org.sky.model.TokenPackage;
+import org.sky.model.SubscriptionPlanEntity;
 import org.sky.repository.SubscriptionPlanRepository;
 import org.sky.repository.TokenPackageRepository;
 
@@ -38,9 +37,9 @@ public class BillingPlansService {
 
     @WithTransaction
     public Uni<ApiResponse<Map<String, Object>>> loadData() {
-        SubscriptionPlan planBasico = createPlan("Basic Plan", "Basic plan with essential features for small businesses", 50.00, "monthly", 1, 5, 500, "[\"QR Generation\", \"Payment Processing\", \"Basic Analytics\", \"Email Support\"]");
-        SubscriptionPlan planProfesional = createPlan("Professional Plan", "Professional plan with advanced features for growing businesses", 150.00, "monthly", 3, 20, 2000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\"]");
-        SubscriptionPlan planEmpresarial = createPlan("Enterprise Plan", "Enterprise plan with complete features for large businesses", 300.00, "monthly", 10, 100, 10000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\", \"Custom Integrations\", \"Dedicated Support\"]");
+        SubscriptionPlanEntity planBasico = createPlan("Basic Plan", "Basic plan with essential features for small businesses", 50.00, "monthly", 1, 5, 500, "[\"QR Generation\", \"Payment Processing\", \"Basic Analytics\", \"Email Support\"]");
+        SubscriptionPlanEntity planProfesional = createPlan("Professional Plan", "Professional plan with advanced features for growing businesses", 150.00, "monthly", 3, 20, 2000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\"]");
+        SubscriptionPlanEntity planEmpresarial = createPlan("Enterprise Plan", "Enterprise plan with complete features for large businesses", 300.00, "monthly", 10, 100, 10000, "[\"QR Generation\", \"Payment Processing\", \"Advanced Analytics\", \"Priority Support\", \"API Access\", \"Custom Integrations\", \"Dedicated Support\"]");
         
         return subscriptionPlanRepository.persist(planBasico)
                 .chain(savedPlan1 -> subscriptionPlanRepository.persist(planProfesional))
@@ -51,9 +50,9 @@ public class BillingPlansService {
                 )));
     }
 
-    private SubscriptionPlan createPlan(String name, String description, double price, String billingCycle, 
-                                      int maxAdmins, int maxSellers, int tokensIncluded, String features) {
-        SubscriptionPlan plan = new SubscriptionPlan();
+    private SubscriptionPlanEntity createPlan(String name, String description, double price, String billingCycle,
+                                              int maxAdmins, int maxSellers, int tokensIncluded, String features) {
+        SubscriptionPlanEntity plan = new SubscriptionPlanEntity();
         plan.name = name;
         plan.description = description;
         plan.pricePen = java.math.BigDecimal.valueOf(price);

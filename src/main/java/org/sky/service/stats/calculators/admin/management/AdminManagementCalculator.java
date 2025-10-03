@@ -9,7 +9,7 @@ import org.sky.dto.stats.financial.FinancialOverviewResponse;
 import org.sky.dto.stats.security.ComplianceAndSecurityResponse;
 import org.sky.dto.stats.seller.SellerManagementResponse;
 import org.sky.dto.stats.system.SystemMetricsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
 import java.time.LocalDate;
@@ -34,16 +34,16 @@ public class AdminManagementCalculator {
     private static final String NO_BRANCH_NAME = "Sin sucursal";
     
     // Functional interfaces for better readability
-    private final Function<PaymentNotification, Boolean> isConfirmed = 
+    private final Function<PaymentNotificationEntity, Boolean> isConfirmed =
         payment -> CONFIRMED_STATUS.equals(payment.status);
-    private final Function<PaymentNotification, Boolean> isPending = 
+    private final Function<PaymentNotificationEntity, Boolean> isPending =
         payment -> PENDING_STATUS.equals(payment.status);
-    private final Function<PaymentNotification, Boolean> isRejected = 
+    private final Function<PaymentNotificationEntity, Boolean> isRejected =
         payment -> REJECTED_STATUS.equals(payment.status);
-    private final Predicate<PaymentNotification> isSuspicious = 
+    private final Predicate<PaymentNotificationEntity> isSuspicious =
         payment -> payment.amount > SUSPICIOUS_AMOUNT_THRESHOLD;
     
-    public Uni<BranchAnalyticsResponse> calculateBranchAnalytics(List<PaymentNotification> payments, 
+    public Uni<BranchAnalyticsResponse> calculateBranchAnalytics(List<PaymentNotificationEntity> payments,
                                                                            List<SellerEntity> sellers, 
                                                                            LocalDate startDate, 
                                                                            LocalDate endDate) {
@@ -56,15 +56,15 @@ public class AdminManagementCalculator {
         });
     }
     
-    private List<PaymentNotification> filterPaymentsByDateRange(List<PaymentNotification> payments, 
-                                                               LocalDate startDate, 
-                                                               LocalDate endDate) {
+    private List<PaymentNotificationEntity> filterPaymentsByDateRange(List<PaymentNotificationEntity> payments,
+                                                                      LocalDate startDate,
+                                                                      LocalDate endDate) {
         return payments.stream()
             .filter(payment -> isPaymentInDateRange(payment, startDate, endDate))
             .toList();
     }
     
-    private boolean isPaymentInDateRange(PaymentNotification payment, LocalDate startDate, LocalDate endDate) {
+    private boolean isPaymentInDateRange(PaymentNotificationEntity payment, LocalDate startDate, LocalDate endDate) {
         return Optional.ofNullable(payment.createdAt)
             .map(LocalDateTime::toLocalDate)
             .map(date -> !date.isBefore(startDate) && !date.isAfter(endDate))
@@ -72,7 +72,7 @@ public class AdminManagementCalculator {
     }
     
     private List< BranchPerformanceData> calculateBranchPerformance(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var branchGroups = groupSellersByBranch(sellers);
         
@@ -91,7 +91,7 @@ public class AdminManagementCalculator {
     }
     
     private  BranchPerformanceData calculateBranchPerformanceData(
-            String branchName, List<SellerEntity> branchSellers, List<PaymentNotification> allPayments) {
+            String branchName, List<SellerEntity> branchSellers, List<PaymentNotificationEntity> allPayments) {
         
         var branchPayments = filterPaymentsBySellers(allPayments, branchSellers);
         var confirmedPayments = branchPayments.stream().filter(isConfirmed::apply).toList();
@@ -112,8 +112,8 @@ public class AdminManagementCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsBySellers(List<PaymentNotification> payments, 
-                                                             List<SellerEntity> sellers) {
+    private List<PaymentNotificationEntity> filterPaymentsBySellers(List<PaymentNotificationEntity> payments,
+                                                                    List<SellerEntity> sellers) {
         var sellerIds = sellers.stream()
             .map(seller -> seller.id)
             .collect(Collectors.toSet());
@@ -123,7 +123,7 @@ public class AdminManagementCalculator {
             .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
             .mapToDouble(payment -> payment.amount)
             .sum();
@@ -138,12 +138,12 @@ public class AdminManagementCalculator {
         return Math.min(10.0, (totalSales / totalTransactions) * 10);
     }
     
-    private double calculateGrowthRate(List<PaymentNotification> payments) {
+    private double calculateGrowthRate(List<PaymentNotificationEntity> payments) {
         // Simplified growth rate calculation
         return payments.size() > 10 ? 5.0 : 0.0;
     }
     
-    private String getLastActivity(List<PaymentNotification> payments) {
+    private String getLastActivity(List<PaymentNotificationEntity> payments) {
         return payments.stream()
             .map(payment -> payment.createdAt)
             .filter(java.util.Objects::nonNull)
@@ -210,7 +210,7 @@ public class AdminManagementCalculator {
             averageSales, averageTransactions, averagePerformanceScore);
     }
     
-    public Uni<SellerManagementResponse> calculateSellerManagement(List<PaymentNotification> payments, 
+    public Uni<SellerManagementResponse> calculateSellerManagement(List<PaymentNotificationEntity> payments,
                                                                              List<SellerEntity> sellers, 
                                                                              LocalDate startDate, 
                                                                              LocalDate endDate) {
@@ -225,7 +225,7 @@ public class AdminManagementCalculator {
     }
     
     private    SellerOverview calculateSellerOverview(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var totalSellers = (long) sellers.size();
         var activeSellers = calculateActiveSellers(payments, sellers);
@@ -241,7 +241,7 @@ public class AdminManagementCalculator {
         );
     }
     
-    private long calculateActiveSellers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateActiveSellers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var activeSellerIds = payments.stream()
             .filter(payment -> payment.confirmedBy != null)
             .map(payment -> payment.confirmedBy)
@@ -261,7 +261,7 @@ public class AdminManagementCalculator {
             .sum();
     }
     
-    private long calculateSellersWithZeroSales(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateSellersWithZeroSales(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var sellerSales = calculateSellerSalesMap(payments, sellers);
         
         return sellers.stream()
@@ -269,7 +269,7 @@ public class AdminManagementCalculator {
             .sum();
     }
     
-    private long calculateTopPerformers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateTopPerformers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var sellerSales = calculateSellerSalesMap(payments, sellers);
         var averageSales = sellerSales.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
         
@@ -278,7 +278,7 @@ public class AdminManagementCalculator {
             .sum();
     }
     
-    private long calculateUnderPerformers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateUnderPerformers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var sellerSales = calculateSellerSalesMap(payments, sellers);
         var averageSales = sellerSales.values().stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
         
@@ -287,7 +287,7 @@ public class AdminManagementCalculator {
             .sum();
     }
     
-    private Map<Long, Double> calculateSellerSalesMap(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private Map<Long, Double> calculateSellerSalesMap(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         return payments.stream()
             .filter(isConfirmed::apply)
             .collect(Collectors.groupingBy(
@@ -297,7 +297,7 @@ public class AdminManagementCalculator {
     }
     
     private    SellerPerformanceDistribution calculateSellerPerformanceDistribution(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var sellerPerformance = calculateSellerPerformanceMap(payments, sellers);
         var excellent = sellerPerformance.values().stream().mapToLong(score -> score >= 8.0 ? 1 : 0).sum();
@@ -308,7 +308,7 @@ public class AdminManagementCalculator {
         return new    SellerPerformanceDistribution(excellent, good, average, poor);
     }
     
-    private Map<Long, Double> calculateSellerPerformanceMap(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private Map<Long, Double> calculateSellerPerformanceMap(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         return sellers.stream()
             .collect(Collectors.toMap(
                 seller -> seller.id,
@@ -316,7 +316,7 @@ public class AdminManagementCalculator {
             ));
     }
     
-    private double calculateIndividualSellerPerformance(List<PaymentNotification> payments, SellerEntity seller) {
+    private double calculateIndividualSellerPerformance(List<PaymentNotificationEntity> payments, SellerEntity seller) {
         var sellerPayments = payments.stream()
             .filter(payment -> payment.confirmedBy != null && payment.confirmedBy.equals(seller.id))
             .toList();
@@ -331,7 +331,7 @@ public class AdminManagementCalculator {
     }
     
     private    SellerActivity calculateSellerActivity(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var dailyActiveSellers = calculateDailyActiveSellers(payments, sellers);
         var weeklyActiveSellers = calculateWeeklyActiveSellers(payments, sellers);
@@ -345,7 +345,7 @@ public class AdminManagementCalculator {
         );
     }
     
-    private long calculateDailyActiveSellers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateDailyActiveSellers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var today = LocalDate.now();
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -358,7 +358,7 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private long calculateWeeklyActiveSellers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateWeeklyActiveSellers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var weekStart = LocalDate.now().minusDays(7);
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -371,7 +371,7 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private long calculateMonthlyActiveSellers(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private long calculateMonthlyActiveSellers(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var monthStart = LocalDate.now().minusDays(30);
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -384,17 +384,17 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private double calculateAverageSessionDuration(List<PaymentNotification> payments) {
+    private double calculateAverageSessionDuration(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - in real scenario would track actual session durations
         return payments.isEmpty() ? 0.0 : 15.5; // minutes
     }
     
-    private double calculateAverageTransactionsPerSeller(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private double calculateAverageTransactionsPerSeller(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         if (sellers.isEmpty()) return 0.0;
         return (double) payments.size() / sellers.size();
     }
     
-    public Uni<SystemMetricsResponse> calculateSystemMetrics(List<PaymentNotification> payments, 
+    public Uni<SystemMetricsResponse> calculateSystemMetrics(List<PaymentNotificationEntity> payments,
                                                                        List<SellerEntity> sellers,
                                                                        LocalDate startDate, 
                                                                        LocalDate endDate) {
@@ -409,7 +409,7 @@ public class AdminManagementCalculator {
     }
     
     private   OverallSystemHealth calculateOverallSystemHealth(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var totalSales = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         var totalTransactions = (long) payments.size();
@@ -423,17 +423,17 @@ public class AdminManagementCalculator {
         );
     }
     
-    private double calculateSystemUptime(List<PaymentNotification> payments) {
+    private double calculateSystemUptime(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - in real scenario would track actual uptime
         return payments.isEmpty() ? 100.0 : 99.9;
     }
     
-    private double calculateAverageResponseTime(List<PaymentNotification> payments) {
+    private double calculateAverageResponseTime(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - in real scenario would track actual response times
         return payments.isEmpty() ? 0.0 : 2.5; // seconds
     }
     
-    private double calculateErrorRate(List<PaymentNotification> payments) {
+    private double calculateErrorRate(List<PaymentNotificationEntity> payments) {
         if (payments.isEmpty()) return 0.0;
         
         var errorCount = payments.stream()
@@ -444,7 +444,7 @@ public class AdminManagementCalculator {
     }
     
     private PaymentSystemMetrics calculatePaymentSystemMetrics(
-            List<PaymentNotification> payments) {
+            List<PaymentNotificationEntity> payments) {
         
         var totalPaymentsProcessed = (long) payments.size();
         var pendingPayments = payments.stream().mapToLong(payment -> isPending.apply(payment) ? 1 : 0).sum();
@@ -459,7 +459,7 @@ public class AdminManagementCalculator {
         );
     }
     
-    private double calculateAverageConfirmationTime(List<PaymentNotification> payments) {
+    private double calculateAverageConfirmationTime(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - in real scenario would track actual confirmation times
         return payments.isEmpty() ? 0.0 : 1.5; // minutes
     }
@@ -470,7 +470,7 @@ public class AdminManagementCalculator {
     }
     
     private UserEngagement calculateUserEngagement(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var dailyActiveUsers = calculateDailyActiveUsers(payments);
         var weeklyActiveUsers = calculateWeeklyActiveUsers(payments);
@@ -483,7 +483,7 @@ public class AdminManagementCalculator {
         );
     }
     
-    private long calculateDailyActiveUsers(List<PaymentNotification> payments) {
+    private long calculateDailyActiveUsers(List<PaymentNotificationEntity> payments) {
         var today = LocalDate.now();
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -496,7 +496,7 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private long calculateWeeklyActiveUsers(List<PaymentNotification> payments) {
+    private long calculateWeeklyActiveUsers(List<PaymentNotificationEntity> payments) {
         var weekStart = LocalDate.now().minusDays(7);
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -509,7 +509,7 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private long calculateMonthlyActiveUsers(List<PaymentNotification> payments) {
+    private long calculateMonthlyActiveUsers(List<PaymentNotificationEntity> payments) {
         var monthStart = LocalDate.now().minusDays(30);
         return payments.stream()
             .filter(payment -> Optional.ofNullable(payment.createdAt)
@@ -522,7 +522,7 @@ public class AdminManagementCalculator {
             .count();
     }
     
-    private FeatureUsage calculateFeatureUsage(List<PaymentNotification> payments) {
+    private FeatureUsage calculateFeatureUsage(List<PaymentNotificationEntity> payments) {
         // Simplified feature usage calculation
         var qrScannerUsage = calculateFeatureUsagePercentage(payments, "QR_SCANNER");
         var paymentManagementUsage = calculateFeatureUsagePercentage(payments, "PAYMENT_MANAGEMENT");
@@ -534,12 +534,12 @@ public class AdminManagementCalculator {
         );
     }
     
-    private double calculateFeatureUsagePercentage(List<PaymentNotification> payments, String feature) {
+    private double calculateFeatureUsagePercentage(List<PaymentNotificationEntity> payments, String feature) {
         // Simplified calculation - in real scenario would track actual feature usage
         return payments.isEmpty() ? 0.0 : 75.0; // percentage
     }
     
-    public Uni<AdministrativeInsightsResponse> calculateAdministrativeInsights(List<PaymentNotification> payments, 
+    public Uni<AdministrativeInsightsResponse> calculateAdministrativeInsights(List<PaymentNotificationEntity> payments,
                                                                                          List<SellerEntity> sellers,
                                                                                          LocalDate startDate, 
                                                                                          LocalDate endDate) {
@@ -559,7 +559,7 @@ public class AdminManagementCalculator {
     }
     
     private List<ManagementAlert> generateManagementAlerts(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var alerts = new ArrayList<ManagementAlert>();
         
@@ -613,14 +613,14 @@ public class AdminManagementCalculator {
             type, severity, message, affectedBranch, affectedSellers, recommendation);
     }
     
-    private double calculateConfirmationRate(List<PaymentNotification> payments) {
+    private double calculateConfirmationRate(List<PaymentNotificationEntity> payments) {
         if (payments.isEmpty()) return 0.0;
         
         var confirmedCount = payments.stream().mapToLong(payment -> isConfirmed.apply(payment) ? 1 : 0).sum();
         return (double) confirmedCount / payments.size() * 100.0;
     }
     
-    private List<String> generateRecommendations(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private List<String> generateRecommendations(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var recommendations = new java.util.ArrayList<String>();
         
         if (payments.isEmpty()) {
@@ -653,7 +653,7 @@ public class AdminManagementCalculator {
     }
     
     private GrowthOpportunities calculateGrowthOpportunities(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var potentialNewBranches = calculatePotentialNewBranches(payments, sellers);
         var marketExpansion = determineMarketExpansion(payments);
@@ -665,13 +665,13 @@ public class AdminManagementCalculator {
         );
     }
     
-    private Long calculatePotentialNewBranches(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private Long calculatePotentialNewBranches(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         // Simplified calculation based on current performance
         var totalSales = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         return totalSales > 10000.0 ? 2L : 0L;
     }
     
-    private String determineMarketExpansion(List<PaymentNotification> payments) {
+    private String determineMarketExpansion(List<PaymentNotificationEntity> payments) {
         var transactionVolume = payments.size();
         return transactionVolume > 100 ? "Alto potencial" : "Estable";
     }
@@ -681,13 +681,13 @@ public class AdminManagementCalculator {
         return sellers.size() < 10 ? 5L : 0L;
     }
     
-    private Double calculateRevenueProjection(List<PaymentNotification> payments) {
+    private Double calculateRevenueProjection(List<PaymentNotificationEntity> payments) {
         var currentRevenue = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         // Simple 20% growth projection
         return currentRevenue * 1.2;
     }
     
-    public Uni<FinancialOverviewResponse> calculateFinancialOverview(List<PaymentNotification> payments, 
+    public Uni<FinancialOverviewResponse> calculateFinancialOverview(List<PaymentNotificationEntity> payments,
                                                                                List<SellerEntity> sellers, 
                                                                                LocalDate startDate, 
                                                                                LocalDate endDate) {
@@ -702,7 +702,7 @@ public class AdminManagementCalculator {
     }
     
     private org.sky.dto.stats.financial.RevenueBreakdown calculateRevenueBreakdown(
-            List<PaymentNotification> payments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         
         var confirmedPayments = payments.stream().filter(isConfirmed::apply).toList();
         var totalRevenue = calculateTotalSales(confirmedPayments);
@@ -713,7 +713,7 @@ public class AdminManagementCalculator {
     }
     
     private List<org.sky.dto.stats.financial.RevenueByBranch> calculateRevenueByBranch(
-            List<PaymentNotification> confirmedPayments, List<SellerEntity> sellers) {
+        List<PaymentNotificationEntity> confirmedPayments, List<SellerEntity> sellers) {
         
         var branchGroups = groupSellersByBranch(sellers);
         var totalRevenue = calculateTotalSales(confirmedPayments);
@@ -732,7 +732,7 @@ public class AdminManagementCalculator {
             .toList();
     }
     
-    private org.sky.dto.stats.financial.RevenueGrowth calculateRevenueGrowth(List<PaymentNotification> payments) {
+    private org.sky.dto.stats.financial.RevenueGrowth calculateRevenueGrowth(List<PaymentNotificationEntity> payments) {
         // Simplified growth calculation based on date range
         var dailyGrowth = calculateDailyGrowth(payments);
         var weeklyGrowth = dailyGrowth * 7;
@@ -743,12 +743,12 @@ public class AdminManagementCalculator {
             dailyGrowth, weeklyGrowth, monthlyGrowth, yearlyGrowth);
     }
     
-    private double calculateDailyGrowth(List<PaymentNotification> payments) {
+    private double calculateDailyGrowth(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - in real scenario would compare with previous periods
         return payments.isEmpty() ? 0.0 : 5.0; // percentage
     }
     
-    private org.sky.dto.stats.financial.CostAnalysis calculateCostAnalysis(List<PaymentNotification> payments) {
+    private org.sky.dto.stats.financial.CostAnalysis calculateCostAnalysis(List<PaymentNotificationEntity> payments) {
         var totalRevenue = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         var operationalCosts = calculateOperationalCosts(payments);
         var sellerCommissions = calculateSellerCommissions(totalRevenue);
@@ -761,7 +761,7 @@ public class AdminManagementCalculator {
             totalCosts, operationalCosts, sellerCommissions, profitMargin);
     }
     
-    private double calculateOperationalCosts(List<PaymentNotification> payments) {
+    private double calculateOperationalCosts(List<PaymentNotificationEntity> payments) {
         // Simplified calculation - 10% of revenue
         var totalRevenue = calculateTotalSales(payments.stream().filter(isConfirmed::apply).toList());
         return totalRevenue * 0.1;
@@ -777,7 +777,7 @@ public class AdminManagementCalculator {
         return 500.0;
     }
     
-    public Uni<ComplianceAndSecurityResponse> calculateComplianceAndSecurity(List<PaymentNotification> payments, 
+    public Uni<ComplianceAndSecurityResponse> calculateComplianceAndSecurity(List<PaymentNotificationEntity> payments,
                                                                                        List<SellerEntity> sellers, 
                                                                                        LocalDate startDate, 
                                                                                        LocalDate endDate) {
@@ -803,7 +803,7 @@ public class AdminManagementCalculator {
     }
     
     private org.sky.dto.stats.SecurityMetrics calculateSecurityMetrics(
-            List<PaymentNotification> payments) {
+            List<PaymentNotificationEntity> payments) {
         
         var failedLoginAttempts = 0L; // Would be tracked separately
         var suspiciousActivities = payments.stream().mapToLong(payment -> isSuspicious.test(payment) ? 1 : 0).sum();
@@ -814,7 +814,7 @@ public class AdminManagementCalculator {
             failedLoginAttempts, suspiciousActivities, dataBreaches, securityScore);
     }
     
-    private double calculateSecurityScore(List<PaymentNotification> payments, long suspiciousActivities) {
+    private double calculateSecurityScore(List<PaymentNotificationEntity> payments, long suspiciousActivities) {
         var baseScore = 10.0;
         var suspiciousPenalty = suspiciousActivities * 0.5;
         var duplicatePenalty = calculateDuplicateTransactions(payments) * 1.0;
@@ -822,7 +822,7 @@ public class AdminManagementCalculator {
         return Math.max(0.0, baseScore - suspiciousPenalty - duplicatePenalty);
     }
     
-    private long calculateDuplicateTransactions(List<PaymentNotification> payments) {
+    private long calculateDuplicateTransactions(List<PaymentNotificationEntity> payments) {
         return payments.stream()
             .collect(Collectors.groupingBy(payment -> payment.deduplicationHash))
             .entrySet().stream()
@@ -831,7 +831,7 @@ public class AdminManagementCalculator {
     }
     
     private org.sky.dto.stats.ComplianceStatus calculateComplianceStatus(
-            List<PaymentNotification> payments) {
+            List<PaymentNotificationEntity> payments) {
         
         var dataProtection = evaluateDataProtection(payments);
         var auditTrail = evaluateAuditTrail(payments);
@@ -842,13 +842,13 @@ public class AdminManagementCalculator {
             dataProtection, auditTrail, backupStatus, lastAudit);
     }
     
-    private String evaluateDataProtection(List<PaymentNotification> payments) {
+    private String evaluateDataProtection(List<PaymentNotificationEntity> payments) {
         // Simplified evaluation based on transaction volume and security measures
         var suspiciousCount = payments.stream().mapToLong(payment -> isSuspicious.test(payment) ? 1 : 0).sum();
         return suspiciousCount == 0 ? "EXCELLENT" : suspiciousCount < 5 ? "GOOD" : "NEEDS_ATTENTION";
     }
     
-    private String evaluateAuditTrail(List<PaymentNotification> payments) {
+    private String evaluateAuditTrail(List<PaymentNotificationEntity> payments) {
         // Simplified evaluation - in real scenario would check actual audit logs
         var hasAuditData = payments.stream()
             .anyMatch(payment -> payment.createdAt != null && payment.confirmedBy != null);

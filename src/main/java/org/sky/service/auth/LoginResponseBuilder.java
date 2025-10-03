@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.auth.LoginResponse;
-import org.sky.model.UserEntity;
+import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.SellerRepository;
@@ -20,7 +20,7 @@ public class LoginResponseBuilder {
     SellerRepository sellerRepository;
 
     public Uni<ApiResponse<LoginResponse>> buildLoginResponse(JwtTokenService.TokenData tokenData) {
-        UserEntity user = tokenData.user();
+        UserEntityEntity user = tokenData.user();
         
         if (user.role == UserRole.ADMIN) {
             return buildAdminLoginResponse(tokenData);
@@ -30,7 +30,7 @@ public class LoginResponseBuilder {
     }
 
     public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(JwtTokenService.TokenData tokenData) {
-        UserEntity user = tokenData.user();
+        UserEntityEntity user = tokenData.user();
         
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
             user.id, user.email, user.role,

@@ -3,7 +3,7 @@ package org.sky.service.hubnotifications;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
 import java.util.function.Function;
@@ -13,8 +13,8 @@ import java.util.function.Function;
 public class PaymentNotificationMapper {
 
 
-    public static final Function<PaymentNotificationRequest, PaymentNotification> REQUEST_TO_ENTITY = request -> {
-        PaymentNotification payment = new PaymentNotification();
+    public static final Function<PaymentNotificationRequest, PaymentNotificationEntity> REQUEST_TO_ENTITY = request -> {
+        PaymentNotificationEntity payment = new PaymentNotificationEntity();
         payment.adminId = request.adminId();
         payment.amount = request.amount();
         payment.senderName = request.senderName();
@@ -25,7 +25,7 @@ public class PaymentNotificationMapper {
     };
 
 
-    public static final Function<PaymentNotification, PaymentNotificationResponse> ENTITY_TO_RESPONSE = payment -> 
+    public static final Function<PaymentNotificationEntity, PaymentNotificationResponse> ENTITY_TO_RESPONSE = payment ->
         new PaymentNotificationResponse(
             payment.id,
             payment.amount,
@@ -37,9 +37,9 @@ public class PaymentNotificationMapper {
         );
 
 
-    public static final Function<PaymentNotificationRequest, Function<SellerEntity, PaymentNotification>> REQUEST_WITH_SELLER_TO_ENTITY = 
+    public static final Function<PaymentNotificationRequest, Function<SellerEntity, PaymentNotificationEntity>> REQUEST_WITH_SELLER_TO_ENTITY =
         request -> seller -> {
-            PaymentNotification payment = REQUEST_TO_ENTITY.apply(request);
+            PaymentNotificationEntity payment = REQUEST_TO_ENTITY.apply(request);
             return payment;
         };
 

@@ -1,36 +1,35 @@
 package org.sky.repository;
 
 import io.quarkus.hibernate.reactive.panache.PanacheRepository;
-import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.ManualPayment;
+import org.sky.model.ManualPaymentEntity;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @ApplicationScoped
-public class ManualPaymentRepository implements PanacheRepository<ManualPayment> {
+public class ManualPaymentRepository implements PanacheRepository<ManualPaymentEntity> {
 
-    public Uni<List<ManualPayment>> findByAdminId(Long adminId) {
+    public Uni<List<ManualPaymentEntity>> findByAdminId(Long adminId) {
         return find("adminId = ?1 order by createdAt desc", adminId).range(0, 100).list(); // Limited to 100 for low-resource efficiency
     }
 
-    public Uni<List<ManualPayment>> findByAdminId(Long adminId, LocalDate startDate, LocalDate endDate) {
+    public Uni<List<ManualPaymentEntity>> findByAdminId(Long adminId, LocalDate startDate, LocalDate endDate) {
         return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 order by createdAt desc", 
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
     }
 
-  public Uni<List<ManualPayment>> findPendingPayments(LocalDate startDate, LocalDate endDate) {
+  public Uni<List<ManualPaymentEntity>> findPendingPayments(LocalDate startDate, LocalDate endDate) {
         return find("status = 'pending' and createdAt >= ?1 and createdAt <= ?2 order by createdAt asc", 
                 startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
     }
 
-    public Uni<List<ManualPayment>> findByStatus(String status) {
+    public Uni<List<ManualPaymentEntity>> findByStatus(String status) {
         return find("status = ?1 order by createdAt desc", status).list();
     }
 
-    public Uni<List<ManualPayment>> findByStatus(String status, LocalDate startDate, LocalDate endDate) {
+    public Uni<List<ManualPaymentEntity>> findByStatus(String status, LocalDate startDate, LocalDate endDate) {
         return find("status = ?1 and createdAt >= ?2 and createdAt <= ?3 order by createdAt desc", 
                 status, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)).list();
     }

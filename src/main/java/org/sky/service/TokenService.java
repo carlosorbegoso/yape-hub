@@ -6,8 +6,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.billing.TokenStatusResponse;
 import org.sky.exception.InsufficientTokensException;
-import org.sky.model.AdminTokens;
-import org.sky.model.TokenUsageLog;
+import org.sky.model.AdminTokensEntity;
+import org.sky.model.TokenUsageLogEntity;
 import org.sky.repository.AdminTokensRepository;
 import org.sky.repository.TokenUsageLogRepository;
 
@@ -25,11 +25,11 @@ public class TokenService {
 
   private static final int DEFAULT_INITIAL_TOKENS = 100;
 
-  private Uni<AdminTokens> findOrCreateAdminTokens(Long adminId) {
+  private Uni<AdminTokensEntity> findOrCreateAdminTokens(Long adminId) {
     return adminTokensRepository.findByAdminId(adminId)
         .chain(tokens -> {
           if (tokens == null) {
-            AdminTokens newTokens = new AdminTokens();
+            AdminTokensEntity newTokens = new AdminTokensEntity();
             newTokens.adminId = adminId;
             newTokens.tokensAvailable = DEFAULT_INITIAL_TOKENS;
             newTokens.tokensUsed = 0;
@@ -55,7 +55,7 @@ public class TokenService {
 
           return adminTokensRepository.persist(adminTokens)
               .chain(savedTokens -> {
-                TokenUsageLog usageLog = new TokenUsageLog();
+                TokenUsageLogEntity usageLog = new TokenUsageLogEntity();
                 usageLog.adminId = adminId;
                 usageLog.operationType = operationType;
                 usageLog.tokensConsumed = tokensNeeded;

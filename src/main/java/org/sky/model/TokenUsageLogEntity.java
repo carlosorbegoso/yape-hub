@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -8,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "token_usage_log")
-public class TokenUsageLog extends PanacheEntityBase {
+public class TokenUsageLogEntity extends PanacheEntityBase {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   public Long id;
@@ -30,9 +29,9 @@ public class TokenUsageLog extends PanacheEntityBase {
     public LocalDateTime createdAt;
 
     // Constructores
-    public TokenUsageLog() {}
+    public TokenUsageLogEntity() {}
 
-    public TokenUsageLog(Long adminId, String operationType, Integer tokensConsumed, String operationDetails) {
+    public TokenUsageLogEntity(Long adminId, String operationType, Integer tokensConsumed, String operationDetails) {
         this.adminId = adminId;
         this.operationType = operationType;
         this.tokensConsumed = tokensConsumed;
@@ -40,27 +39,27 @@ public class TokenUsageLog extends PanacheEntityBase {
     }
 
     // Métodos de utilidad
-    public static TokenUsageLog createPaymentLog(Long adminId, Integer tokensConsumed, String paymentId) {
+    public static TokenUsageLogEntity createPaymentLog(Long adminId, Integer tokensConsumed, String paymentId) {
         String details = String.format("{\"paymentId\": \"%s\", \"timestamp\": %d}", 
                                      paymentId, System.currentTimeMillis());
-        return new TokenUsageLog(adminId, "payment", tokensConsumed, details);
+        return new TokenUsageLogEntity(adminId, "payment", tokensConsumed, details);
     }
 
-    public static TokenUsageLog createQrLog(Long adminId, Integer tokensConsumed, String qrCode) {
+    public static TokenUsageLogEntity createQrLog(Long adminId, Integer tokensConsumed, String qrCode) {
         String details = String.format("{\"qrCode\": \"%s\", \"timestamp\": %d}", 
                                      qrCode, System.currentTimeMillis());
-        return new TokenUsageLog(adminId, "qr_generation", tokensConsumed, details);
+        return new TokenUsageLogEntity(adminId, "qr_generation", tokensConsumed, details);
     }
 
-    public static TokenUsageLog createWebSocketLog(Long adminId, Integer tokensConsumed, String sellerId) {
+    public static TokenUsageLogEntity createWebSocketLog(Long adminId, Integer tokensConsumed, String sellerId) {
         String details = String.format("{\"sellerId\": \"%s\", \"timestamp\": %d}", 
                                      sellerId, System.currentTimeMillis());
-        return new TokenUsageLog(adminId, "websocket", tokensConsumed, details);
+        return new TokenUsageLogEntity(adminId, "websocket", tokensConsumed, details);
     }
 
-    public static TokenUsageLog createAnalyticsLog(Long adminId, Integer tokensConsumed, String reportType) {
+    public static TokenUsageLogEntity createAnalyticsLog(Long adminId, Integer tokensConsumed, String reportType) {
         String details = String.format("{\"reportType\": \"%s\", \"timestamp\": %d}", 
                                      reportType, System.currentTimeMillis());
-        return new TokenUsageLog(adminId, "analytics", tokensConsumed, details);
+        return new TokenUsageLogEntity(adminId, "analytics", tokensConsumed, details);
     }
 }

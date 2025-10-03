@@ -11,7 +11,7 @@ import org.sky.dto.seller.SellerListResponse;
 import org.sky.dto.seller.SellerResponse;
 import org.sky.dto.seller.SellerRegistrationResponse;
 import org.sky.model.SellerEntity;
-import org.sky.model.UserEntity;
+import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
 import org.sky.repository.AffiliationCodeRepository;
 import org.sky.repository.BranchRepository;
@@ -105,7 +105,7 @@ public class SellerService {
                                             }
                                             
                                             // Create user with auto-generated credentials
-                                            UserEntity user = new UserEntity();
+                                            UserEntityEntity user = new UserEntityEntity();
                                             user.email = autoEmail;
                                             user.password = BCrypt.hashpw("auto_password_" + request.phone(), BCrypt.gensalt());
                                             user.role = UserRole.SELLER;

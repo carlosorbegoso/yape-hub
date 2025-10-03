@@ -39,7 +39,7 @@ public class BranchEntity extends PanacheEntityBase {
     public List<SellerEntity> sellers;
     
     @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public List<Transaction> transactions;
+    public List<TransactionEntity> transactions;
     
     @CreationTimestamp
     @Column(name = "created_at")

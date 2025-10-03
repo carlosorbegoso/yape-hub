@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.*;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.seller.overview.SellerOverviewCalculator;
@@ -87,7 +87,7 @@ public class SellerAnalyticsCalculator extends BaseStatsCalculator<SellerAnalyti
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, SellerAnalyticsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, SellerAnalyticsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -95,7 +95,7 @@ public class SellerAnalyticsCalculator extends BaseStatsCalculator<SellerAnalyti
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, SellerAnalyticsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, SellerAnalyticsRequest request) {
         // Para seller analytics, filtramos por vendedor específico
         return payments.stream()
                 .filter(payment -> request.sellerId().equals(payment.confirmedBy))
@@ -103,7 +103,7 @@ public class SellerAnalyticsCalculator extends BaseStatsCalculator<SellerAnalyti
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, SellerAnalyticsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, SellerAnalyticsRequest request) {
         // Métricas específicas para seller analytics: cálculos complejos
         Object overview = null;
         Object dailySales = null;
@@ -117,7 +117,7 @@ public class SellerAnalyticsCalculator extends BaseStatsCalculator<SellerAnalyti
     @Override
     protected SellerAnalyticsResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                   Double averageTransactionValue, Double claimRate,
-                                                  Object specificMetrics, List<PaymentNotification> payments, 
+                                                  Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                   SellerAnalyticsRequest request) {
         var sellerAnalyticsMetrics = (SellerAnalyticsSpecificMetrics) specificMetrics;
         

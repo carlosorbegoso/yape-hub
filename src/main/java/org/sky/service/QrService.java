@@ -7,7 +7,7 @@ import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.qr.*;
 import org.sky.exception.ValidationException;
-import org.sky.model.AffiliationCode;
+import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;
 import org.sky.repository.BranchRepository;
 import org.sky.repository.AffiliationCodeRepository;
@@ -80,7 +80,7 @@ public class QrService {
       }
 
       // Create affiliation code
-      AffiliationCode code = new AffiliationCode();
+      AffiliationCodeEntity code = new AffiliationCodeEntity();
       code.affiliationCode = affiliationCode;
       code.branch = branch;
       code.expiresAt = expiresAt;

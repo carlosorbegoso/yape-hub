@@ -4,11 +4,9 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
-import org.sky.model.UserEntity;
-import org.sky.model.UserRole;
+import org.sky.model.UserEntityEntity;
 import org.sky.repository.UserRepository;
 
-import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,7 +33,7 @@ public class CacheService {
     // CACHE DE USUARIOS OPTIMIZADO
     // ==================================================================================
     
-    public Uni<UserEntity> getUserByEmailCached(String email) {
+    public Uni<UserEntityEntity> getUserByEmailCached(String email) {
         String cacheKey = "user:email:" + email;
         
         return Uni.createFrom().item(() -> {
@@ -67,7 +65,7 @@ public class CacheService {
         });
     }
     
-    public Uni<UserEntity> getUserByIdCached(Long userId) {
+    public Uni<UserEntityEntity> getUserByIdCached(Long userId) {
         String cacheKey = "user:id:" + userId;
         
         return Uni.createFrom().item(() -> {
@@ -105,7 +103,7 @@ public class CacheService {
     
     // Métodos de carga de BD removidos - ahora se manejan reactivamente en los métodos principales
     
-    private void cacheUser(String key, UserEntity user) {
+    private void cacheUser(String key, UserEntityEntity user) {
         // LRU simple - eliminar entrada más antigua si alcanzamos límite
         if (cache.size() >= MAX_CACHE_SIZE) {
             String oldestKey = accessTimes.entrySet().stream()
@@ -176,7 +174,7 @@ public class CacheService {
     // Método público para compatibilidad con servicios existentes
     public Uni<Void> putInCacheDirect(String key, Object value, long ttlMs) {
         return Uni.createFrom().item(() -> {
-            if (value instanceof UserEntity user) {
+            if (value instanceof UserEntityEntity user) {
                 cacheUser(key, user);
             } else {
                 log.debug("💾 Generic cached: " + key);
@@ -192,7 +190,7 @@ public class CacheService {
     /**
      * Obtener usuario cachead usando email y role (compatible con AuthService)
      */
-    public Uni<UserEntity> getCachedUser(String email, String role) {
+    public Uni<UserEntityEntity> getCachedUser(String email, String role) {
         return getUserByEmailCached(email);
     }
     
@@ -234,7 +232,7 @@ public class CacheService {
     /**
      * Cache user con compatibilidad de email y role (compatible con DatabaseLoginStrategy)
      */
-    public Uni<Void> cacheUser(String email, String role, UserEntity user) {
+    public Uni<Void> cacheUser(String email, String role, UserEntityEntity user) {
         // Solo usar email como clave, ignorar role duplicado
         String cacheKey = "user:email:" + email;
         return Uni.createFrom().item(() -> {
@@ -296,10 +294,10 @@ public class CacheService {
     // ==================================================================================
     
     private static class CacheEntry {
-        final UserEntity user;
+        final UserEntityEntity user;
         final long timestamp;
         
-        CacheEntry(UserEntity user) {
+        CacheEntry(UserEntityEntity user) {
             this.user = user;
             this.timestamp = System.currentTimeMillis();
         }

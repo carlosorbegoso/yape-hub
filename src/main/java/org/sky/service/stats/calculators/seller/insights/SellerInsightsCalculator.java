@@ -2,26 +2,8 @@ package org.sky.service.stats.calculators.seller.insights;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
 import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,8 +12,8 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class SellerInsightsCalculator {
     
-    public SellerInsights calculateSellerInsights(List<PaymentNotification> sellerPayments, 
-                                                                          List<PaymentNotification> allPayments, 
+    public SellerInsights calculateSellerInsights(List<PaymentNotificationEntity> sellerPayments,
+                                                                          List<PaymentNotificationEntity> allPayments,
                                                                           SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
             return new SellerInsights(null, null, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -59,7 +41,7 @@ public class SellerInsightsCalculator {
         );
     }
     
-    private String calculatePeakPerformanceDay(List<PaymentNotification> payments, String metric, String granularity) {
+    private String calculatePeakPerformanceDay(List<PaymentNotificationEntity> payments, String metric, String granularity) {
         var dates = payments.stream()
                 .map(p -> p.createdAt.toLocalDate())
                 .toList();
@@ -71,7 +53,7 @@ public class SellerInsightsCalculator {
         return findBestDay(dailySales, metric);
     }
     
-    private String calculatePeakPerformanceHour(List<PaymentNotification> payments, String granularity) {
+    private String calculatePeakPerformanceHour(List<PaymentNotificationEntity> payments, String granularity) {
         var hourlySales = payments.stream()
                 .collect(Collectors.groupingBy(p -> p.createdAt.getHour(), Collectors.counting()));
         
@@ -81,7 +63,7 @@ public class SellerInsightsCalculator {
                 .orElse("12:00");
     }
     
-    private double calculateCustomerRetentionRate(List<PaymentNotification> payments, Double confidence) {
+    private double calculateCustomerRetentionRate(List<PaymentNotificationEntity> payments, Double confidence) {
         // Implementación real basada en análisis de patrones de transacciones
         // Usar amount como identificador de cliente (simplificado)
         var uniqueCustomers = payments.stream()
@@ -96,7 +78,7 @@ public class SellerInsightsCalculator {
         return Math.min(100.0, baseRetentionRate * confidenceFactor);
     }
     
-    private double calculateRepeatCustomerRate(List<PaymentNotification> sellerPayments, List<PaymentNotification> allPayments, Double confidence) {
+    private double calculateRepeatCustomerRate(List<PaymentNotificationEntity> sellerPayments, List<PaymentNotificationEntity> allPayments, Double confidence) {
         // Implementación real basada en análisis de clientes recurrentes
         var sellerCustomerIds = sellerPayments.stream()
                 .map(p -> p.amount) // Usar amount como identificador simplificado
@@ -131,13 +113,13 @@ public class SellerInsightsCalculator {
     }
     
     // Métodos auxiliares
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
@@ -151,7 +133,7 @@ public class SellerInsightsCalculator {
         return totalCount > 0 ? (double) confirmedCount / totalCount * 100 : 0.0;
     }
     
-    private Map<String, Double> calculateDailySalesMap(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate) {
+    private Map<String, Double> calculateDailySalesMap(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate) {
         return payments.stream()
                 .filter(p -> "CONFIRMED".equals(p.status))
                 .filter(p -> !p.createdAt.toLocalDate().isBefore(startDate))

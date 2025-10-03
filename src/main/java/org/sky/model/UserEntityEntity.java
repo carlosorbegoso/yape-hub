@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -14,7 +13,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
-public class UserEntity extends PanacheEntityBase {
+public class UserEntityEntity extends PanacheEntityBase {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   public Long id;
@@ -55,9 +54,9 @@ public class UserEntity extends PanacheEntityBase {
     
     
     // Constructors
-    public UserEntity() {}
+    public UserEntityEntity() {}
     
-    public UserEntity(String email, String password, UserRole role) {
+    public UserEntityEntity(String email, String password, UserRole role) {
         this.email = email;
         this.password = password;
         this.role = role;

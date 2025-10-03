@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.AdminStatsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
@@ -36,7 +36,7 @@ public class AdminStatsCalculator extends BaseStatsCalculator<AdminStatsRequest,
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -44,21 +44,21 @@ public class AdminStatsCalculator extends BaseStatsCalculator<AdminStatsRequest,
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         return payments.stream()
                 .filter(payment -> payment.adminId.equals(request.adminId()))
                 .toList();
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         return null; // No specific metrics for admin stats
     }
     
     @Override
-    protected AdminStatsResponse buildResponse(Double totalSales, Long totalTransactions, 
-                                             Double averageTransactionValue, Double claimRate,
-                                             Object specificMetrics, List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected AdminStatsResponse buildResponse(Double totalSales, Long totalTransactions,
+                                               Double averageTransactionValue, Double claimRate,
+                                               Object specificMetrics, List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         return new AdminStatsResponse(
             request.adminId(),
             totalSales,

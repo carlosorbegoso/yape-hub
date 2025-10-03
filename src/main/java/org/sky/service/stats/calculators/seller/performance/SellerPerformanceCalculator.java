@@ -2,28 +2,9 @@ package org.sky.service.stats.calculators.seller.performance;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
 import org.sky.dto.stats.PerformanceMetrics;
 import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -35,7 +16,7 @@ public class SellerPerformanceCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> sellerPayments, 
+    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotificationEntity> sellerPayments,
                                                                                  SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);
         var pendingPayments = filterPaymentsByStatus(sellerPayments, PENDING_STATUS);
@@ -51,8 +32,8 @@ public class SellerPerformanceCalculator {
         );
     }
     
-    public SellerPerformance calculateSellerPerformance(List<PaymentNotification> sellerPayments, 
-                                                                               List<PaymentNotification> allPayments, 
+    public SellerPerformance calculateSellerPerformance(List<PaymentNotificationEntity> sellerPayments,
+                                                                               List<PaymentNotificationEntity> allPayments,
                                                                                SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
             return new SellerPerformance(
@@ -85,7 +66,7 @@ public class SellerPerformanceCalculator {
         );
     }
     
-    private Map<String, Double> calculateDailySalesMap(List<PaymentNotification> payments, 
+    private Map<String, Double> calculateDailySalesMap(List<PaymentNotificationEntity> payments,
                                                       java.time.LocalDate startDate, 
                                                       java.time.LocalDate endDate) {
         return payments.stream()
@@ -122,19 +103,19 @@ public class SellerPerformanceCalculator {
         };
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private List<String> calculatePeakHours(List<PaymentNotification> payments, String granularity) {
+    private List<String> calculatePeakHours(List<PaymentNotificationEntity> payments, String granularity) {
         var hourlySales = payments.stream()
                 .filter(p -> CONFIRMED_STATUS.equals(p.status))
                 .collect(Collectors.groupingBy(
@@ -169,7 +150,7 @@ public class SellerPerformanceCalculator {
         return baseScore * confidenceFactor;
     }
     
-    private double calculateEfficiencyRate(List<PaymentNotification> payments, Double confidence) {
+    private double calculateEfficiencyRate(List<PaymentNotificationEntity> payments, Double confidence) {
         var confirmedCount = filterPaymentsByStatus(payments, CONFIRMED_STATUS).size();
         var totalCount = payments.size();
         var baseRate = totalCount > 0 ? (double) confirmedCount / totalCount * 100 : 0.0;
@@ -177,7 +158,7 @@ public class SellerPerformanceCalculator {
         return Math.min(baseRate * confidenceFactor, 100.0);
     }
     
-    private double calculateAverageConfirmationTime(List<PaymentNotification> confirmedPayments) {
+    private double calculateAverageConfirmationTime(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .filter(payment -> payment.confirmedAt != null)
                 .mapToDouble(payment -> java.time.Duration.between(payment.createdAt, payment.confirmedAt).toMinutes())

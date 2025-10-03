@@ -5,7 +5,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.billing.PaymentHistoryResponse;
-import org.sky.model.PaymentHistory;
+import org.sky.model.PaymentHistoryEntity;
 import org.sky.repository.PaymentHistoryRepository;
 
 import java.util.List;
@@ -19,11 +19,11 @@ public class PaymentHistoryService {
     @WithTransaction
     public Uni<List<PaymentHistoryResponse>> getPaymentHistory(Long adminId, String period) {
         return paymentHistoryRepository.findByAdminId(adminId)
-                .onFailure().recoverWithItem(throwable -> List.<PaymentHistory>of())
+                .onFailure().recoverWithItem(throwable -> List.<PaymentHistoryEntity>of())
                 .map(this::convertToResponseList);
     }
 
-    private List<PaymentHistoryResponse> convertToResponseList(List<PaymentHistory> payments) {
+    private List<PaymentHistoryResponse> convertToResponseList(List<PaymentHistoryEntity> payments) {
         if (payments == null || payments.isEmpty()) {
             return List.of();
         }
@@ -33,7 +33,7 @@ public class PaymentHistoryService {
                 .toList();
     }
 
-    private PaymentHistoryResponse convertToResponse(PaymentHistory payment) {
+    private PaymentHistoryResponse convertToResponse(PaymentHistoryEntity payment) {
         return new PaymentHistoryResponse(
             payment.id,
             payment.adminId,

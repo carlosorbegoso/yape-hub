@@ -2,26 +2,8 @@ package org.sky.service.stats.calculators.seller.trends;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
 import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -31,8 +13,8 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class SellerTrendsCalculator {
     
-    public SellerTrends calculateSellerTrends(List<PaymentNotification> sellerPayments, 
-                                                                     List<PaymentNotification> allPayments, 
+    public SellerTrends calculateSellerTrends(List<PaymentNotificationEntity> sellerPayments,
+                                                                     List<PaymentNotificationEntity> allPayments,
                                                                      SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
             return new SellerTrends(
@@ -54,7 +36,7 @@ public class SellerTrendsCalculator {
         );
     }
     
-    private String calculateSalesTrend(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate, String period) {
+    private String calculateSalesTrend(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate, String period) {
         if (payments.isEmpty()) {
             return "stable";
         }
@@ -77,7 +59,7 @@ public class SellerTrendsCalculator {
         return determineTrendFromData(salesByPeriod);
     }
     
-    private String calculateTransactionTrend(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate, String period) {
+    private String calculateTransactionTrend(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate, String period) {
         if (payments.isEmpty()) {
             return "stable";
         }
@@ -99,7 +81,7 @@ public class SellerTrendsCalculator {
         return determineTransactionTrendFromData(transactionsByPeriod);
     }
     
-    private double calculateGrowthRate(List<PaymentNotification> payments, Integer days, Double confidence) {
+    private double calculateGrowthRate(List<PaymentNotificationEntity> payments, Integer days, Double confidence) {
         var sales = calculateTotalSales(filterPaymentsByStatus(payments, "CONFIRMED"));
         var baseDays = days != null ? days : 7;
         var dailyAvg = sales / baseDays;
@@ -107,7 +89,7 @@ public class SellerTrendsCalculator {
         return Math.max(0.0, dailyAvg * confidenceFactor * 0.1);
     }
     
-    private String calculateMomentum(List<PaymentNotification> payments, String metric) {
+    private String calculateMomentum(List<PaymentNotificationEntity> payments, String metric) {
         // Implementación real basada en el volumen de transacciones
         var transactionCount = payments.size();
         var confirmedCount = filterPaymentsByStatus(payments, "CONFIRMED").size();
@@ -126,7 +108,7 @@ public class SellerTrendsCalculator {
         return growthRate > 0.5 ? "up" : growthRate < -0.5 ? "down" : "flat";
     }
     
-    private double calculateVolatility(List<PaymentNotification> payments, String granularity) {
+    private double calculateVolatility(List<PaymentNotificationEntity> payments, String granularity) {
         if (payments.isEmpty()) {
             return 0.0;
         }
@@ -156,7 +138,7 @@ public class SellerTrendsCalculator {
                 Math.min(coefficientOfVariation, 0.5);
     }
     
-    private String determineSeasonality(List<PaymentNotification> payments, String period) {
+    private String determineSeasonality(List<PaymentNotificationEntity> payments, String period) {
         if (payments.isEmpty() || period == null || !period.equals("yearly")) {
             return "none";
         }
@@ -186,19 +168,19 @@ public class SellerTrendsCalculator {
     }
     
     // Métodos auxiliares
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private Map<String, Double> calculateSalesByPeriod(List<PaymentNotification> payments, String period) {
+    private Map<String, Double> calculateSalesByPeriod(List<PaymentNotificationEntity> payments, String period) {
         return switch (period != null ? period.toLowerCase() : "daily") {
             case "weekly" -> payments.stream()
                     .collect(Collectors.groupingBy(
@@ -223,7 +205,7 @@ public class SellerTrendsCalculator {
         };
     }
     
-    private Map<String, Long> calculateTransactionsByPeriod(List<PaymentNotification> payments, String period) {
+    private Map<String, Long> calculateTransactionsByPeriod(List<PaymentNotificationEntity> payments, String period) {
         return switch (period != null ? period.toLowerCase() : "daily") {
             case "weekly" -> payments.stream()
                     .collect(Collectors.groupingBy(

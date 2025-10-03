@@ -2,7 +2,7 @@ package org.sky.service.stats.calculators.admin.daily;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SalesStatsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,14 +13,14 @@ public class DailyStatsCalculator {
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public List<SalesStatsResponse.DailyStats> calculateDailyStats(List<PaymentNotification> payments,
+    public List<SalesStatsResponse.DailyStats> calculateDailyStats(List<PaymentNotificationEntity> payments,
                                                                  LocalDate startDate, LocalDate endDate) {
         return startDate.datesUntil(endDate.plusDays(1))
                 .map(date -> calculateDailyStatForDate(payments, date))
                 .toList();
     }
     
-    private SalesStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotification> payments, LocalDate date) {
+    private SalesStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> payments, LocalDate date) {
         var dayPayments = filterPaymentsByDate(payments, date);
         
         var daySales = calculateDaySales(dayPayments);
@@ -35,13 +35,13 @@ public class DailyStatsCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByDate(List<PaymentNotification> payments, LocalDate date) {
+    private List<PaymentNotificationEntity> filterPaymentsByDate(List<PaymentNotificationEntity> payments, LocalDate date) {
         return payments.stream()
                 .filter(payment -> payment.createdAt.toLocalDate().equals(date))
                 .toList();
     }
     
-    private double calculateDaySales(List<PaymentNotification> dayPayments) {
+    private double calculateDaySales(List<PaymentNotificationEntity> dayPayments) {
         return dayPayments.stream()
                 .filter(payment -> CONFIRMED_STATUS.equals(payment.status))
                 .mapToDouble(payment -> payment.amount)

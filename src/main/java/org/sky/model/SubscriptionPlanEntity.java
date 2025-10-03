@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "subscription_plans")
-public class SubscriptionPlan extends PanacheEntityBase {
+public class SubscriptionPlanEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -46,10 +45,10 @@ public class SubscriptionPlan extends PanacheEntityBase {
     public LocalDateTime createdAt;
 
     // Constructores
-    public SubscriptionPlan() {}
+    public SubscriptionPlanEntity() {}
 
-    public SubscriptionPlan(String name, String description, BigDecimal pricePen, String billingCycle, 
-                          Integer maxAdmins, Integer maxSellers, Integer tokensIncluded) {
+    public SubscriptionPlanEntity(String name, String description, BigDecimal pricePen, String billingCycle,
+                                  Integer maxAdmins, Integer maxSellers, Integer tokensIncluded) {
         this.name = name;
         this.description = description;
         this.pricePen = pricePen;

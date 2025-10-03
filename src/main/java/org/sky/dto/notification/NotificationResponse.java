@@ -1,16 +1,16 @@
 package org.sky.dto.notification;
 
-import org.sky.model.Notification;
+import org.sky.model.NotificationEntity;
 
 import java.time.LocalDateTime;
 
 public record NotificationResponse(
     Long id,
-    Notification.TargetType targetType,
+    NotificationEntity.TargetType targetType,
     Long targetId,
     String title,
     String message,
-    Notification.NotificationType type,
+    NotificationEntity.NotificationType type,
     String data,
     Boolean isRead,
     LocalDateTime readAt,

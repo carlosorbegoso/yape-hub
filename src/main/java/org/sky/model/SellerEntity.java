@@ -20,7 +20,7 @@ public class SellerEntity extends PanacheEntityBase {
     
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
-    public UserEntity user;
+    public UserEntityEntity user;
     
     @NotBlank
     @Column(name = "seller_name", nullable = false)
@@ -60,7 +60,7 @@ public class SellerEntity extends PanacheEntityBase {
     public LocalDateTime lastPayment;
     
     @OneToMany(mappedBy = "seller", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    public List<Transaction> transactions;
+    public List<TransactionEntity> transactions;
     
     @CreationTimestamp
     @Column(name = "created_at")
@@ -73,7 +73,7 @@ public class SellerEntity extends PanacheEntityBase {
     // Constructors
     public SellerEntity() {}
     
-    public SellerEntity(UserEntity user, String sellerName, String email, String phone, BranchEntity branch, String affiliationCode) {
+    public SellerEntity(UserEntityEntity user, String sellerName, String email, String phone, BranchEntity branch, String affiliationCode) {
         this.user = user;
         this.sellerName = sellerName;
         this.email = email;

@@ -2,7 +2,7 @@ package org.sky.service.stats.calculators.admin.sellers;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.*;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.SellerEntity;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ public class AdminSellersCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public List<TopSellerData> calculateTopSellers(List<PaymentNotification> payments,
+    public List<TopSellerData> calculateTopSellers(List<PaymentNotificationEntity> payments,
                                                    List<SellerEntity> sellers) {
         if (sellers.isEmpty()) {
             return new ArrayList<>();
@@ -42,7 +42,7 @@ public class AdminSellersCalculator {
         return sellerStats;
     }
     
-    public SellerComparisons calculateComparisons(List<PaymentNotification> payments, 
+    public SellerComparisons calculateComparisons(List<PaymentNotificationEntity> payments,
                                                                          java.time.LocalDate startDate, 
                                                                          java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -61,7 +61,7 @@ public class AdminSellersCalculator {
         );
     }
     
-    public  SellerTrends calculateTrends(List<PaymentNotification> payments, 
+    public  SellerTrends calculateTrends(List<PaymentNotificationEntity> payments,
                                                                java.time.LocalDate startDate, 
                                                                java.time.LocalDate endDate) {
         if (payments.isEmpty()) {
@@ -84,7 +84,7 @@ public class AdminSellersCalculator {
         );
     }
     
-    public  SellerAchievements calculateAchievements(List<PaymentNotification> payments, 
+    public  SellerAchievements calculateAchievements(List<PaymentNotificationEntity> payments,
                                                                            List<SellerEntity> sellers, 
                                                                            java.time.LocalDate startDate, 
                                                                            java.time.LocalDate endDate) {
@@ -100,7 +100,7 @@ public class AdminSellersCalculator {
         return new  SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
     }
     
-    private  TopSellerData calculateSellerStats(List<PaymentNotification> payments, SellerEntity seller) {
+    private  TopSellerData calculateSellerStats(List<PaymentNotificationEntity> payments, SellerEntity seller) {
         var sellerPayments = filterPaymentsBySeller(payments, seller.id);
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);
         
@@ -118,19 +118,19 @@ public class AdminSellersCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsBySeller(List<PaymentNotification> payments, Long sellerId) {
+    private List<PaymentNotificationEntity> filterPaymentsBySeller(List<PaymentNotificationEntity> payments, Long sellerId) {
         return payments.stream()
                 .filter(payment -> sellerId.equals(payment.confirmedBy))
                 .toList();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
@@ -150,7 +150,7 @@ public class AdminSellersCalculator {
         return current > 0 ? (change / current) * 100 : 0.0;
     }
     
-    private String calculateSalesTrend(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private String calculateSalesTrend(List<PaymentNotificationEntity> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         if (payments.size() < 2) return "stable";
         
         var dailySales = payments.stream()
@@ -173,7 +173,7 @@ public class AdminSellersCalculator {
         };
     }
     
-    private String calculateTransactionTrend(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private String calculateTransactionTrend(List<PaymentNotificationEntity> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         if (payments.size() < 2) return "stable";
         
         var dailyCounts = payments.stream()
@@ -196,14 +196,14 @@ public class AdminSellersCalculator {
         };
     }
     
-    private double calculateGrowthRate(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private double calculateGrowthRate(List<PaymentNotificationEntity> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         var totalSales = calculateTotalSales(payments);
         var daysDiff = startDate.until(endDate).getDays() + 1;
         var dailyAvg = daysDiff > 0 ? totalSales / daysDiff : 0.0;
         return Math.max(0.0, dailyAvg * 0.1);
     }
     
-    private String calculateMomentum(List<PaymentNotification> payments) {
+    private String calculateMomentum(List<PaymentNotificationEntity> payments) {
         return payments.size() > 50 ? "strong" : payments.size() > 20 ? "building" : "weak";
     }
     
@@ -211,7 +211,7 @@ public class AdminSellersCalculator {
         return growthRate > 0.5 ? "up" : growthRate < -0.5 ? "down" : "flat";
     }
     
-    private double calculateVolatility(List<PaymentNotification> payments) {
+    private double calculateVolatility(List<PaymentNotificationEntity> payments) {
         if (payments.size() < 2) return 0.0;
         
         var dailySales = payments.stream()
@@ -228,12 +228,12 @@ public class AdminSellersCalculator {
         return avg > 0 ? standardDeviation / avg : 0.0;
     }
     
-    private String determineSeasonality(List<PaymentNotification> payments) {
+    private String determineSeasonality(List<PaymentNotificationEntity> payments) {
         // Implementación simplificada
         return payments.size() > 100 ? "present" : "none";
     }
     
-    private long calculateStreakDays(List<PaymentNotification> payments, java.time.LocalDate endDate) {
+    private long calculateStreakDays(List<PaymentNotificationEntity> payments, java.time.LocalDate endDate) {
         if (payments.isEmpty()) return 0L;
         
         var daysWithSales = payments.stream()
@@ -244,7 +244,7 @@ public class AdminSellersCalculator {
         return Math.min(daysWithSales, 30L);
     }
     
-    private long calculateBestStreak(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private long calculateBestStreak(List<PaymentNotificationEntity> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         if (payments.isEmpty()) return 0L;
         
         var daysWithSales = payments.stream()
@@ -257,7 +257,7 @@ public class AdminSellersCalculator {
         return Math.max(daysWithSales, 1L);
     }
     
-    private long calculateTotalStreaks(List<PaymentNotification> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    private long calculateTotalStreaks(List<PaymentNotificationEntity> payments, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         if (payments.isEmpty()) return 0L;
         
         var activeDays = payments.stream()
@@ -270,7 +270,7 @@ public class AdminSellersCalculator {
         return Math.max(activeDays / 7, 1L);
     }
     
-    private List<Milestone> createMilestones(List<PaymentNotification> payments) {
+    private List<Milestone> createMilestones(List<PaymentNotificationEntity> payments) {
         var milestones = new ArrayList<Milestone>();
         
         if (payments.size() >= 1) {
@@ -300,7 +300,7 @@ public class AdminSellersCalculator {
         return milestones;
     }
     
-    private List<Badge> createBadges(List<PaymentNotification> payments, List<SellerEntity> sellers) {
+    private List<Badge> createBadges(List<PaymentNotificationEntity> payments, List<SellerEntity> sellers) {
         var badges = new ArrayList<Badge>();
         
         if (payments.size() >= 1) {

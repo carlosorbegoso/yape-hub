@@ -3,33 +3,14 @@ package org.sky.service.stats.calculators.seller.overview;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
 import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;
 @ApplicationScoped
 public class SellerOverviewCalculator {
     
-    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> sellerPayments, 
-                                                                           List<PaymentNotification> allPayments, 
+    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotificationEntity> sellerPayments,
+                                                                           List<PaymentNotificationEntity> allPayments,
                                                                            SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, "CONFIRMED");
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -59,13 +40,13 @@ public class SellerOverviewCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();

@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "token_packages")
-public class TokenPackage extends PanacheEntityBase {
+public class TokenPackageEntity extends PanacheEntityBase {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   public Long id;
@@ -53,7 +53,7 @@ public class TokenPackage extends PanacheEntityBase {
     public LocalDateTime updatedAt;
     
     // Constructor por defecto
-    public TokenPackage() {
+    public TokenPackageEntity() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         this.isActive = true;
@@ -63,9 +63,9 @@ public class TokenPackage extends PanacheEntityBase {
     }
     
     // Constructor con parámetros principales
-    public TokenPackage(String packageId, String name, String description, Integer tokens, 
-                       BigDecimal price, String currency, BigDecimal discount, 
-                       Boolean isPopular, String features, Integer sortOrder) {
+    public TokenPackageEntity(String packageId, String name, String description, Integer tokens,
+                              BigDecimal price, String currency, BigDecimal discount,
+                              Boolean isPopular, String features, Integer sortOrder) {
         this();
         this.packageId = packageId;
         this.name = name;

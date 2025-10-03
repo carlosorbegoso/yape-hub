@@ -1,19 +1,19 @@
 package org.sky.service.stats.calculators.strategy;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import java.util.List;
 
 /**
  * Estrategia para calcular total de ventas de pagos confirmados
  */
 @ApplicationScoped
-public class SalesCalculationStrategy implements StatsCalculationStrategy<List<PaymentNotification>, Double> {
+public class SalesCalculationStrategy implements StatsCalculationStrategy<List<PaymentNotificationEntity>, Double> {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
     @Override
-    public Double calculate(List<PaymentNotification> payments) {
+    public Double calculate(List<PaymentNotificationEntity> payments) {
         if (payments == null || payments.isEmpty()) {
             return 0.0;
         }
@@ -30,7 +30,7 @@ public class SalesCalculationStrategy implements StatsCalculationStrategy<List<P
     }
     
     @Override
-    public boolean canHandle(List<PaymentNotification> payments) {
+    public boolean canHandle(List<PaymentNotificationEntity> payments) {
         return payments != null;
     }
 }

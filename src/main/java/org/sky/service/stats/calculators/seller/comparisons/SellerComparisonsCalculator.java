@@ -2,26 +2,9 @@ package org.sky.service.stats.calculators.seller.comparisons;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
 import org.sky.dto.stats.SellerComparisons;
 import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;
 @ApplicationScoped
@@ -29,8 +12,8 @@ public class SellerComparisonsCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerComparisons calculateSellerComparisons(List<PaymentNotification> sellerPayments, 
-                                                                               List<PaymentNotification> allPayments, 
+    public SellerComparisons calculateSellerComparisons(List<PaymentNotificationEntity> sellerPayments,
+                                                                               List<PaymentNotificationEntity> allPayments,
                                                                                SellerAnalyticsRequest request) {
         var currentSales = calculateTotalSales(filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS));
         var currentTransactions = sellerPayments.size();
@@ -52,13 +35,13 @@ public class SellerComparisonsCalculator {
         );
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
@@ -94,7 +77,7 @@ public class SellerComparisonsCalculator {
         return current > 0 ? (change / current) * 100 : 0.0;
     }
     
-    private ComparisonData calculatePeriodComparison(List<PaymentNotification> sellerPayments, 
+    private ComparisonData calculatePeriodComparison(List<PaymentNotificationEntity> sellerPayments,
                                                                            String period, 
                                                                            SellerAnalyticsRequest request) {
         var confirmedPayments = filterPaymentsByStatus(sellerPayments, CONFIRMED_STATUS);

@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "qr_codes")
-public class QrCode extends PanacheEntityBase {
+public class QrCodeEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -53,9 +52,9 @@ public class QrCode extends PanacheEntityBase {
     }
     
     // Constructors
-    public QrCode() {}
+    public QrCodeEntity() {}
     
-    public QrCode(String qrData, QrType type, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
+    public QrCodeEntity(String qrData, QrType type, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
         this.qrData = qrData;
         this.type = type;
         this.branch = branch;

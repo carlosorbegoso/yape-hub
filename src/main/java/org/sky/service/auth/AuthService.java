@@ -13,10 +13,10 @@ import org.sky.dto.auth.SellerLoginWithAffiliationResponse;
 import org.sky.exception.ValidationException;
 import org.sky.model.AdminEntity;
 import org.sky.model.BusinessType;
-import org.sky.model.AffiliationCode;
+import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;
 import org.sky.model.SellerEntity;
-import org.sky.model.UserEntity;
+import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
 import org.sky.repository.AdminRepository;
 import org.sky.repository.AffiliationCodeRepository;
@@ -99,7 +99,7 @@ public class AuthService {
     private Uni<ApiResponse<LoginResponse>> createAdminAndUser(AdminRegisterRequest request) {
         return Uni.createFrom().item(() -> {
             // Create user
-            UserEntity user = new UserEntity();
+            UserEntityEntity user = new UserEntityEntity();
             user.email = request.email();
             user.password = BCrypt.hashpw(request.password(), BCrypt.gensalt());
             user.role = UserRole.ADMIN;
@@ -227,7 +227,7 @@ public class AuthService {
                 .asTuple()
                 .chain(tuple -> {
                     BranchEntity branch = tuple.getItem1();
-                    AffiliationCode code = tuple.getItem2();
+                    AffiliationCodeEntity code = tuple.getItem2();
                     
                     return UserValidations.validateAffiliationCode(code, affiliationCode, branch)
                             .chain(validatedCode -> {
@@ -239,7 +239,7 @@ public class AuthService {
     }
 
     private Uni<SellerEntity> updateUserLastLogin(SellerEntity seller) {
-        UserEntity user = seller.user;
+        UserEntityEntity user = seller.user;
         if (user == null) {
             return Uni.createFrom().failure(
                 ValidationException.invalidField("user", seller.phone, "Usuario no encontrado")
@@ -252,7 +252,7 @@ public class AuthService {
     }
 
     private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(SellerEntity seller, String affiliationCode) {
-        UserEntity user = seller.user;
+        UserEntityEntity user = seller.user;
         String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, seller.id);
         
         SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(

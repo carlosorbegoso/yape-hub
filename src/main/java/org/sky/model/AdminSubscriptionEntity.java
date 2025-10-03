@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "admin_subscriptions")
-public class AdminSubscription extends PanacheEntityBase {
+public class AdminSubscriptionEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -35,9 +35,9 @@ public class AdminSubscription extends PanacheEntityBase {
     public LocalDateTime createdAt;
 
     // Constructores
-    public AdminSubscription() {}
+    public AdminSubscriptionEntity() {}
 
-    public AdminSubscription(Long adminId, Long planId, String status, LocalDateTime startDate) {
+    public AdminSubscriptionEntity(Long adminId, Long planId, String status, LocalDateTime startDate) {
         this.adminId = adminId;
         this.planId = planId;
         this.status = status;

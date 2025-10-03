@@ -7,7 +7,8 @@ import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
 import org.sky.dto.payment.PendingPaymentsResponse;
 import org.sky.dto.payment.AdminPaymentManagementResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
+import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
 
 import java.time.LocalDate;
@@ -63,7 +64,7 @@ public class PaymentNotificationService {
                 ).asTuple();
             })
             .chain(tuple -> {
-                List<PaymentNotification> payments = tuple.getItem1();
+                List<PaymentNotificationEntity> payments = tuple.getItem1();
                 Long totalCount = tuple.getItem2();
                 
                 List<PaymentNotificationResponse> responses = payments.stream()
@@ -105,7 +106,7 @@ public class PaymentNotificationService {
                 ).asTuple();
             })
             .chain(tuple -> {
-                List<PaymentNotification> payments = tuple.getItem1();
+                List<PaymentNotificationEntity> payments = tuple.getItem1();
                 Long totalCount = tuple.getItem2();
                 
                 List<PaymentNotificationResponse> responses = payments.stream()
@@ -175,7 +176,7 @@ public class PaymentNotificationService {
                     return Uni.createFrom().failure(org.sky.exception.ValidationException.invalidField("payment", payment.id.toString(), "is not pending"));
                 }
                 
-                org.sky.model.PaymentRejection rejection = new org.sky.model.PaymentRejection(
+                PaymentRejectionEntity rejection = new PaymentRejectionEntity(
                     payment.id,
                     payment.adminId, // Using adminId as sellerId for now
                     reason

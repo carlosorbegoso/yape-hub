@@ -4,7 +4,6 @@ import io.smallrye.jwt.build.Jwt;
 import io.smallrye.jwt.build.JwtClaimsBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.sky.model.UserEntity;
 import org.sky.model.UserRole;
 
 import java.time.Duration;

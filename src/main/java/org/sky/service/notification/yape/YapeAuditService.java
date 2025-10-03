@@ -6,11 +6,10 @@ import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.notification.YapeAuditResponse;
-import org.sky.model.YapeNotificationAudit;
+import org.sky.model.YapeNotificationAuditEntity;
 import org.sky.repository.YapeNotificationAuditRepository;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class YapeAuditService {
@@ -30,19 +29,19 @@ public class YapeAuditService {
                 });
     }
 
-    private List<YapeAuditResponse> paginateAndConvert(List<YapeNotificationAudit> auditRecords, int page, int size) {
+    private List<YapeAuditResponse> paginateAndConvert(List<YapeNotificationAuditEntity> auditRecords, int page, int size) {
         int totalCount = auditRecords.size();
         int startIndex = page * size;
         int endIndex = Math.min(startIndex + size, totalCount);
         
-        List<YapeNotificationAudit> paginatedRecords = auditRecords.subList(startIndex, endIndex);
+        List<YapeNotificationAuditEntity> paginatedRecords = auditRecords.subList(startIndex, endIndex);
         
         return paginatedRecords.stream()
                 .map(this::convertToResponse)
                 .toList();
     }
 
-    private YapeAuditResponse convertToResponse(YapeNotificationAudit audit) {
+    private YapeAuditResponse convertToResponse(YapeNotificationAuditEntity audit) {
         return new YapeAuditResponse(
             audit.id,
             audit.adminId,

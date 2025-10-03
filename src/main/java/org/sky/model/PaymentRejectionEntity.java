@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -8,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payment_rejections")
-public class PaymentRejection extends PanacheEntityBase {
+public class PaymentRejectionEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -27,9 +26,9 @@ public class PaymentRejection extends PanacheEntityBase {
     public LocalDateTime rejectedAt;
     
     // Constructors
-    public PaymentRejection() {}
+    public PaymentRejectionEntity() {}
     
-    public PaymentRejection(Long paymentNotificationId, Long sellerId, String rejectionReason) {
+    public PaymentRejectionEntity(Long paymentNotificationId, Long sellerId, String rejectionReason) {
         this.paymentNotificationId = paymentNotificationId;
         this.sellerId = sellerId;
         this.rejectionReason = rejectionReason;

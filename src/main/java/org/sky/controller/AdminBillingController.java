@@ -64,14 +64,12 @@ public class AdminBillingController {
         }
         
         return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> {
-                    return switch (type.toLowerCase()) {
-                        case "payments" -> getPaymentsByStatus(adminId, status, include, startDate, endDate);
-                        case "codes" -> getPaymentCodesUnified(adminId, include, startDate, endDate);
-                        case "dashboard" -> getAdminDashboardUnified(adminId, include, startDate, endDate);
-                        case "stats" -> getAdminStats(adminId, include, startDate, endDate);
-                        default -> Uni.createFrom().failure(new IllegalArgumentException("Tipo no válido: " + type));
-                    };
+                .chain(userId -> switch (type.toLowerCase()) {
+                    case "payments" -> getPaymentsByStatus(adminId, status, include, startDate, endDate);
+                    case "codes" -> getPaymentCodesUnified(adminId, include, startDate, endDate);
+                    case "dashboard" -> getAdminDashboardUnified(adminId, include, startDate, endDate);
+                    case "stats" -> getAdminStats(adminId, include, startDate, endDate);
+                    default -> Uni.createFrom().failure(new IllegalArgumentException("Tipo no válido: " + type));
                 })
                 .map(response -> Response.ok(response).build())
                 .onFailure().recoverWithItem(throwable -> {

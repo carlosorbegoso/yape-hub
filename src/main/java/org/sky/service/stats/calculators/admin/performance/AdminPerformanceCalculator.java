@@ -1,11 +1,10 @@
 package org.sky.service.stats.calculators.admin.performance;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
 import org.sky.dto.stats.PerformanceMetrics;
 import org.sky.dto.stats.SellerGoals;
 import org.sky.dto.stats.SellerPerformance;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.Duration;
 import java.util.List;
@@ -17,7 +16,7 @@ public class AdminPerformanceCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotification> payments) {
+    public PerformanceMetrics calculatePerformanceMetrics(List<PaymentNotificationEntity> payments) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var pendingPayments = filterPaymentsByStatus(payments, PENDING_STATUS);
         var rejectedPayments = filterPaymentsByStatus(payments, REJECTED_BY_SELLER_STATUS);
@@ -33,7 +32,7 @@ public class AdminPerformanceCalculator {
         );
     }
     
-    public SellerGoals calculateGoals(List<PaymentNotification> payments, 
+    public SellerGoals calculateGoals(List<PaymentNotificationEntity> payments,
                                                              java.time.LocalDate startDate, 
                                                              java.time.LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -56,7 +55,7 @@ public class AdminPerformanceCalculator {
         );
     }
     
-    public SellerPerformance calculateSellerPerformance(List<PaymentNotification> payments, 
+    public SellerPerformance calculateSellerPerformance(List<PaymentNotificationEntity> payments,
                                                                                List<org.sky.model.SellerEntity> sellers, 
                                                                                java.time.LocalDate startDate, 
                                                                                java.time.LocalDate endDate) {
@@ -84,19 +83,19 @@ public class AdminPerformanceCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private double calculateAverageConfirmationTime(List<PaymentNotification> confirmedPayments) {
+    private double calculateAverageConfirmationTime(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .filter(payment -> payment.confirmedAt != null)
                 .mapToDouble(payment -> Duration.between(payment.createdAt, payment.confirmedAt).toMinutes())
@@ -126,7 +125,7 @@ public class AdminPerformanceCalculator {
         return expected > 0 ? Math.min(actual / expected, 2.0) : 0.0;
     }
     
-    private java.util.Map<String, Double> calculateDailySalesMap(List<PaymentNotification> payments, 
+    private java.util.Map<String, Double> calculateDailySalesMap(List<PaymentNotificationEntity> payments,
                                                                java.time.LocalDate startDate, 
                                                                java.time.LocalDate endDate) {
         return payments.stream()
@@ -152,7 +151,7 @@ public class AdminPerformanceCalculator {
                 .orElse(null);
     }
     
-    private double calculateAverageDailySales(List<PaymentNotification> payments, 
+    private double calculateAverageDailySales(List<PaymentNotificationEntity> payments,
                                             java.time.LocalDate startDate, 
                                             java.time.LocalDate endDate) {
         var daysDiff = startDate.until(endDate).getDays() + 1;
@@ -172,7 +171,7 @@ public class AdminPerformanceCalculator {
         return Math.sqrt(variance);
     }
     
-    private List<String> calculatePeakHours(List<PaymentNotification> payments) {
+    private List<String> calculatePeakHours(List<PaymentNotificationEntity> payments) {
         var hourlySales = payments.stream()
                 .collect(java.util.stream.Collectors.groupingBy(
                         p -> p.createdAt.getHour(),

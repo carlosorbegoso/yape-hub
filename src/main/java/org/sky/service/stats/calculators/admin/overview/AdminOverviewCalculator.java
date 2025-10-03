@@ -1,9 +1,8 @@
 package org.sky.service.stats.calculators.admin.overview;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.dto.stats.AnalyticsSummaryResponse;
 import org.sky.dto.stats.OverviewMetrics;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -13,7 +12,7 @@ public class AdminOverviewCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotification> payments, 
+    public OverviewMetrics calculateOverviewMetrics(List<PaymentNotificationEntity> payments,
                                                                            LocalDate startDate, 
                                                                            LocalDate endDate) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -33,13 +32,13 @@ public class AdminOverviewCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();

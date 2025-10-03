@@ -3,7 +3,7 @@ package org.sky.service.subscription;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.model.PaymentCode;
+import org.sky.model.PaymentCodeEntity;
 import org.sky.service.TokenService;
 import org.sky.service.SubscriptionService;
 
@@ -16,7 +16,7 @@ public class PaymentActivationService {
     @Inject
     SubscriptionService subscriptionService;
 
-    public Uni<String> activatePlanOrTokens(Long adminId, PaymentCode code) {
+    public Uni<String> activatePlanOrTokens(Long adminId, PaymentCodeEntity code) {
         return Uni.createFrom().item(code)
                 .chain(c -> {
                     if (c.planId != null) {

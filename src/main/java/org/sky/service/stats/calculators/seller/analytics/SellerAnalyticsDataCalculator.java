@@ -2,26 +2,11 @@ package org.sky.service.stats.calculators.seller.analytics;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
 import org.sky.dto.stats.SellerAnalytics;
 import org.sky.dto.stats.SalesDistribution;
 import org.sky.dto.stats.TransactionPatterns;
 import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +16,8 @@ public class SellerAnalyticsDataCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerAnalytics calculateSellerAnalytics(List<PaymentNotification> sellerPayments, 
-                                                                            List<PaymentNotification> allPayments, 
+    public SellerAnalytics calculateSellerAnalytics(List<PaymentNotificationEntity> sellerPayments,
+                                                                            List<PaymentNotificationEntity> allPayments,
                                                                             SellerAnalyticsRequest request) {
         // Calcular analytics usando granularity y metric
         var salesDistribution = calculateSalesDistribution(sellerPayments, request.granularity());
@@ -42,7 +27,7 @@ public class SellerAnalyticsDataCalculator {
         return new SellerAnalytics(salesDistribution, transactionPatterns, performanceIndicators);
     }
     
-    private SalesDistribution calculateSalesDistribution(List<PaymentNotification> payments, String granularity) {
+    private SalesDistribution calculateSalesDistribution(List<PaymentNotificationEntity> payments, String granularity) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         
         // Calcular distribución por días de la semana
@@ -73,7 +58,7 @@ public class SellerAnalyticsDataCalculator {
         );
     }
     
-    private TransactionPatterns calculateTransactionPatterns(List<PaymentNotification> payments, 
+    private TransactionPatterns calculateTransactionPatterns(List<PaymentNotificationEntity> payments,
                                                                                    String metric, String granularity) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -93,7 +78,7 @@ public class SellerAnalyticsDataCalculator {
         return new TransactionPatterns(avgPerDay, mostActiveDay, mostActiveHour, frequency);
     }
     
-    private PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotification> payments, 
+    private PerformanceIndicators calculatePerformanceIndicators(List<PaymentNotificationEntity> payments,
                                                                                         String metric, Double confidence) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -116,7 +101,7 @@ public class SellerAnalyticsDataCalculator {
         );
     }
     
-    private String findMostActiveDay(List<PaymentNotification> confirmedPayments) {
+    private String findMostActiveDay(List<PaymentNotificationEntity> confirmedPayments) {
         if (confirmedPayments.isEmpty()) return "2024-01-01";
         
         var dailySales = confirmedPayments.stream()
@@ -131,7 +116,7 @@ public class SellerAnalyticsDataCalculator {
                 .orElse("2024-01-01");
     }
     
-    private String findMostActiveHour(List<PaymentNotification> confirmedPayments, String granularity) {
+    private String findMostActiveHour(List<PaymentNotificationEntity> confirmedPayments, String granularity) {
         if (confirmedPayments.isEmpty()) return "12:00";
         
         var hourlyCounts = confirmedPayments.stream()
@@ -157,7 +142,7 @@ public class SellerAnalyticsDataCalculator {
         };
     }
     
-    private double calculateConsistencyIndex(List<PaymentNotification> confirmedPayments, Double confidence) {
+    private double calculateConsistencyIndex(List<PaymentNotificationEntity> confirmedPayments, Double confidence) {
         if (confirmedPayments.size() < 2) return 0.0;
         
         // Calcular consistencia basada en la variación de ventas diarias
@@ -188,13 +173,13 @@ public class SellerAnalyticsDataCalculator {
         return Math.min(1.0, consistencyIndex * confidenceFactor);
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();

@@ -2,26 +2,9 @@ package org.sky.service.stats.calculators.seller.forecasting;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
 import org.sky.dto.stats.SellerForecasting;
 import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -34,8 +17,8 @@ public class SellerForecastingCalculator {
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public SellerForecasting calculateSellerForecasting(List<PaymentNotification> sellerPayments, 
-                                                                               List<PaymentNotification> allPayments, 
+    public SellerForecasting calculateSellerForecasting(List<PaymentNotificationEntity> sellerPayments,
+                                                                               List<PaymentNotificationEntity> allPayments,
                                                                                SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
             var emptyTrend = new TrendAnalysis("stable", 0.0, 0.0, 0.0);
@@ -54,7 +37,7 @@ public class SellerForecastingCalculator {
         );
     }
     
-    private List<Object> createPredictedSales(List<PaymentNotification> payments, 
+    private List<Object> createPredictedSales(List<PaymentNotificationEntity> payments,
                                              LocalDate startDate, LocalDate endDate, 
                                              String period, Integer days) {
         var predictions = new ArrayList<Object>();
@@ -89,7 +72,7 @@ public class SellerForecastingCalculator {
         return predictions;
     }
     
-    private TrendAnalysis createTrendAnalysis(List<PaymentNotification> payments, 
+    private TrendAnalysis createTrendAnalysis(List<PaymentNotificationEntity> payments,
                                                                      String period, Double confidence) {
         var historicalData = calculateHistoricalData(payments, 
                 payments.stream().map(p -> p.createdAt.toLocalDate()).min(LocalDate::compareTo).orElse(LocalDate.now().minusDays(30)),
@@ -113,7 +96,7 @@ public class SellerForecastingCalculator {
         );
     }
     
-    private List<Object> createRecommendations(List<PaymentNotification> payments, 
+    private List<Object> createRecommendations(List<PaymentNotificationEntity> payments,
                                               String include, String metric) {
         var recommendations = new ArrayList<Object>();
         
@@ -162,7 +145,7 @@ public class SellerForecastingCalculator {
     }
     
     // Métodos auxiliares para pronósticos
-    private Map<String, Double> calculateHistoricalData(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate, String period) {
+    private Map<String, Double> calculateHistoricalData(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate, String period) {
         return switch (period != null ? period.toLowerCase() : "daily") {
             case "weekly" -> payments.stream()
                     .filter(p -> !p.createdAt.toLocalDate().isBefore(startDate))
@@ -285,7 +268,7 @@ public class SellerForecastingCalculator {
         return trend > 0.1 ? "upward" : trend < -0.1 ? "downward" : "stable";
     }
     
-    private Map<String, Boolean> analyzePerformancePatterns(List<PaymentNotification> payments, String metric) {
+    private Map<String, Boolean> analyzePerformancePatterns(List<PaymentNotificationEntity> payments, String metric) {
         var totalPayments = payments.size();
         var confirmedPayments = payments.stream()
                 .filter(p -> "CONFIRMED".equals(p.status))

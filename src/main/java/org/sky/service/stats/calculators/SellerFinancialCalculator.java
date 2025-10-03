@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.SellerFinancialResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
@@ -39,7 +39,7 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, SellerFinancialRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, SellerFinancialRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -47,7 +47,7 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, SellerFinancialRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, SellerFinancialRequest request) {
         // Para seller financial, filtramos solo pagos confirmados del vendedor específico
         return payments.stream()
                 .filter(payment -> "CONFIRMED".equals(payment.status))
@@ -56,7 +56,7 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, SellerFinancialRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, SellerFinancialRequest request) {
         // Métricas específicas para seller financial: comisiones
         var totalSales = salesStrategy.calculate(payments);
         var finalCommissionRate = getCommissionRate(request.commissionRate());
@@ -75,7 +75,7 @@ public class SellerFinancialCalculator extends BaseStatsCalculator<SellerFinanci
     @Override
     protected SellerFinancialResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                   Double averageTransactionValue, Double claimRate,
-                                                  Object specificMetrics, List<PaymentNotification> payments, 
+                                                  Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                   SellerFinancialRequest request) {
         var sellerFinancialMetrics = (SellerFinancialSpecificMetrics) specificMetrics;
         

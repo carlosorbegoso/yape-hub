@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.FinancialAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
@@ -42,7 +42,7 @@ public class FinancialAnalyticsCalculator extends BaseStatsCalculator<org.sky.se
     }
 
     @Override
-    protected void validateInput(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -50,7 +50,7 @@ public class FinancialAnalyticsCalculator extends BaseStatsCalculator<org.sky.se
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
         // Para financial analytics, filtramos solo pagos confirmados
         return payments.stream()
                 .filter(payment -> "CONFIRMED".equals(payment.status))
@@ -58,7 +58,7 @@ public class FinancialAnalyticsCalculator extends BaseStatsCalculator<org.sky.se
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
         // Métricas específicas para financial analytics: cálculos de impuestos
         var totalRevenue = salesStrategy.calculate(payments);
         var taxRate = getTaxRate(request.taxRate());
@@ -77,7 +77,7 @@ public class FinancialAnalyticsCalculator extends BaseStatsCalculator<org.sky.se
     @Override
     protected FinancialAnalyticsResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                      Double averageTransactionValue, Double claimRate,
-                                                     Object specificMetrics, List<PaymentNotification> payments, 
+                                                     Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                      org.sky.service.stats.calculators.template.FinancialAnalyticsRequest request) {
         var financialMetrics = (FinancialSpecificMetrics) specificMetrics;
         

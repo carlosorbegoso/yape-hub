@@ -5,7 +5,8 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.payment.PaymentNotificationRequest;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
+import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.PaymentRejectionRepository;
@@ -25,7 +26,7 @@ public class PaymentNotificationDataService {
     @Inject
     SellerRepository sellerRepository;
 
-    public Uni<PaymentNotification> savePaymentNotification(PaymentNotification payment) {
+    public Uni<PaymentNotificationEntity> savePaymentNotification(PaymentNotificationEntity payment) {
         return paymentRepository.persist(payment);
     }
 
@@ -34,11 +35,11 @@ public class PaymentNotificationDataService {
         return sellerRepository.findByAdminId(adminId);
     }
 
-    public Uni<List<PaymentNotification>> findPendingPaymentsForSeller(Long sellerId, int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public Uni<List<PaymentNotificationEntity>> findPendingPaymentsForSeller(Long sellerId, int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         return paymentRepository.findPendingPaymentsForSeller(sellerId, page, size, startDate, endDate);
     }
 
-    public Uni<List<PaymentNotification>> findAllPendingPayments(int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+    public Uni<List<PaymentNotificationEntity>> findAllPendingPayments(int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         return paymentRepository.findAllPendingPayments(page, size, startDate, endDate);
     }
 
@@ -50,20 +51,20 @@ public class PaymentNotificationDataService {
         return paymentRepository.countAllPendingPayments(startDate, endDate);
     }
 
-    public Uni<PaymentNotification> findPaymentById(Long paymentId) {
+    public Uni<PaymentNotificationEntity> findPaymentById(Long paymentId) {
         return paymentRepository.findById(paymentId);
     }
 
-    public Uni<PaymentNotification> updatePaymentStatus(Long paymentId, String status) {
+    public Uni<PaymentNotificationEntity> updatePaymentStatus(Long paymentId, String status) {
         return paymentRepository.updatePaymentStatus(paymentId, status);
     }
 
-    public Uni<org.sky.model.PaymentRejection> savePaymentRejection(org.sky.model.PaymentRejection rejection) {
+    public Uni<PaymentRejectionEntity> savePaymentRejection(PaymentRejectionEntity rejection) {
         return rejectionRepository.persist(rejection);
     }
 
-    public Uni<PaymentNotification> createPaymentForSeller(PaymentNotificationRequest request, SellerEntity seller) {
-        PaymentNotification payment = PaymentNotificationMapper.REQUEST_WITH_SELLER_TO_ENTITY.apply(request).apply(seller);
+    public Uni<PaymentNotificationEntity> createPaymentForSeller(PaymentNotificationRequest request, SellerEntity seller) {
+        PaymentNotificationEntity payment = PaymentNotificationMapper.REQUEST_WITH_SELLER_TO_ENTITY.apply(request).apply(seller);
         return savePaymentNotification(payment);
     }
 }

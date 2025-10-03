@@ -5,10 +5,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.mindrot.jbcrypt.BCrypt;
 import org.sky.dto.auth.LoginRequest;
 import org.sky.exception.ValidationException;
-import org.sky.model.AffiliationCode;
+import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;
 import org.sky.model.SellerEntity;
-import org.sky.model.UserEntity;
+import org.sky.model.UserEntityEntity;
 
 import java.time.LocalDateTime;
 
@@ -38,7 +38,7 @@ public  class UserValidations {
     return Uni.createFrom().item(branch);
   }
 
-  public static Uni<AffiliationCode> validateAffiliationCode(AffiliationCode code, String affiliationCode, BranchEntity sellerBranch) {
+  public static Uni<AffiliationCodeEntity> validateAffiliationCode(AffiliationCodeEntity code, String affiliationCode, BranchEntity sellerBranch) {
     if (code == null || !code.isActive) {
       return Uni.createFrom().failure(
         ValidationException.invalidField("affiliationCode", affiliationCode, "Código inválido")
@@ -61,7 +61,7 @@ public  class UserValidations {
     }
     return Uni.createFrom().item(code);
   }
-  public Uni<UserEntity> validateUserCredentials(UserEntity user, LoginRequest request) {
+  public Uni<UserEntityEntity> validateUserCredentials(UserEntityEntity user, LoginRequest request) {
     if (user == null) {
       return Uni.createFrom().failure(
           ValidationException.invalidField("credentials", request.email(), "Invalid email or password")

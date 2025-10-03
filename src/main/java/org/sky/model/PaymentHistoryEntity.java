@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payment_history")
-public class PaymentHistory extends PanacheEntityBase {
+public class PaymentHistoryEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -52,9 +51,9 @@ public class PaymentHistory extends PanacheEntityBase {
     public LocalDateTime createdAt;
 
     // Constructores
-    public PaymentHistory() {}
+    public PaymentHistoryEntity() {}
 
-    public PaymentHistory(Long adminId, String paymentType, BigDecimal amountPen, String status, String paymentMethod) {
+    public PaymentHistoryEntity(Long adminId, String paymentType, BigDecimal amountPen, String status, String paymentMethod) {
         this.adminId = adminId;
         this.paymentType = paymentType;
         this.amountPen = amountPen;
@@ -91,14 +90,14 @@ public class PaymentHistory extends PanacheEntityBase {
     }
 
     // Factory methods
-    public static PaymentHistory createSubscriptionPayment(Long adminId, BigDecimal amountPen, Long planId, String paymentMethod) {
-        PaymentHistory payment = new PaymentHistory(adminId, "subscription", amountPen, "pending", paymentMethod);
+    public static PaymentHistoryEntity createSubscriptionPayment(Long adminId, BigDecimal amountPen, Long planId, String paymentMethod) {
+        PaymentHistoryEntity payment = new PaymentHistoryEntity(adminId, "subscription", amountPen, "pending", paymentMethod);
         payment.planId = planId;
         return payment;
     }
 
-    public static PaymentHistory createTokenPayment(Long adminId, BigDecimal amountPen, Integer tokensPurchased, String paymentMethod) {
-        PaymentHistory payment = new PaymentHistory(adminId, "tokens", amountPen, "pending", paymentMethod);
+    public static PaymentHistoryEntity createTokenPayment(Long adminId, BigDecimal amountPen, Integer tokensPurchased, String paymentMethod) {
+        PaymentHistoryEntity payment = new PaymentHistoryEntity(adminId, "tokens", amountPen, "pending", paymentMethod);
         payment.tokensPurchased = tokensPurchased;
         return payment;
     }

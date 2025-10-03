@@ -1,6 +1,5 @@
 package org.sky.dto.auth;
 
-import org.sky.model.UserEntity;
 import org.sky.model.UserRole;
 
 public record LoginResponse(

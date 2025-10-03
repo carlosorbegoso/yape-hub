@@ -3,18 +3,18 @@ package org.sky.repository;
 import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @ApplicationScoped
-public class PaymentNotificationRepository implements PanacheRepository<PaymentNotification> {
+public class PaymentNotificationRepository implements PanacheRepository<PaymentNotificationEntity> {
     
     /**
      * Find pending payments for seller with pagination
      */
-    public Uni<List<PaymentNotification>> findPendingPaymentsForSeller(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
+    public Uni<List<PaymentNotificationEntity>> findPendingPaymentsForSeller(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
         return find(
             "seller.id = ?1 AND status = 'PENDING' AND createdAt BETWEEN ?2 AND ?3 ORDER BY createdAt DESC",
             sellerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
@@ -24,7 +24,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find all pending payments with pagination
      */
-    public Uni<List<PaymentNotification>> findAllPendingPayments(int page, int size, LocalDate startDate, LocalDate endDate) {
+    public Uni<List<PaymentNotificationEntity>> findAllPendingPayments(int page, int size, LocalDate startDate, LocalDate endDate) {
         return find(
             "status = 'PENDING' AND createdAt BETWEEN ?1 AND ?2 ORDER BY createdAt DESC",
             startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
@@ -54,7 +54,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Update payment status
      */
-    public Uni<PaymentNotification> updatePaymentStatus(Long paymentId, String status) {
+    public Uni<PaymentNotificationEntity> updatePaymentStatus(Long paymentId, String status) {
         return findById(paymentId)
             .chain(payment -> {
                 if (payment != null) {
@@ -72,7 +72,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments by admin ID within date range for stats (OPLIMIZADO para pocos recursos)
      */
-    public Uni<List<PaymentNotification>> findPaymentsForStatsByAdminId(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForStatsByAdminId(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
                 .page(0, 5000)  // LÍMITE CRÍTICO: máximo 5000 pagos para evitar OOM
                 .list();
@@ -81,7 +81,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments by seller ID within date range for stats
      */
-    public Uni<List<PaymentNotification>> findPaymentsForStatsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForStatsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("seller.id = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", sellerId, startDateTime, endDateTime)
                 .page(0, 5000)  // LÍMITE CRÍTICO: máximo 5000 pagos
                 .list();
@@ -90,7 +90,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments by confirmed by admin within date range
      */
-    public Uni<List<PaymentNotification>> findPaymentsConfirmedByAdmin(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsConfirmedByAdmin(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
                 .page(0, 5000)  // LÍMITE CRÍTICO
                 .list();
@@ -113,7 +113,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments for quick summary (limited result set for dashboard)
      */
-    public Uni<List<PaymentNotification>> findPaymentsForQuickSummary(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForQuickSummary(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
                 .page(0, 1000)  // LÍMITE: máximo 1000 pagos para resumen rápido
                 .list();
@@ -122,7 +122,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments for detailed analytics with pagination
      */
-    public Uni<List<PaymentNotification>> findPaymentsForAnalytics(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForAnalytics(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", adminId, startDateTime, endDateTime)
                 .page(0, 3000)  // LÍMITE: máximo 3000 pagos para análisis
                 .list();
@@ -131,7 +131,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments confirmed by specific seller
      */
-    public Uni<List<PaymentNotification>> findPaymentsConfirmedBySeller(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findPaymentsConfirmedBySeller(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
                 sellerId, startDateTime, endDateTime)
                 .page(0, 2000)  // Límite específico para vendedor
@@ -141,14 +141,14 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     /**
      * Find payments confirmed by seller within date range for financial analytics
      */
-    public Uni<List<PaymentNotification>> findByConfirmedByAndDateRange(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findByConfirmedByAndDateRange(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("confirmedBy = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
                 sellerId, startDateTime, endDateTime)
                 .page(0, 2000)  // Límite para análisis financiero
                 .list();
     }
     
-    public Uni<List<PaymentNotification>> findByAdminIdAndDateRange(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    public Uni<List<PaymentNotificationEntity>> findByAdminIdAndDateRange(Long adminId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", 
                 adminId, startDateTime, endDateTime)
                 .page(0, 5000)  // Límite para analytics

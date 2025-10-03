@@ -19,7 +19,7 @@ public class AdminEntity extends PanacheEntityBase {
     
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    public UserEntity user;
+    public UserEntityEntity user;
     
     @NotBlank
     @Column(name = "business_name", nullable = false)
@@ -61,8 +61,8 @@ public class AdminEntity extends PanacheEntityBase {
     // Constructors
     public AdminEntity() {}
     
-    public AdminEntity(UserEntity user, String businessName, BusinessType businessType, String ruc, 
-                 String contactName, String phone, String address) {
+    public AdminEntity(UserEntityEntity user, String businessName, BusinessType businessType, String ruc,
+                       String contactName, String phone, String address) {
         this.user = user;
         this.businessName = businessName;
         this.businessType = businessType;

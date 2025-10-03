@@ -1,17 +1,17 @@
 package org.sky.service.stats.calculators.strategy;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import java.util.List;
 
 /**
  * Estrategia para contar el número total de transacciones
  */
 @ApplicationScoped
-public class TransactionCountStrategy implements StatsCalculationStrategy<List<PaymentNotification>, Long> {
+public class TransactionCountStrategy implements StatsCalculationStrategy<List<PaymentNotificationEntity>, Long> {
     
     @Override
-    public Long calculate(List<PaymentNotification> payments) {
+    public Long calculate(List<PaymentNotificationEntity> payments) {
         if (payments == null) {
             return 0L;
         }
@@ -24,7 +24,7 @@ public class TransactionCountStrategy implements StatsCalculationStrategy<List<P
     }
     
     @Override
-    public boolean canHandle(List<PaymentNotification> payments) {
+    public boolean canHandle(List<PaymentNotificationEntity> payments) {
         return payments != null;
     }
 }

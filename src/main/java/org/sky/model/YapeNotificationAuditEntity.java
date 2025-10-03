@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "yape_notification_audit")
-public class YapeNotificationAudit extends PanacheEntityBase {
+public class YapeNotificationAuditEntity extends PanacheEntityBase {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   public Long id;

@@ -2,11 +2,11 @@ package org.sky.dto.notification;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import org.sky.model.Notification;
+import org.sky.model.NotificationEntity;
 
 public record SendNotificationRequest(
     @NotNull(message = "Target type is required")
-    Notification.TargetType targetType,
+    NotificationEntity.TargetType targetType,
     
     Long targetId,
     
@@ -17,7 +17,7 @@ public record SendNotificationRequest(
     String message,
     
     @NotNull(message = "Type is required")
-    Notification.NotificationType type,
+    NotificationEntity.NotificationType type,
     
     String data
 ) {}

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "affiliation_codes")
-public class AffiliationCode extends PanacheEntityBase {
+public class AffiliationCodeEntity extends PanacheEntityBase {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,9 +43,9 @@ public class AffiliationCode extends PanacheEntityBase {
     public LocalDateTime createdAt;
     
     // Constructors
-    public AffiliationCode() {}
+    public AffiliationCodeEntity() {}
     
-    public AffiliationCode(String affiliationCode, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
+    public AffiliationCodeEntity(String affiliationCode, BranchEntity branch, LocalDateTime expiresAt, Integer maxUses) {
         this.affiliationCode = affiliationCode;
         this.branch = branch;
         this.expiresAt = expiresAt;

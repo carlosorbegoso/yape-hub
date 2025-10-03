@@ -2,26 +2,10 @@ package org.sky.service.stats.calculators.seller.achievements;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
 import org.sky.dto.stats.SellerAchievements;
 import org.sky.dto.stats.Milestone;
 import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -32,8 +16,8 @@ public class SellerAchievementsCalculator {
     
     private static final String CONFIRMED_STATUS = "CONFIRMED";
     
-    public SellerAchievements calculateSellerAchievements(List<PaymentNotification> sellerPayments, 
-                                                                                   List<PaymentNotification> allPayments, 
+    public SellerAchievements calculateSellerAchievements(List<PaymentNotificationEntity> sellerPayments,
+                                                                                   List<PaymentNotificationEntity> allPayments,
                                                                                    SellerAnalyticsRequest request) {
         if (sellerPayments.isEmpty()) {
             return new SellerAchievements(0L, 0L, 0L, List.of(), List.of());
@@ -53,7 +37,7 @@ public class SellerAchievementsCalculator {
         return new SellerAchievements(streakDays, bestStreak, totalStreaks, milestones, badges);
     }
     
-    private long calculateStreakDays(List<PaymentNotification> payments, LocalDate endDate, Integer days) {
+    private long calculateStreakDays(List<PaymentNotificationEntity> payments, LocalDate endDate, Integer days) {
         if (payments.isEmpty()) return 0L;
         
         // Calcular racha actual basada en días consecutivos con ventas
@@ -69,7 +53,7 @@ public class SellerAchievementsCalculator {
         return Math.min(daysWithSales, maxDays);
     }
     
-    private long calculateBestStreak(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate) {
+    private long calculateBestStreak(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate) {
         if (payments.isEmpty()) return 0L;
         
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
@@ -83,7 +67,7 @@ public class SellerAchievementsCalculator {
         return Math.max(daysWithSales, 1L);
     }
     
-    private long calculateTotalStreaks(List<PaymentNotification> payments, LocalDate startDate, LocalDate endDate) {
+    private long calculateTotalStreaks(List<PaymentNotificationEntity> payments, LocalDate startDate, LocalDate endDate) {
         if (payments.isEmpty()) return 0L;
         
         // Contar períodos de actividad
@@ -99,7 +83,7 @@ public class SellerAchievementsCalculator {
         return Math.max(activeDays / 7, 1L);
     }
     
-    private List<Milestone> createMilestones(List<PaymentNotification> payments, String include, String metric) {
+    private List<Milestone> createMilestones(List<PaymentNotificationEntity> payments, String include, String metric) {
         var milestones = new ArrayList<Milestone>();
         
         if (shouldIncludeMetric("milestones", include)) {
@@ -159,7 +143,7 @@ public class SellerAchievementsCalculator {
         return milestones;
     }
     
-    private List<Badge> createBadges(List<PaymentNotification> payments, String include) {
+    private List<Badge> createBadges(List<PaymentNotificationEntity> payments, String include) {
         var badges = new ArrayList<Badge>();
         
         if (shouldIncludeMetric("badges", include)) {
@@ -219,7 +203,7 @@ public class SellerAchievementsCalculator {
         return badges;
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();

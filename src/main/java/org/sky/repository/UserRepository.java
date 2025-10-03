@@ -3,27 +3,27 @@ package org.sky.repository;
 import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.sky.model.UserEntity;
+import org.sky.model.UserEntityEntity;
 import org.sky.model.UserRole;
 
 @ApplicationScoped
-public class UserRepository implements PanacheRepositoryBase<UserEntity, Long> {
+public class UserRepository implements PanacheRepositoryBase<UserEntityEntity, Long> {
     
-    public Uni<UserEntity> findByEmail(String email) {
+    public Uni<UserEntityEntity> findByEmail(String email) {
         return find("email", email).firstResult();
     }
     
-    public Uni<UserEntity> findByEmailAndRole(String email, UserRole role) {
+    public Uni<UserEntityEntity> findByEmailAndRole(String email, UserRole role) {
         return find("email = ?1 and role = ?2", email, role).firstResult();
     }
     
     // Consulta para login
-    public Uni<UserEntity> findByEmailAndRoleForLogin(String email, UserRole role) {
+    public Uni<UserEntityEntity> findByEmailAndRoleForLogin(String email, UserRole role) {
         return find("email = ?1 and role = ?2", email, role).firstResult();
     }
     
     // Consulta para refreshToken
-    public Uni<UserEntity> findByIdForRefresh(Long userId) {
+    public Uni<UserEntityEntity> findByIdForRefresh(Long userId) {
         return findById(userId);
     }
 

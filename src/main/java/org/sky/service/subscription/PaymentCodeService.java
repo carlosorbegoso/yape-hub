@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.billing.PaymentCodeResponse;
 import org.sky.dto.billing.PaymentStatusResponse;
-import org.sky.model.PaymentCode;
+import org.sky.model.PaymentCodeEntity;
 import org.sky.repository.PaymentCodeRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +42,7 @@ public class PaymentCodeService {
     }
 
     @WithTransaction
-    public Uni<PaymentCode> markAsPaid(Long paymentCodeId) {
+    public Uni<PaymentCodeEntity> markAsPaid(Long paymentCodeId) {
         return paymentCodeRepository.findById(paymentCodeId)
                 .chain(code -> {
                     code.markAsPaid();
@@ -50,13 +50,13 @@ public class PaymentCodeService {
                 });
     }
 
-    public Uni<PaymentCode> findValidCode(String paymentCode) {
+    public Uni<PaymentCodeEntity> findValidCode(String paymentCode) {
         return paymentCodeRepository.findValidCode(paymentCode);
     }
 
     private Uni<PaymentCodeResponse> createPaymentCode(Long adminId, Long planId, String tokensPackage, 
                                                       String paymentCode, Double amount) {
-        PaymentCode paymentCodeEntity = new PaymentCode();
+        PaymentCodeEntity paymentCodeEntity = new PaymentCodeEntity();
         paymentCodeEntity.code = paymentCode;
         paymentCodeEntity.adminId = adminId;
         paymentCodeEntity.planId = planId;
@@ -83,7 +83,7 @@ public class PaymentCodeService {
         );
     }
 
-    private Uni<PaymentStatusResponse> processValidCode(String paymentCode, PaymentCode code) {
+    private Uni<PaymentStatusResponse> processValidCode(String paymentCode, PaymentCodeEntity code) {
         boolean isExpired = code.isExpired();
         String status = isExpired ? "expired" : code.status;
         

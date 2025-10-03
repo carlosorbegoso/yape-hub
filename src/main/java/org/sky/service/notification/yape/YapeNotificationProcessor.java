@@ -9,7 +9,7 @@ import org.sky.dto.notification.YapeNotificationRequest;
 import org.sky.dto.notification.YapeNotificationResponse;
 import org.sky.dto.payment.PaymentNotificationRequest;
 import org.sky.dto.payment.PaymentNotificationResponse;
-import org.sky.model.YapeNotificationAudit;
+import org.sky.model.YapeNotificationAuditEntity;
 import org.sky.repository.YapeNotificationAuditRepository;
 import org.sky.service.DeviceFingerprintService;
 import org.sky.service.hubnotifications.PaymentNotificationService;
@@ -39,8 +39,8 @@ public class YapeNotificationProcessor {
                 .chain(auditRecord -> validateAndProcess(request, auditRecord));
     }
 
-    private Uni<YapeNotificationAudit> createAuditRecord(YapeNotificationRequest request) {
-        YapeNotificationAudit auditRecord = new YapeNotificationAudit();
+    private Uni<YapeNotificationAuditEntity> createAuditRecord(YapeNotificationRequest request) {
+        YapeNotificationAuditEntity auditRecord = new YapeNotificationAuditEntity();
         auditRecord.adminId = request.adminId();
         auditRecord.encryptedNotification = request.encryptedNotification();
         auditRecord.deviceFingerprint = request.deviceFingerprint();
@@ -52,7 +52,7 @@ public class YapeNotificationProcessor {
     }
 
     private Uni<ApiResponse<YapeNotificationResponse>> validateAndProcess(YapeNotificationRequest request, 
-                                                                         YapeNotificationAudit auditRecord) {
+                                                                         YapeNotificationAuditEntity auditRecord) {
         return validateTimestamp(request)
                 .chain(v -> validateDeviceFingerprint(request))
                 .chain(v -> decryptNotification(request))
@@ -104,15 +104,15 @@ public class YapeNotificationProcessor {
     private Uni<ApiResponse<YapeNotificationResponse>> processPaymentAndUpdateAudit(
             YapeNotificationRequest request, 
             org.sky.dto.notification.YapeNotificationResponse decryptedResponse, 
-            YapeNotificationAudit auditRecord) {
+            YapeNotificationAuditEntity auditRecord) {
         
         return updateAuditWithDecryptedData(auditRecord, decryptedResponse)
                 .chain(updatedAudit -> processPaymentNotification(request, decryptedResponse)
                         .chain(paymentResponse -> finalizeAuditAndCreateResponse(updatedAudit, paymentResponse, decryptedResponse)));
     }
 
-    private Uni<YapeNotificationAudit> updateAuditWithDecryptedData(YapeNotificationAudit auditRecord, 
-                                                                   org.sky.dto.notification.YapeNotificationResponse decryptedResponse) {
+    private Uni<YapeNotificationAuditEntity> updateAuditWithDecryptedData(YapeNotificationAuditEntity auditRecord,
+                                                                          org.sky.dto.notification.YapeNotificationResponse decryptedResponse) {
         auditRecord.decryptionStatus = "SUCCESS";
         auditRecord.extractedAmount = decryptedResponse.amount();
         auditRecord.extractedSenderName = decryptedResponse.senderName();
@@ -138,7 +138,7 @@ public class YapeNotificationProcessor {
     }
 
     private Uni<ApiResponse<YapeNotificationResponse>> finalizeAuditAndCreateResponse(
-            YapeNotificationAudit auditRecord, 
+            YapeNotificationAuditEntity auditRecord,
             org.sky.dto.payment.PaymentNotificationResponse paymentResponse, 
             org.sky.dto.notification.YapeNotificationResponse decryptedResponse) {
         

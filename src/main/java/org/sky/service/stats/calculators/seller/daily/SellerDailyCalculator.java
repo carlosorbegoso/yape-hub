@@ -2,27 +2,8 @@ package org.sky.service.stats.calculators.seller.daily;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
-import org.sky.dto.stats.OverviewMetrics;
 import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.PerformanceMetrics;
-import org.sky.dto.stats.SellerPerformance;
-import org.sky.dto.stats.SellerGoals;
-import org.sky.dto.stats.SellerComparisons;
-import org.sky.dto.stats.ComparisonData;
-import org.sky.dto.stats.SellerTrends;
-import org.sky.dto.stats.SellerAchievements;
-import org.sky.dto.stats.Milestone;
-import org.sky.dto.stats.Badge;
-import org.sky.dto.stats.SellerInsights;
-import org.sky.dto.stats.SellerForecasting;
-import org.sky.dto.stats.TrendAnalysis;
-import org.sky.dto.stats.SellerAnalytics;
-import org.sky.dto.stats.SalesDistribution;
-import org.sky.dto.stats.TransactionPatterns;
-import org.sky.dto.stats.PerformanceIndicators;
-import org.sky.dto.stats.DailySalesData;
-import org.sky.dto.stats.SellerAnalyticsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -33,8 +14,8 @@ public class SellerDailyCalculator {
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
-    public List<DailySalesData> calculateDailySalesData(List<PaymentNotification> sellerPayments, 
-                                                                               List<PaymentNotification> allPayments,
+    public List<DailySalesData> calculateDailySalesData(List<PaymentNotificationEntity> sellerPayments,
+                                                                               List<PaymentNotificationEntity> allPayments,
                                                                                SellerAnalyticsRequest request) {
         // Usar granularity para determinar el nivel de detalle
         var granularity = request.granularity() != null ? request.granularity() : "daily";
@@ -44,8 +25,8 @@ public class SellerDailyCalculator {
                 .collect(Collectors.toList());
     }
     
-    private DailySalesData calculateDailyStatForDate(List<PaymentNotification> sellerPayments, 
-                                                                            List<PaymentNotification> allPayments,
+    private DailySalesData calculateDailyStatForDate(List<PaymentNotificationEntity> sellerPayments,
+                                                                            List<PaymentNotificationEntity> allPayments,
                                                                             LocalDate date, String granularity, String include) {
         var daySellerPayments = filterPaymentsByDate(sellerPayments, date);
         
@@ -69,25 +50,25 @@ public class SellerDailyCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByDate(List<PaymentNotification> payments, LocalDate date) {
+    private List<PaymentNotificationEntity> filterPaymentsByDate(List<PaymentNotificationEntity> payments, LocalDate date) {
         return payments.stream()
                 .filter(payment -> payment.createdAt.toLocalDate().equals(date))
                 .toList();
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
     }
     
-    private long countPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private long countPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .count();

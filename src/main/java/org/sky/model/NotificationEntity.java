@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications")
-public class Notification extends PanacheEntityBase {
+public class NotificationEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -59,9 +58,9 @@ public class Notification extends PanacheEntityBase {
     }
     
     // Constructors
-    public Notification() {}
+    public NotificationEntity() {}
     
-    public Notification(TargetType targetType, Long targetId, String title, String message, NotificationType type) {
+    public NotificationEntity(TargetType targetType, Long targetId, String title, String message, NotificationType type) {
         this.targetType = targetType;
         this.targetId = targetId;
         this.title = title;

@@ -4,15 +4,15 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SellerAnalyticsRequest;
 import org.sky.dto.stats.SellerGoals;
 
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.time.LocalDate;
 import java.util.List;
 @ApplicationScoped
 public class SellerGoalsCalculator {
     
-    public SellerGoals calculateSellerGoals(List<PaymentNotification> sellerPayments, 
-                                                                    List<PaymentNotification> allPayments, 
+    public SellerGoals calculateSellerGoals(List<PaymentNotificationEntity> sellerPayments,
+                                                                    List<PaymentNotificationEntity> allPayments,
                                                                     SellerAnalyticsRequest request) {
         var totalSales = calculateTotalSales(filterPaymentsByStatus(sellerPayments, "CONFIRMED"));
         
@@ -36,13 +36,13 @@ public class SellerGoalsCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();

@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.notification.NotificationResponse;
-import org.sky.model.Notification;
+import org.sky.model.NotificationEntity;
 import org.sky.repository.NotificationRepository;
 
 import java.time.LocalDate;
@@ -54,35 +54,35 @@ public class NotificationQueryService {
     
     private record DateRange(LocalDate startDate, LocalDate endDate) {}
 
-    private Uni<List<Notification>> getNotificationsFromRepository(String userRole, Long userId, Boolean unreadOnly, 
-                                                                   LocalDate startDate, LocalDate endDate) {
+    private Uni<List<NotificationEntity>> getNotificationsFromRepository(String userRole, Long userId, Boolean unreadOnly,
+                                                                         LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
         
         if ("ADMIN".equals(userRole)) {
             return notificationRepository.findByTargetTypeAndUserId(
-                Notification.TargetType.ADMIN, userId, unreadOnly, startDateTime, endDateTime);
+                NotificationEntity.TargetType.ADMIN, userId, unreadOnly, startDateTime, endDateTime);
         } else if ("SELLER".equals(userRole)) {
             return notificationRepository.findByTargetTypeAndUserId(
-                Notification.TargetType.SELLER, userId, unreadOnly, startDateTime, endDateTime);
+                NotificationEntity.TargetType.SELLER, userId, unreadOnly, startDateTime, endDateTime);
         } else {
             return notificationRepository.findByUserIdForBothRoles(userId, unreadOnly, startDateTime, endDateTime);
         }
     }
 
-    private List<NotificationResponse> paginateAndConvert(List<Notification> notifications, int page, int limit) {
+    private List<NotificationResponse> paginateAndConvert(List<NotificationEntity> notifications, int page, int limit) {
         int totalItems = notifications.size();
         int startIndex = (page - 1) * limit;
         int endIndex = Math.min(startIndex + limit, totalItems);
 
-        List<Notification> paginatedNotifications = notifications.subList(startIndex, endIndex);
+        List<NotificationEntity> paginatedNotifications = notifications.subList(startIndex, endIndex);
 
         return paginatedNotifications.stream()
                 .map(this::convertToResponse)
                 .toList();
     }
 
-    private NotificationResponse convertToResponse(Notification notification) {
+    private NotificationResponse convertToResponse(NotificationEntity notification) {
         return new NotificationResponse(
             notification.id, notification.targetType, notification.targetId,
             notification.title, notification.message, notification.type,

@@ -2,7 +2,7 @@ package org.sky.service.stats.calculators.template;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.service.stats.calculators.strategy.*;
 
 import java.time.LocalDate;
@@ -42,12 +42,12 @@ public abstract class BaseStatsCalculator<T, R> {
     /**
      * Template Method que define el algoritmo común para calcular estadísticas
      */
-    public final R calculateStats(List<PaymentNotification> payments, T request) {
+    public final R calculateStats(List<PaymentNotificationEntity> payments, T request) {
         // 1. Validar entrada
         validateInput(payments, request);
         
         // 2. Filtrar pagos si es necesario
-        List<PaymentNotification> filteredPayments = filterPayments(payments, request);
+        List<PaymentNotificationEntity> filteredPayments = filterPayments(payments, request);
         
         // 3. Calcular métricas básicas usando estrategias
         Double totalSales = salesStrategy.calculate(filteredPayments);
@@ -66,29 +66,29 @@ public abstract class BaseStatsCalculator<T, R> {
     /**
      * Valida la entrada de datos (implementación específica por calculadora)
      */
-    protected abstract void validateInput(List<PaymentNotification> payments, T request);
+    protected abstract void validateInput(List<PaymentNotificationEntity> payments, T request);
     
     /**
      * Filtra los pagos según criterios específicos (implementación específica por calculadora)
      */
-    protected abstract List<PaymentNotification> filterPayments(List<PaymentNotification> payments, T request);
+    protected abstract List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, T request);
     
     /**
      * Calcula métricas específicas de cada tipo de calculadora
      */
-    protected abstract Object calculateSpecificMetrics(List<PaymentNotification> payments, T request);
+    protected abstract Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, T request);
     
     /**
      * Construye la respuesta final (implementación específica por calculadora)
      */
-    protected abstract R buildResponse(Double totalSales, Long totalTransactions, 
-                                     Double averageTransactionValue, Double claimRate,
-                                     Object specificMetrics, List<PaymentNotification> payments, T request);
+    protected abstract R buildResponse(Double totalSales, Long totalTransactions,
+                                       Double averageTransactionValue, Double claimRate,
+                                       Object specificMetrics, List<PaymentNotificationEntity> payments, T request);
     
     /**
      * Método helper para contar pagos por estado
      */
-    protected Long countPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    protected Long countPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return paymentStatusCountStrategy.calculate(
             new PaymentStatusInput(payments, status)
         );

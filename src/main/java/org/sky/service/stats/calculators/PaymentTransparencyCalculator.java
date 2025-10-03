@@ -5,7 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.PaymentTransparencyRequest;
 import org.sky.dto.stats.PaymentTransparencyResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
@@ -47,7 +47,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     }
 
     @Override
-    protected void validateInput(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -55,7 +55,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
         // Para transparency, filtramos solo pagos confirmados
         return payments.stream()
                 .filter(payment -> "CONFIRMED".equals(payment.status))
@@ -63,7 +63,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
         // Métricas específicas para transparency: fees, taxes, comisiones
         var totalRevenue = salesStrategy.calculate(payments);
         
@@ -97,7 +97,7 @@ public class PaymentTransparencyCalculator extends BaseStatsCalculator<org.sky.s
     @Override
     protected PaymentTransparencyResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                       Double averageTransactionValue, Double claimRate,
-                                                      Object specificMetrics, List<PaymentNotification> payments, 
+                                                      Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                       org.sky.service.stats.calculators.template.PaymentTransparencyRequest request) {
         var transparencyMetrics = (TransparencySpecificMetrics) specificMetrics;
         

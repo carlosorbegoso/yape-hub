@@ -1,8 +1,8 @@
 package org.sky.service.billing;
 
 import org.sky.dto.ApiResponse;
-import org.sky.model.SubscriptionPlan;
-import org.sky.model.TokenPackage;
+import org.sky.model.SubscriptionPlanEntity;
+import org.sky.model.TokenPackageEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -10,7 +10,7 @@ import java.util.Map;
 @jakarta.enterprise.context.ApplicationScoped
 public class BillingResponseBuilder {
 
-    public ApiResponse<List<Map<String, Object>>> buildPlansResponse(List<SubscriptionPlan> plans) {
+    public ApiResponse<List<Map<String, Object>>> buildPlansResponse(List<SubscriptionPlanEntity> plans) {
         List<Map<String, Object>> planList = plans.stream()
                 .map(this::buildPlanMap)
                 .toList();
@@ -18,7 +18,7 @@ public class BillingResponseBuilder {
             return ApiResponse.success("Plans retrieved successfully", planList);
     }
 
-    public ApiResponse<List<Map<String, Object>>> buildTokenPackagesResponse(List<TokenPackage> packages) {
+    public ApiResponse<List<Map<String, Object>>> buildTokenPackagesResponse(List<TokenPackageEntity> packages) {
         List<Map<String, Object>> tokenPackages = packages.stream()
                 .map(this::buildTokenPackageMap)
                 .toList();
@@ -26,7 +26,7 @@ public class BillingResponseBuilder {
             return ApiResponse.success("Token packages retrieved successfully", tokenPackages);
     }
 
-    private Map<String, Object> buildPlanMap(SubscriptionPlan plan) {
+    private Map<String, Object> buildPlanMap(SubscriptionPlanEntity plan) {
         Map<String, Object> planMap = new java.util.HashMap<>();
         planMap.put("id", plan.id);
         planMap.put("name", plan.name);
@@ -43,7 +43,7 @@ public class BillingResponseBuilder {
         return planMap;
     }
 
-    private Map<String, Object> buildTokenPackageMap(TokenPackage pkg) {
+    private Map<String, Object> buildTokenPackageMap(TokenPackageEntity pkg) {
         Map<String, Object> packageMap = new java.util.HashMap<>();
         packageMap.put("id", pkg.packageId);
         packageMap.put("name", pkg.name);

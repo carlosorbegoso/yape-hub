@@ -1,6 +1,5 @@
 package org.sky.model;
 
-import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -10,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "admin_tokens")
-public class AdminTokens extends PanacheEntityBase {
+public class AdminTokensEntity extends PanacheEntityBase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
@@ -39,9 +38,9 @@ public class AdminTokens extends PanacheEntityBase {
     public LocalDateTime updatedAt;
 
     // Constructores
-    public AdminTokens() {}
+    public AdminTokensEntity() {}
 
-    public AdminTokens(Long adminId, Integer tokensAvailable, LocalDate lastResetDate) {
+    public AdminTokensEntity(Long adminId, Integer tokensAvailable, LocalDate lastResetDate) {
         this.adminId = adminId;
         this.tokensAvailable = tokensAvailable;
         this.lastResetDate = lastResetDate;

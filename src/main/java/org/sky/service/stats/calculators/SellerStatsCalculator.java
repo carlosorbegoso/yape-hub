@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.SellerStatsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
@@ -38,7 +38,7 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, SellerStatsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, SellerStatsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -46,7 +46,7 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, SellerStatsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, SellerStatsRequest request) {
         // Filtrar pagos por vendedor específico
         return payments.stream()
                 .filter(payment -> request.sellerId().equals(payment.confirmedBy))
@@ -54,7 +54,7 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, SellerStatsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, SellerStatsRequest request) {
         // Métricas específicas para seller: estadísticas diarias
         return new SellerSpecificMetrics(
             calculateSellerDailyStats(payments, request.startDate(), request.endDate())
@@ -64,7 +64,7 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
     @Override
     protected SellerStatsResponse buildResponse(Double totalSales, Long totalTransactions, 
                                               Double averageTransactionValue, Double claimRate,
-                                              Object specificMetrics, List<PaymentNotification> payments, 
+                                              Object specificMetrics, List<PaymentNotificationEntity> payments,
                                               SellerStatsRequest request) {
         var sellerMetrics = (SellerSpecificMetrics) specificMetrics;
         
@@ -92,14 +92,14 @@ public class SellerStatsCalculator extends BaseStatsCalculator<SellerStatsReques
         );
     }
     
-    private List<SellerStatsResponse.DailyStats> calculateSellerDailyStats(List<PaymentNotification> sellerPayments,
+    private List<SellerStatsResponse.DailyStats> calculateSellerDailyStats(List<PaymentNotificationEntity> sellerPayments,
                                                                           LocalDate startDate, LocalDate endDate) {
         return startDate.datesUntil(endDate.plusDays(1))
                 .map(date -> calculateDailyStatForDate(sellerPayments, date))
                 .toList();
     }
     
-    private SellerStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotification> sellerPayments,
+    private SellerStatsResponse.DailyStats calculateDailyStatForDate(List<PaymentNotificationEntity> sellerPayments,
                                                                     LocalDate date) {
         var daySellerPayments = sellerPayments.stream()
                 .filter(payment -> payment.createdAt.toLocalDate().equals(date))

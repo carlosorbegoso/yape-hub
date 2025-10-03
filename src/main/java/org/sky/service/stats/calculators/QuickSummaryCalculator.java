@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.QuickSummaryResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.service.stats.calculators.template.BaseStatsCalculator;
 import org.sky.service.stats.calculators.template.AdminStatsRequest;
@@ -35,7 +35,7 @@ public class QuickSummaryCalculator extends BaseStatsCalculator<AdminStatsReques
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -43,13 +43,13 @@ public class QuickSummaryCalculator extends BaseStatsCalculator<AdminStatsReques
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         // Para quick summary, no filtramos
         return payments;
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, AdminStatsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, AdminStatsRequest request) {
         // Métricas específicas para quick summary: tiempos de confirmación
         var confirmedPayments = payments.stream()
                 .filter(payment -> CONFIRMED_STATUS.equals(payment.status))
@@ -68,7 +68,7 @@ public class QuickSummaryCalculator extends BaseStatsCalculator<AdminStatsReques
     @Override
     protected QuickSummaryResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                Double averageTransactionValue, Double claimRate,
-                                               Object specificMetrics, List<PaymentNotification> payments, 
+                                               Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                AdminStatsRequest request) {
         var quickMetrics = (QuickSummarySpecificMetrics) specificMetrics;
         
@@ -80,7 +80,7 @@ public class QuickSummaryCalculator extends BaseStatsCalculator<AdminStatsReques
         );
     }
     
-    private double calculateAverageConfirmationTime(List<PaymentNotification> confirmedPayments) {
+    private double calculateAverageConfirmationTime(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .filter(payment -> payment.confirmedAt != null)
                 .mapToDouble(payment -> calculateConfirmationTimeInMinutes(payment.createdAt, payment.confirmedAt))

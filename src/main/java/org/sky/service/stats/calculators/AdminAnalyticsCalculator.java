@@ -4,7 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.stats.AnalyticsSummaryResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.service.stats.calculators.admin.overview.AdminOverviewCalculator;
@@ -66,7 +66,7 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     }
     
     @Override
-    protected void validateInput(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected void validateInput(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
         validateDateRange(request.startDate(), request.endDate());
         if (payments == null) {
             throw new IllegalArgumentException("Los pagos no pueden ser null");
@@ -74,13 +74,13 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     }
     
     @Override
-    protected List<PaymentNotification> filterPayments(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected List<PaymentNotificationEntity> filterPayments(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
         // Para admin analytics, no filtramos por vendedor específico
         return payments;
     }
     
     @Override
-    protected Object calculateSpecificMetrics(List<PaymentNotification> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
+    protected Object calculateSpecificMetrics(List<PaymentNotificationEntity> payments, org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
         // Calcular métricas específicas usando los calculadores inyectados
         var overview = overviewCalculator.calculateOverviewMetrics(payments, request.startDate(), request.endDate());
         var dailySales = salesCalculator.calculateDailySalesData(payments, request.startDate(), request.endDate());
@@ -97,7 +97,7 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     @Override
     protected AnalyticsSummaryResponse buildResponse(Double totalSales, Long totalTransactions, 
                                                    Double averageTransactionValue, Double claimRate,
-                                                   Object specificMetrics, List<PaymentNotification> payments, 
+                                                   Object specificMetrics, List<PaymentNotificationEntity> payments,
                                                    org.sky.service.stats.calculators.template.AdminAnalyticsRequest request) {
         // Este método ya no se usa en el flujo reactivo
         throw new UnsupportedOperationException("Use buildResponseReactive instead");
@@ -106,7 +106,7 @@ public class AdminAnalyticsCalculator extends BaseStatsCalculator<org.sky.servic
     /**
      * Método reactivo para construir la respuesta sin bloqueo
      */
-    private Uni<AnalyticsSummaryResponse> buildResponseReactive(List<PaymentNotification> payments, 
+    private Uni<AnalyticsSummaryResponse> buildResponseReactive(List<PaymentNotificationEntity> payments,
                                                                org.sky.service.stats.calculators.template.AdminAnalyticsRequest request,
                                                                List<org.sky.model.SellerEntity> sellers) {
         // Calcular métricas específicas usando los calculadores

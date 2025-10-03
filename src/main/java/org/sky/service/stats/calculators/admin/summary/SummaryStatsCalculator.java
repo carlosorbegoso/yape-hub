@@ -2,7 +2,7 @@ package org.sky.service.stats.calculators.admin.summary;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.dto.stats.SalesStatsResponse;
-import org.sky.model.PaymentNotification;
+import org.sky.model.PaymentNotificationEntity;
 
 import java.util.List;
 @ApplicationScoped
@@ -12,7 +12,7 @@ public class SummaryStatsCalculator {
     private static final String PENDING_STATUS = "PENDING";
     private static final String REJECTED_BY_SELLER_STATUS = "REJECTED_BY_SELLER";
     
-    public SalesStatsResponse.SummaryStats calculateSummaryStats(List<PaymentNotification> payments) {
+    public SalesStatsResponse.SummaryStats calculateSummaryStats(List<PaymentNotificationEntity> payments) {
         var confirmedPayments = filterPaymentsByStatus(payments, CONFIRMED_STATUS);
         
         var totalSales = calculateTotalSales(confirmedPayments);
@@ -28,13 +28,13 @@ public class SummaryStatsCalculator {
         );
     }
     
-    private List<PaymentNotification> filterPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private List<PaymentNotificationEntity> filterPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .toList();
     }
     
-    private double calculateTotalSales(List<PaymentNotification> confirmedPayments) {
+    private double calculateTotalSales(List<PaymentNotificationEntity> confirmedPayments) {
         return confirmedPayments.stream()
                 .mapToDouble(payment -> payment.amount)
                 .sum();
@@ -44,7 +44,7 @@ public class SummaryStatsCalculator {
         return totalTransactions > 0 ? totalSales / totalTransactions : 0.0;
     }
     
-    private long countPaymentsByStatus(List<PaymentNotification> payments, String status) {
+    private long countPaymentsByStatus(List<PaymentNotificationEntity> payments, String status) {
         return payments.stream()
                 .filter(payment -> status.equals(payment.status))
                 .count();
