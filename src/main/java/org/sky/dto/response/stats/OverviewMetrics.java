@@ -7,4 +7,8 @@ public record OverviewMetrics(
     Double salesGrowth,
     Double transactionGrowth,
     Double averageGrowth
-) {}
+) {
+    public static OverviewMetrics empty() {
+        return new OverviewMetrics(0.0, 0L, 0.0, 0.0, 0.0, 0.0);
+    }
+}

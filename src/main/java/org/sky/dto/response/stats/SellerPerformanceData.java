@@ -1,8 +1,8 @@
-package org.sky.dto.response.seller;
+package org.sky.dto.response.stats;
 
 import java.util.List;
 
-public record SellerPerformance(
+public record SellerPerformanceData(
     String bestDay,
     String worstDay,
     Double averageDailySales,
@@ -12,7 +12,7 @@ public record SellerPerformance(
     Double efficiencyRate,
     Double responseTime
 ) {
-    public static SellerPerformance empty() {
-        return new SellerPerformance("", "", 0.0, 0.0, List.of(), 0.0, 0.0, 0.0);
+    public static SellerPerformanceData empty() {
+        return new SellerPerformanceData("", "", 0.0, 0.0, List.of(), 0.0, 0.0, 0.0);
     }
 }

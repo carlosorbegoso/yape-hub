@@ -5,4 +5,8 @@ public record ComplianceStatus(
     String auditTrail,
     String backupStatus,
     String lastAudit
-) {}
+) {
+    public static ComplianceStatus empty() {
+        return new ComplianceStatus("", "", "", "");
+    }
+}

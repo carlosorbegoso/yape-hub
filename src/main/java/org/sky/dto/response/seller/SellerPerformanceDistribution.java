@@ -5,4 +5,8 @@ public record SellerPerformanceDistribution(
     Long good,
     Long average,
     Long poor
-) {}
+) {
+    public static SellerPerformanceDistribution empty() {
+        return new SellerPerformanceDistribution(0L, 0L, 0L, 0L);
+    }
+}

@@ -6,4 +6,8 @@ public record SalesDistribution(
     Double morning,
     Double afternoon,
     Double evening
-) {}
+) {
+    public static SalesDistribution empty() {
+        return new SalesDistribution(0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+}

@@ -1,6 +1,7 @@
 package org.sky.dto.response.admin;
 
 import org.sky.dto.response.common.BranchInfo;
+import org.sky.model.AdminEntity;
 import org.sky.model.BusinessType;
 
 import java.time.LocalDateTime;
@@ -18,4 +19,80 @@ public record AdminProfileResponse(
     Boolean isVerified,
     LocalDateTime createdAt,
     List<BranchInfo> branches
-) {}
+) {
+    // Constructor compacto - validaciones y normalizaciones
+    public AdminProfileResponse {
+        // Validaciones
+        if (id == null) {
+            throw new IllegalArgumentException("Admin ID cannot be null");
+        }
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be null or empty");
+        }
+        if (businessName == null || businessName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Business name cannot be null or empty");
+        }
+        if (businessType == null) {
+            throw new IllegalArgumentException("Business type cannot be null");
+        }
+        
+        // Normalizaciones
+        email = email.trim().toLowerCase();
+        businessName = businessName.trim();
+        ruc = ruc != null ? ruc.trim() : null;
+        phone = phone != null ? phone.trim() : null;
+        address = address != null ? address.trim() : null;
+        contactName = contactName != null ? contactName.trim() : null;
+        
+        // Valores por defecto
+        if (isVerified == null) isVerified = false;
+        if (branches == null) branches = List.of();
+        if (createdAt == null) createdAt = LocalDateTime.now();
+    }
+    
+    // Constructor desde AdminEntity
+    public static AdminProfileResponse fromAdmin(org.sky.model.AdminEntity admin) {
+        if (admin == null || admin.user == null) {
+            throw new IllegalArgumentException("Admin and user cannot be null");
+        }
+        
+        return new AdminProfileResponse(
+            admin.id,
+            admin.user.email,
+            admin.businessName,
+            admin.businessType,
+            admin.ruc,
+            null, // phone no está en UserEntityEntity
+            admin.address,
+            admin.contactName,
+            admin.user.isVerified,
+            admin.createdAt,
+            admin.branches != null ? admin.branches.stream()
+                .map(branch -> new BranchInfo(
+                    branch.id, branch.name, branch.address, null, // phone no está en BranchEntity
+                    branch.isActive, branch.createdAt))
+                .toList() : List.of()
+        );
+    }
+    
+    // Constructor con branches personalizadas
+    public static AdminProfileResponse withBranches(AdminEntity admin, List<BranchInfo> customBranches) {
+        if (admin == null || admin.user == null) {
+            throw new IllegalArgumentException("Admin and user cannot be null");
+        }
+        
+        return new AdminProfileResponse(
+            admin.id,
+            admin.user.email,
+            admin.businessName,
+            admin.businessType,
+            admin.ruc,
+            null, // phone no está en UserEntityEntity
+            admin.address,
+            admin.contactName,
+            admin.user.isVerified,
+            admin.createdAt,
+            customBranches != null ? customBranches : List.of()
+        );
+    }
+}

@@ -5,4 +5,8 @@ public record BranchSummary(
     Double totalSales,
     Long totalTransactions,
     Double performanceScore
-) {}
+) {
+    public static BranchSummary empty() {
+        return new BranchSummary("", 0.0, 0L, 0.0);
+    }
+}

@@ -8,4 +8,8 @@ public record SellerTrends(
     String trendDirection,
     Double volatility,
     String seasonality
-) {}
+) {
+    public static SellerTrends empty() {
+        return new SellerTrends("", "", 0.0, "", "", 0.0, "");
+    }
+}

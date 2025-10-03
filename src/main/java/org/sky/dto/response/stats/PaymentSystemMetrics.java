@@ -6,4 +6,8 @@ public record PaymentSystemMetrics(
     Long rejectedPayments,
     Double averageConfirmationTime,
     Double paymentSuccessRate
-) {}
+) {
+    public static PaymentSystemMetrics empty() {
+        return new PaymentSystemMetrics(0L, 0L, 0L, 0L, 0.0, 0.0);
+    }
+}

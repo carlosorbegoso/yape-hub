@@ -9,4 +9,8 @@ public record SellerGoals(
     Double dailyProgress,
     Double weeklyProgress,
     Double monthlyProgress
-) {}
+) {
+    public static SellerGoals empty() {
+        return new SellerGoals(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+}

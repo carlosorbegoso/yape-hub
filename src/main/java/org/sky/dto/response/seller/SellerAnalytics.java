@@ -8,4 +8,12 @@ public record SellerAnalytics(
     SalesDistribution salesDistribution,
     TransactionPatterns transactionPatterns,
     PerformanceIndicators performanceIndicators
-) {}
+) {
+    public static SellerAnalytics empty() {
+        return new SellerAnalytics(
+            SalesDistribution.empty(),
+            TransactionPatterns.empty(),
+            PerformanceIndicators.empty()
+        );
+    }
+}

@@ -96,10 +96,16 @@ public class AuthController {
   @POST
     @Path("/forgot-password")
     @Operation(summary = "Forgot password", description = "Send password reset email")
-    public Response forgotPassword(@QueryParam("email") String email) {
-        // TODO: Implement forgot password functionality
-        ApiResponse<String> response = ApiResponse.success("Password reset email sent");
-        return Response.ok(response).build();
+    public Uni<Response> forgotPassword(@QueryParam("email") String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return Uni.createFrom().item(Response.status(400)
+                .entity(ApiResponse.error("Email is required")).build());
+        }
+        
+        return authService.forgotPassword(email.trim())
+            .map(result -> Response.ok(ApiResponse.success("Password reset email sent", result)).build())
+            .onFailure().recoverWithItem(throwable -> Response.status(400)
+                .entity(ApiResponse.error("Failed to send password reset email: " + throwable.getMessage())).build());
     }
     
     @POST

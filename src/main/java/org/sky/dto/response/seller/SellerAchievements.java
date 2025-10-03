@@ -8,4 +8,8 @@ public record SellerAchievements(
     Long totalStreaks,
     List<Milestone> milestones,
     List<Badge> badges
-) {}
+) {
+    public static SellerAchievements empty() {
+        return new SellerAchievements(0L, 0L, 0L, List.of(), List.of());
+    }
+}

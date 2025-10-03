@@ -7,4 +7,13 @@ public record SellerComparisons(
     ComparisonData vsPreviousMonth,
     ComparisonData vsPersonalBest,
     ComparisonData vsAverage
-) {}
+) {
+    public static SellerComparisons empty() {
+        return new SellerComparisons(
+            ComparisonData.empty(),
+            ComparisonData.empty(),
+            ComparisonData.empty(),
+            ComparisonData.empty()
+        );
+    }
+}

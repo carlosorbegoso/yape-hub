@@ -44,43 +44,16 @@ public class LoginResponseBuilder {
 
     private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(JwtTokenService.TokenData tokenData) {
         return adminRepository.findByUserId(tokenData.user().id)
-                .map(admin -> {
-                    Long businessId = admin != null ? admin.id : null;
-                    String businessName = admin != null ? admin.businessName : null;
-                    
-                    UserInfo userInfo = new UserInfo(
-                        tokenData.user().id, tokenData.user().email, businessName, businessId, tokenData.user().role.toString(), tokenData.user().isVerified
-                    );
-                    
-                    LoginResponse response = new LoginResponse(
-                        tokenData.accessToken(), tokenData.refreshToken(), 3600L, userInfo
-                    );
-                    
-                    return ApiResponse.success("Login exitoso", response);
-                });
+                .map(UserInfo::fromAdmin)
+                .map(userInfo -> ApiResponse.success("Login exitoso", 
+                    LoginResponse.create(tokenData.accessToken(), tokenData.refreshToken(), userInfo)));
     }
 
     private Uni<ApiResponse<LoginResponse>> buildSellerLoginResponse(JwtTokenService.TokenData tokenData) {
         return sellerRepository.findByUserId(tokenData.user().id)
-                .map(seller -> {
-                    Long businessId = null;
-                    String businessName = null;
-                    
-                    if (seller != null && seller.branch != null && seller.branch.admin != null) {
-                        businessId = seller.branch.admin.id;
-                        businessName = seller.branch.admin.businessName;
-                    }
-                    
-                    UserInfo userInfo = new UserInfo(
-                        tokenData.user().id, tokenData.user().email, businessName, businessId, tokenData.user().role.toString(), tokenData.user().isVerified
-                    );
-                    
-                    LoginResponse response = new LoginResponse(
-                        tokenData.accessToken(), tokenData.refreshToken(), 3600L, userInfo
-                    );
-                    
-                    return ApiResponse.success("Login exitoso", response);
-                });
+                .map(UserInfo::fromSeller)
+                .map(userInfo -> ApiResponse.success("Login exitoso", 
+                    LoginResponse.create(tokenData.accessToken(), tokenData.refreshToken(), userInfo)));
     }
 
 }

@@ -9,4 +9,8 @@ public record SellerForecasting(
     List<PredictedSale> predictedSales,
     TrendAnalysis trendAnalysis,
     List<String> recommendations
-) {}
+) {
+    public static SellerForecasting empty() {
+        return new SellerForecasting(List.of(), TrendAnalysis.empty(), List.of());
+    }
+}

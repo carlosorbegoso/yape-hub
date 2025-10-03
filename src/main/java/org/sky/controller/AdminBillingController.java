@@ -9,9 +9,11 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.sky.dto.response.ApiResponse;
+import org.sky.dto.response.stats.AdminAnalyticsResponse;
 import org.sky.repository.ManualPaymentRepository;
 import org.sky.repository.PaymentCodeRepository;
 import org.sky.service.security.SecurityService;
+import org.sky.service.StatsService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -32,6 +34,9 @@ public class AdminBillingController {
 
     @Inject
     SecurityService securityService;
+    
+    @Inject
+    StatsService statsService;
     
 
     @GET
@@ -130,11 +135,23 @@ public class AdminBillingController {
                 });
     }
 
-    private Uni<ApiResponse<Object>> getAdminStats(Long adminId, String include, LocalDate startDate, LocalDate endDate) {
+    private Uni<ApiResponse<AdminAnalyticsResponse>> getAdminStats(Long adminId, String include, LocalDate startDate, LocalDate endDate) {
         Log.info("📈 AdminBillingController.getAdminStats()");
         
-        // TODO: Implementar estadísticas avanzadas
-        return Uni.createFrom().item(ApiResponse.success("Estadísticas obtenidas exitosamente", "Stats disponibles"));
+        return statsService.getAdminAnalytics(adminId, startDate, endDate)
+            .map(analytics -> {
+                if ("basic".equals(include)) {
+                    return ApiResponse.success("Estadísticas básicas obtenidas", analytics);
+                } else if ("detailed".equals(include)) {
+                    return ApiResponse.success("Estadísticas detalladas obtenidas", analytics);
+                } else {
+                    return ApiResponse.success("Estadísticas completas obtenidas", analytics);
+                }
+            })
+            .onFailure().recoverWithItem(throwable -> {
+                Log.error("Error obteniendo estadísticas: " + throwable.getMessage());
+                return ApiResponse.error("Error obteniendo estadísticas: " + throwable.getMessage());
+            });
     }
 
     @GET

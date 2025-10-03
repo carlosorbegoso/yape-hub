@@ -14,6 +14,14 @@ public class BranchRepository implements PanacheRepository<BranchEntity> {
         return find("admin.id = ?1 ORDER BY id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
     
+    public Uni<List<BranchEntity>> findActiveBranchesByAdminId(Long adminId) {
+        return find("admin.id = ?1 and isActive = true ORDER BY id", adminId).range(0, 100).list(); // LIMIT 100
+    }
+    
+    public Uni<List<BranchEntity>> findAllWithLimit(int limit) {
+        return findAll().range(0, Math.min(limit, 500)).list(); // MAX 500
+    }
+    
     public Uni<BranchEntity> findByCode(String code) {
         return find("code", code).firstResult();
     }

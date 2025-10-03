@@ -6,4 +6,8 @@ public record CostAnalysis(
     Double systemMaintenance,
     Double netProfit,
     Double profitMargin
-) {}
+) {
+    public static CostAnalysis empty() {
+        return new CostAnalysis(0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+}

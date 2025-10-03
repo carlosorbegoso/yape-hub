@@ -8,4 +8,8 @@ public record SellerOverview(
     Long sellersWithZeroSales,
     Long topPerformers,
     Long underPerformers
-) {}
+) {
+    public static SellerOverview empty() {
+        return new SellerOverview(0L, 0L, 0L, 0L, 0L, 0L, 0L);
+    }
+}

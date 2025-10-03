@@ -6,7 +6,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.PaymentNotificationEntity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @ApplicationScoped
 public class PaymentNotificationRepository implements PanacheRepository<PaymentNotificationEntity> {
@@ -163,7 +166,41 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
                 adminId, status, startDateTime, endDateTime);
     }
     
-    // TODO: Implement getPaymentTrends with simplified query approach
+    /**
+     * Obtiene tendencias de pagos por día para un admin específico
+     * Implementación simplificada para eficiencia de recursos
+     */
+    public Uni<List<PaymentTrendResult>> getPaymentTrends(Long adminId, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        
+        return find("adminId = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY DATE(createdAt), status", 
+                adminId, startDateTime, endDateTime)
+                .range(0, 1000) // LIMIT para eficiencia
+                .list()
+                .map(payments -> {
+                    // Agrupar por fecha y calcular estadísticas
+                    Map<LocalDate, PaymentTrendResult> trends = new HashMap<>();
+                    
+                    for (PaymentNotificationEntity payment : payments) {
+                        LocalDate date = payment.createdAt.toLocalDate();
+                        
+                        PaymentTrendResult existing = trends.get(date);
+                        if (existing == null) {
+                            trends.put(date, new PaymentTrendResult(date, 1, 
+                                "CONFIRMED".equals(payment.status) ? payment.amount.doubleValue() : 0.0,
+                                "CONFIRMED".equals(payment.status) ? 1 : 0));
+                        } else {
+                            trends.put(date, new PaymentTrendResult(date, 
+                                existing.totalCount() + 1,
+                                existing.confirmedAmount() + ("CONFIRMED".equals(payment.status) ? payment.amount.doubleValue() : 0.0),
+                                existing.confirmedCount() + ("CONFIRMED".equals(payment.status) ? 1 : 0)));
+                        }
+                    }
+                    
+                    return new ArrayList<>(trends.values());
+                });
+    }
     
     /**
      * Result records

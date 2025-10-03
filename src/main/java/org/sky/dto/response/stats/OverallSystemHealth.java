@@ -7,4 +7,8 @@ public record OverallSystemHealth(
     Double averageResponseTime,
     Double errorRate,
     Long activeUsers
-) {}
+) {
+    public static OverallSystemHealth empty() {
+        return new OverallSystemHealth(0.0, 0L, 0.0, 0.0, 0.0, 0L);
+    }
+}

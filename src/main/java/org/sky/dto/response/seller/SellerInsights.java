@@ -9,4 +9,8 @@ public record SellerInsights(
     Double newCustomerRate,
     Double conversionRate,
     Double satisfactionScore
-) {}
+) {
+    public static SellerInsights empty() {
+        return new SellerInsights("", "", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    }
+}

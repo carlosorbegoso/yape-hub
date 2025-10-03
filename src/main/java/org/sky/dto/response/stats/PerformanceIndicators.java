@@ -5,4 +5,8 @@ public record PerformanceIndicators(
     Double transactionVelocity,
     Double efficiencyIndex,
     Double consistencyIndex
-) {}
+) {
+    public static PerformanceIndicators empty() {
+        return new PerformanceIndicators(0.0, 0.0, 0.0, 0.0);
+    }
+}

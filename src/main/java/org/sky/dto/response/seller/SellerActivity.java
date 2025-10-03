@@ -6,4 +6,8 @@ public record SellerActivity(
     Long monthlyActiveSellers,
     Double averageSessionDuration,
     Double averageTransactionsPerSeller
-) {}
+) {
+    public static SellerActivity empty() {
+        return new SellerActivity(0L, 0L, 0L, 0.0, 0.0);
+    }
+}

@@ -20,4 +20,34 @@ public record PaymentNotificationRequest(
     
     @NotBlank(message = "Deduplication hash es requerido")
     String deduplicationHash
-) {}
+) {
+    // Constructor compacto - validaciones y normalizaciones
+    public PaymentNotificationRequest {
+        // Validaciones
+        if (adminId == null) {
+            throw new IllegalArgumentException("AdminId es requerido");
+        }
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Monto debe ser positivo");
+        }
+        if (senderName == null || senderName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nombre del remitente es requerido");
+        }
+        if (yapeCode == null || yapeCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Código de Yape es requerido");
+        }
+        if (deduplicationHash == null || deduplicationHash.trim().isEmpty()) {
+            throw new IllegalArgumentException("Deduplication hash es requerido");
+        }
+        
+        // Normalizaciones
+        senderName = senderName.trim();
+        yapeCode = yapeCode.trim();
+        deduplicationHash = deduplicationHash.trim();
+    }
+    
+    // Constructor de conveniencia
+    public static PaymentNotificationRequest create(Long adminId, Double amount, String senderName, String yapeCode, String deduplicationHash) {
+        return new PaymentNotificationRequest(adminId, amount, senderName, yapeCode, deduplicationHash);
+    }
+}

@@ -5,4 +5,8 @@ public record TrendAnalysis(
     Double slope,
     Double r2,
     Double forecastAccuracy
-) {}
+) {
+    public static TrendAnalysis empty() {
+        return new TrendAnalysis("", 0.0, 0.0, 0.0);
+    }
+}

@@ -5,4 +5,8 @@ public record SecurityMetrics(
     Long suspiciousActivities,
     Long dataBreaches,
     Double securityScore
-) {}
+) {
+    public static SecurityMetrics empty() {
+        return new SecurityMetrics(0L, 0L, 0L, 0.0);
+    }
+}

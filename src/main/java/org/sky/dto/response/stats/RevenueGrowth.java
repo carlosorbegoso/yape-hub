@@ -5,4 +5,8 @@ public record RevenueGrowth(
     Double weekly,
     Double monthly,
     Double yearly
-) {}
+) {
+    public static RevenueGrowth empty() {
+        return new RevenueGrowth(0.0, 0.0, 0.0, 0.0);
+    }
+}

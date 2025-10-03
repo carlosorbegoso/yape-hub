@@ -15,5 +15,13 @@ public class AdminRepository implements PanacheRepository<AdminEntity> {
     public Uni<AdminEntity> findByRuc(String ruc) {
         return find("ruc", ruc).firstResult();
     }
+    
+    public Uni<java.util.List<AdminEntity>> findAllWithLimit(int limit) {
+        return findAll().range(0, Math.min(limit, 1000)).list(); // MAX 1000
+    }
+    
+    public Uni<java.util.List<AdminEntity>> findActiveAdmins() {
+        return find("user.isActive = true").range(0, 500).list(); // LIMIT 500
+    }
 
 }
