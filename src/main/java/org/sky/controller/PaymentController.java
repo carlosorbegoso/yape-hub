@@ -66,15 +66,15 @@ public class PaymentController {
     
     @GET
     @Path("/pending")
-    @Operation(summary = "Get pending payments for seller", 
-               description = "Get all pending payments for a specific seller with pagination. Admins can view payments from their sellers.")
+    @Operation(summary = "Get pending payments based on user role", 
+               description = "Get pending payments filtered by user role: Admin sees all payments from their sellers, Seller sees only their own payments.")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Pending payments retrieved successfully"),
         @APIResponse(responseCode = "401", description = "Unauthorized"),
-        @APIResponse(responseCode = "404", description = "Seller not found")
+        @APIResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+        @APIResponse(responseCode = "400", description = "Invalid parameters")
     })
     public Uni<Response> getPendingPayments(@QueryParam("sellerId") Long sellerId,
-                                           @QueryParam("adminId") Long adminId,
                                            @QueryParam("startDate") String startDateStr,
                                            @QueryParam("endDate") String endDateStr,
                                            @QueryParam("page") @DefaultValue("0") int page,
@@ -82,11 +82,17 @@ public class PaymentController {
                                            @QueryParam("limit") @DefaultValue("20") int limit,
                                            @HeaderParam("Authorization") String authorization) {
         return securityService.validateJwtToken(authorization)
-                .chain(userId -> hubNotificationControllerService.getPendingPayments(sellerId, adminId, startDateStr, endDateStr, page, size, limit))
-                .map(pendingPaymentsResponse -> Response.ok(ApiResponse.success("Pending payments retrieved successfully", pendingPaymentsResponse)).build())
+                .chain(userId -> {
+                    // Determinar el rol del usuario y obtener los pagos apropiados
+                    return hubNotificationControllerService.getPendingPaymentsByRole(userId, sellerId, startDateStr, endDateStr, page, size, limit);
+                })
+                .map(pendingPaymentsResponse -> Response.ok(ApiResponse.success("Pagos pendientes obtenidos exitosamente", pendingPaymentsResponse)).build())
                 .onFailure().recoverWithItem(throwable -> {
                     if (throwable instanceof IllegalArgumentException) {
                         return Response.status(400).entity(ApiResponse.error(throwable.getMessage())).build();
+                    }
+                    if (throwable instanceof SecurityException) {
+                        return Response.status(403).entity(ApiResponse.error("Acceso denegado: " + throwable.getMessage())).build();
                     }
                     return ControllerErrorHandler.handleControllerError(throwable);
                 });
@@ -154,17 +160,31 @@ public class PaymentController {
                                                      @HeaderParam("Authorization") String authorization) {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> hubNotificationControllerService.getConnectedSellersForAdmin(adminId))
-                .map(connectedSellers -> {
-                    java.util.Map<String, Object> response = java.util.Map.of(
-                        "adminId", adminId,
-                        "connectedSellers", connectedSellers,
-                        "totalConnected", connectedSellers.size(),
-                        "timestamp", java.time.LocalDateTime.now()
-                    );
-                    
-                    return Response.ok(ApiResponse.success("Connected sellers retrieved successfully", response)).build();
+                .map(connectedSellersResponse -> {
+                    return Response.ok(ApiResponse.success("Vendedores conectados obtenidos exitosamente", connectedSellersResponse)).build();
                 })
                 .onFailure().recoverWithItem(ControllerErrorHandler::handleControllerError);
+    }
+    
+    @GET
+    @Path("/test/admin/management")
+    @Operation(summary = "Test admin payment management endpoint", 
+               description = "Test endpoint for admin payment management without authentication")
+    public Uni<Response> testAdminPaymentManagement(@QueryParam("adminId") @DefaultValue("605") Long adminId,
+                                                   @QueryParam("startDate") String startDateStr,
+                                                   @QueryParam("endDate") String endDateStr,
+                                                   @QueryParam("page") @DefaultValue("0") int page,
+                                                   @QueryParam("size") @DefaultValue("20") int size,
+                                                   @QueryParam("status") String status) {
+        return hubNotificationControllerService.getAdminPaymentManagement(adminId, page, size, status, startDateStr, endDateStr)
+                .map(managementResponse -> {
+                    return Response.ok(ApiResponse.success("Admin payment management obtenido exitosamente", managementResponse)).build();
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    return Response.status(500)
+                            .entity(ApiResponse.error("Error: " + throwable.getMessage()))
+                            .build();
+                });
     }
     
     @GET

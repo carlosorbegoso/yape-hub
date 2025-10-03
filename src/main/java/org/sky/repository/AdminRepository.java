@@ -23,5 +23,13 @@ public class AdminRepository implements PanacheRepository<AdminEntity> {
     public Uni<java.util.List<AdminEntity>> findActiveAdmins() {
         return find("user.isActive = true").range(0, 500).list(); // LIMIT 500
     }
+    
+    /**
+     * Find admin by ID ensuring the user relation is properly loaded
+     * This method helps avoid NPE issues when accessing admin.user properties
+     */
+    public Uni<AdminEntity> findByIdWithUser(Long adminId) {
+        return find("SELECT a FROM AdminEntity a JOIN FETCH a.user WHERE a.id = ?1", adminId).firstResult();
+    }
 
 }

@@ -203,6 +203,64 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     }
     
     /**
+     * Find pending payments for admin (all payments from their sellers)
+     */
+    public Uni<List<PaymentNotificationEntity>> findPendingPaymentsForAdmin(Long adminId, int page, int size, LocalDate startDate, LocalDate endDate) {
+        return find(
+            "adminId = ?1 AND status = 'PENDING' AND createdAt BETWEEN ?2 AND ?3 ORDER BY createdAt DESC",
+            adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+        ).page(page, size).list();
+    }
+    
+    /**
+     * Count pending payments for admin
+     */
+    public Uni<Long> countPendingPaymentsForAdmin(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return count(
+            "adminId = ?1 AND status = 'PENDING' AND createdAt BETWEEN ?2 AND ?3",
+            adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+        );
+    }
+    
+    /**
+     * Find payments for admin by specific status
+     */
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForAdminByStatus(Long adminId, int page, int size, String status, LocalDate startDate, LocalDate endDate) {
+        if (status == null || status.trim().isEmpty()) {
+            // Si no se especifica estado, obtener todos los pagos del admin
+            return find(
+                "adminId = ?1 AND createdAt BETWEEN ?2 AND ?3 ORDER BY createdAt DESC",
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            ).page(page, size).list();
+        } else {
+            // Si se especifica estado, filtrar por estado
+            return find(
+                "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4 ORDER BY createdAt DESC",
+                adminId, status, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            ).page(page, size).list();
+        }
+    }
+    
+    /**
+     * Count payments for admin by specific status
+     */
+    public Uni<Long> countPaymentsForAdminByStatus(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
+        if (status == null || status.trim().isEmpty()) {
+            // Si no se especifica estado, contar todos los pagos del admin
+            return count(
+                "adminId = ?1 AND createdAt BETWEEN ?2 AND ?3",
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            );
+        } else {
+            // Si se especifica estado, contar por estado
+            return count(
+                "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4",
+                adminId, status, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            );
+        }
+    }
+    
+    /**
      * Result records
      */
     public record DailyStatsResult(LocalDate date, int count, double totalAmount) {}

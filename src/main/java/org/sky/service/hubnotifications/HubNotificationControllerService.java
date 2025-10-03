@@ -78,14 +78,8 @@ public class HubNotificationControllerService {
                     sellerId, page, effectiveSize, dateRange.startDate(), dateRange.endDate()));
     }
 
-    public Uni<java.util.Map<String, Object>> getConnectedSellersForAdmin(Long adminId) {
-        return paymentNotificationService.getConnectedSellersForAdmin(adminId).onItem().transform(connectionMap -> {
-            java.util.Map<String, Object> result = new java.util.HashMap<>();
-            result.put("adminId", adminId);
-            result.put("connectedSellers", connectionMap);
-            result.put("timestamp", java.time.LocalDateTime.now());
-            return result;
-        });
+    public Uni<org.sky.dto.response.seller.ConnectedSellersResponse> getConnectedSellersForAdmin(Long adminId) {
+        return paymentNotificationService.getConnectedSellersForAdmin(adminId);
     }
 
     public Uni<java.util.Map<String, Object>> getAllSellersStatusForAdmin(Long adminId) {
@@ -144,5 +138,31 @@ public class HubNotificationControllerService {
 
     public Uni<AdminPaymentManagementResponse> getConfirmedPaymentsForSeller(Long sellerId, Long adminId, String startDateStr, String endDateStr) {
         return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, 0, 20, null, null);
+    }
+    
+    /**
+     * Obtiene pagos pendientes filtrados por rol del usuario
+     * - Admin: Ve todos los pagos de sus vendedores
+     * - Seller: Ve solo sus propios pagos
+     */
+    public Uni<PendingPaymentsResponse> getPendingPaymentsByRole(Long userId, Long sellerId, String startDateStr, String endDateStr, int page, int size, int limit) {
+        int effectiveSize = Math.min(size, limit);
+        
+        return validateAndParseDates(startDateStr, endDateStr)
+                .chain(dateRange -> {
+                    // Determinar el rol del usuario
+                    return paymentNotificationService.getUserRole(userId)
+                            .chain(userRole -> {
+                                if ("ADMIN".equals(userRole)) {
+                                    // Admin: obtener todos los pagos de sus vendedores
+                                    return paymentNotificationService.getPendingPaymentsForAdmin(userId, page, effectiveSize, dateRange.startDate(), dateRange.endDate());
+                                } else if ("SELLER".equals(userRole)) {
+                                    // Seller: obtener solo sus propios pagos
+                                    return paymentNotificationService.getPendingPaymentsForSeller(userId, page, effectiveSize, dateRange.startDate(), dateRange.endDate());
+                                } else {
+                                    return Uni.createFrom().failure(new SecurityException("Rol de usuario no válido: " + userRole));
+                                }
+                            });
+                });
     }
 }

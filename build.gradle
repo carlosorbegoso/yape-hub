@@ -68,6 +68,11 @@ dependencies {
     
     // WebSocket Support
     implementation 'io.quarkus:quarkus-websockets'
+    
+    // Statistical Analysis & Machine Learning Libraries (Stable Versions)
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation 'org.ejml:ejml-all:0.44.0'
+
 
     implementation 'io.quarkus:quarkus-rest'
     implementation 'io.quarkus:quarkus-arc'

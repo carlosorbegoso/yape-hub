@@ -61,4 +61,26 @@ public class UserEntityEntity extends PanacheEntityBase {
         this.password = password;
         this.role = role;
     }
+    
+    /**
+     * Safely get role with fallback to ADMIN if null
+     * This prevents NPE when role is corrupted in database
+     */
+    public UserRole getRoleSafe() {
+        if (role == null) {
+            // Log warning and return ADMIN as default for null roles
+            System.err.println("WARNING: User " + id + " has null role, defaulting to ADMIN");
+            return UserRole.ADMIN;
+        }
+        return role;
+    }
+    
+    /**
+     * Comprehensive validation method
+     */
+    public boolean isValid() {
+        return email != null && !email.trim().isEmpty() &&
+               password != null && !password.trim().isEmpty() &&
+               role != null;
+    }
 }

@@ -11,6 +11,8 @@ import org.sky.model.SellerEntity;
 import org.sky.repository.PaymentNotificationRepository;
 import org.sky.repository.PaymentRejectionRepository;
 import org.sky.repository.SellerRepository;
+import org.sky.repository.UserRepository;
+import org.sky.model.UserEntityEntity;
 
 import java.util.List;
 
@@ -25,6 +27,9 @@ public class PaymentNotificationDataService {
 
     @Inject
     SellerRepository sellerRepository;
+
+    @Inject
+    UserRepository userRepository;
 
     public Uni<PaymentNotificationEntity> savePaymentNotification(PaymentNotificationEntity payment) {
         return paymentRepository.persist(payment);
@@ -66,5 +71,40 @@ public class PaymentNotificationDataService {
     public Uni<PaymentNotificationEntity> createPaymentForSeller(PaymentNotificationRequest request, SellerEntity seller) {
         PaymentNotificationEntity payment = PaymentNotificationMapper.REQUEST_WITH_SELLER_TO_ENTITY.apply(request).apply(seller);
         return savePaymentNotification(payment);
+    }
+    
+    /**
+     * Busca un usuario por su ID
+     */
+    public Uni<UserEntityEntity> findUserById(Long userId) {
+        return userRepository.findById(userId);
+    }
+    
+    /**
+     * Busca pagos pendientes para un admin (todos los pagos de sus vendedores)
+     */
+    public Uni<List<PaymentNotificationEntity>> findPendingPaymentsForAdmin(Long adminId, int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.findPendingPaymentsForAdmin(adminId, page, size, startDate, endDate);
+    }
+    
+    /**
+     * Cuenta pagos pendientes para un admin
+     */
+    public Uni<Long> countPendingPaymentsForAdmin(Long adminId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.countPendingPaymentsForAdmin(adminId, startDate, endDate);
+    }
+    
+    /**
+     * Busca pagos para un admin por estado específico
+     */
+    public Uni<List<PaymentNotificationEntity>> findPaymentsForAdminByStatus(Long adminId, int page, int size, String status, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.findPaymentsForAdminByStatus(adminId, page, size, status, startDate, endDate);
+    }
+    
+    /**
+     * Cuenta pagos para un admin por estado específico
+     */
+    public Uni<Long> countPaymentsForAdminByStatus(Long adminId, String status, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.countPaymentsForAdminByStatus(adminId, status, startDate, endDate);
     }
 }

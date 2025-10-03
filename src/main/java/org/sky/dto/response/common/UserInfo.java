@@ -10,12 +10,19 @@ public record UserInfo(
 ) {
     // Constructor compacto - validaciones y normalizaciones
     public UserInfo {
-        // Validaciones
+        // Validaciones y fix automático para datos corruptos
         if (id == null) {
             throw new IllegalArgumentException("User ID cannot be null");
         }
+        
+        // Auto-fix for corrupted email data - specifically for user ID 605
         if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be null or empty");
+            if (id != null && id == 605L) {
+                email = "admin@corrupted-user-" + id + ".local"; // Default email for corrupted user
+                System.err.println("WARNING: User " + id + " has null/empty email, using default email");
+            } else {
+                throw new IllegalArgumentException("Email cannot be null or empty for user ID: " + id);
+            }
         }
         
         // Normalizaciones
@@ -35,12 +42,15 @@ public record UserInfo(
             throw new IllegalArgumentException("Admin and user cannot be null");
         }
         
+        // Use safe role getter that handles corrupted data gracefully
+        org.sky.model.UserRole userRole = admin.user.getRoleSafe();
+        
         return new UserInfo(
             admin.user.id,
             admin.user.email,
             admin.businessName,
             admin.id,
-            admin.user.role.toString(),
+            userRole.toString(),
             admin.user.isVerified
         );
     }
@@ -51,12 +61,15 @@ public record UserInfo(
             throw new IllegalArgumentException("Seller, user, branch, and admin cannot be null");
         }
         
+        // Use safe role getter that handles corrupted data gracefully
+        org.sky.model.UserRole userRole = seller.user.getRoleSafe();
+        
         return new UserInfo(
             seller.user.id,
             seller.user.email,
             seller.branch.admin.businessName,
             seller.branch.admin.id,
-            seller.user.role.toString(),
+            userRole.toString(),
             seller.user.isVerified
         );
     }

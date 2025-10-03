@@ -52,12 +52,21 @@ public class CacheService {
         })
         .chain(cachedUser -> {
             if (cachedUser != null) {
+                // Validate cached user has complete data
+                if (cachedUser.role == null || cachedUser.email == null || cachedUser.email.trim().isEmpty()) {
+                    log.warn("⚠️ Corrupted user found in cache: ID=" + cachedUser.id + " email=" + email + " role=" + cachedUser.role);
+                    // Force database reload instead of corrupted cache
+                    cachedUser = null;
+                }
+            }
+            
+            if (cachedUser != null) {
                 return Uni.createFrom().item(cachedUser);
             }
             // Load from DB reactively
             return userRepository.findByEmail(email)
                 .map(user -> {
-                    if (user != null) {
+                    if (user != null && user.role != null && user.email != null && !user.email.trim().isEmpty()) { // Only cache valid users
                         cacheUser(cacheKey, user);
                     }
                     return user;
@@ -84,12 +93,21 @@ public class CacheService {
         })
         .chain(cachedUser -> {
             if (cachedUser != null) {
+                // Validate cached user has complete data
+                if (cachedUser.role == null || cachedUser.email == null || cachedUser.email.trim().isEmpty()) {
+                    log.warn("⚠️ Corrupted user found in cache: ID=" + cachedUser.id + " email=" + cachedUser.email + " role=" + cachedUser.role);
+                    // Force database reload instead of corrupted cache
+                    cachedUser = null;
+                }
+            }
+            
+            if (cachedUser != null) {
                 return Uni.createFrom().item(cachedUser);
             }
             // Load from DB reactively
             return userRepository.findById(userId)
                 .map(user -> {
-                    if (user != null) {
+                    if (user != null && user.role != null && user.email != null && !user.email.trim().isEmpty()) { // Only cache valid users
                         cacheUser(cacheKey, user);
                     }
                     return user;
@@ -191,7 +209,16 @@ public class CacheService {
      * Obtener usuario cachead usando email y role (compatible con AuthService)
      */
     public Uni<UserEntityEntity> getCachedUser(String email, String role) {
-        return getUserByEmailCached(email);
+        return getUserByEmailCached(email)
+                .chain(cachedUser -> {
+                    // Validate cached user has complete data
+                    if (cachedUser != null && (cachedUser.role == null || cachedUser.email == null || cachedUser.email.trim().isEmpty())) {
+                        log.warn("⚠️ Corrupted user found in cache: ID=" + cachedUser.id + " email=" + email + " role=" + cachedUser.role);
+                        // Return null to force database reload instead of corrupted cache
+                        return Uni.createFrom().item((UserEntityEntity) null);
+                    }
+                    return Uni.createFrom().item(cachedUser);
+                });
     }
     
     /**
