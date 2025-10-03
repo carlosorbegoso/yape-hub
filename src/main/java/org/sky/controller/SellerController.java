@@ -116,14 +116,23 @@ public class SellerController {
                                @QueryParam("limit") @DefaultValue("20") int limit,
                                @QueryParam("branchId") Long branchId,
                                @QueryParam("status") @DefaultValue("all") String status) {
-        return sellerService.listSellers(getCurrentUserId(), page, limit, branchId, status)
-                .map(response -> {
-                    if (response.isSuccess()) {
-                        return Response.ok(response).build();
-                    } else {
-                        return Response.status(400).entity(response).build();
-                    }
-                });
+        try {
+            Long userId = getCurrentUserId();
+            return sellerService.listSellers(userId, page, limit, branchId, status)
+                    .map(response -> {
+                        if (response.isSuccess()) {
+                            return Response.ok(response).build();
+                        } else {
+                            return Response.status(400).entity(response).build();
+                        }
+                    });
+        } catch (SecurityException e) {
+            log.warn("Authentication failed in listSellers: " + e.getMessage());
+            return Uni.createFrom()
+                    .item(Response.status(401)
+                            .entity(org.sky.dto.response.ApiResponse.error(e.getMessage()))
+                            .build());
+        }
     }
     
     @PUT
@@ -251,8 +260,14 @@ public class SellerController {
     // Helper method to get current user ID from JWT
     private Long getCurrentUserId() {
         if (jwt != null && jwt.getSubject() != null) {
-            return Long.parseLong(jwt.getSubject());
+            try {
+                return Long.parseLong(jwt.getSubject());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid user ID format in JWT subject: " + jwt.getSubject());
+                throw new SecurityException("Invalid user authentication data");
+            }
         }
-        throw new SecurityException("No authenticated user found");
+        log.warn("No JWT token or subject found in request");
+        throw new SecurityException("No authenticated user found - valid authorization token required");
     }
 }

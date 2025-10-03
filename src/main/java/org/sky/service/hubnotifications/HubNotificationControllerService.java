@@ -40,10 +40,10 @@ public class HubNotificationControllerService {
                 startDate = LocalDate.parse(startDateStr, DATE_FORMATTER);
                 endDate = LocalDate.parse(endDateStr, DATE_FORMATTER);
             } else {
-                // Use current month as default
+                // Use broader default range to include more historical data
                 LocalDate now = LocalDate.now();
-                startDate = now.withDayOfMonth(1);
-                endDate = now.withDayOfMonth(now.lengthOfMonth());
+                startDate = now.minusMonths(6); // Last 6 months
+                endDate = now.plusDays(1); // Include today
             }
             return Uni.createFrom().item(new DateRange(startDate, endDate));
         } catch (DateTimeParseException e) {

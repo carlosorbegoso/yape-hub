@@ -9,7 +9,7 @@ import org.sky.model.AffiliationCodeEntity;
 public class AffiliationCodeRepository implements PanacheRepository<AffiliationCodeEntity> {
     
     public Uni<AffiliationCodeEntity> findByAffiliationCode(String affiliationCode) {
-        return find("affiliationCode", affiliationCode).firstResult();
+        return find("SELECT a FROM AffiliationCodeEntity a JOIN FETCH a.branch b JOIN FETCH b.admin WHERE a.affiliationCode = ?1", affiliationCode).firstResult();
     }
 
 }

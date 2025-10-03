@@ -18,6 +18,11 @@ import org.sky.service.auth.AuthService;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.sky.util.jwt.JwtExtractor;
 
 import java.time.Instant;
@@ -42,7 +47,63 @@ public class AuthController {
     @Path("/admin/register")
     @Consumes(MediaType.APPLICATION_JSON)
     @PermitAll
-    @Operation(summary = "Register new admin", description = "Register a new business administrator")
+    @Operation(
+        summary = "Registrar nuevo administrador", 
+        description = "Registra un nuevo administrador de negocio en el sistema. El administrador podrá gestionar vendedores, sucursales y pagos."
+    )
+    @APIResponses(value = {
+        @APIResponse(
+            responseCode = "201", 
+            description = "Administrador registrado exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    name = "Registro exitoso",
+                    summary = "Respuesta de registro exitoso",
+                    value = """
+                        {
+                          "success": true,
+                          "message": "Administrador registrado exitosamente",
+                          "data": {
+                            "adminId": 1,
+                            "businessName": "Mi Negocio",
+                            "email": "admin@negocio.com",
+                            "contactName": "Juan Pérez",
+                            "phone": "+51987654321",
+                            "createdAt": "2024-01-15T10:30:00Z"
+                          },
+                          "timestamp": "2024-01-15T10:30:00Z"
+                        }
+                        """
+                )
+            )
+        ),
+        @APIResponse(
+            responseCode = "400", 
+            description = "Datos de entrada inválidos",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "Error de validación",
+                    summary = "Error cuando faltan campos requeridos",
+                    value = """
+                        {
+                          "message": "Email ya registrado",
+                          "errorCode": "EMAIL_ALREADY_EXISTS",
+                          "details": {
+                            "field": "email",
+                            "value": "admin@negocio.com",
+                            "reason": "El email ya está en uso"
+                          },
+                          "timestamp": "2024-01-15T10:30:00Z"
+                        }
+                        """
+                )
+            )
+        )
+    })
     public Uni<Response> registerAdmin(@Valid AdminRegisterRequest request) {
       return authService.registerAdmin(request)
           .map(response -> Response.status(Response.Status.CREATED).entity(response).build());
@@ -52,7 +113,62 @@ public class AuthController {
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     @PermitAll
-    @Operation(summary = "User login", description = "Authenticate user and return access token")
+    @Operation(
+        summary = "Iniciar sesión", 
+        description = "Autentica un usuario (administrador o vendedor) y retorna un token JWT de acceso. El token debe incluirse en el header Authorization para endpoints protegidos."
+    )
+    @APIResponses(value = {
+        @APIResponse(
+            responseCode = "200", 
+            description = "Login exitoso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    name = "Login exitoso",
+                    summary = "Respuesta de login exitoso",
+                    value = """
+                        {
+                          "success": true,
+                          "message": "Login exitoso",
+                          "data": {
+                            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                            "userId": 1,
+                            "userRole": "admin",
+                            "businessName": "Mi Negocio",
+                            "expiresIn": 3600
+                          },
+                          "timestamp": "2024-01-15T10:30:00Z"
+                        }
+                        """
+                )
+            )
+        ),
+        @APIResponse(
+            responseCode = "401", 
+            description = "Credenciales inválidas",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "Credenciales inválidas",
+                    summary = "Error de autenticación",
+                    value = """
+                        {
+                          "message": "Credenciales inválidas",
+                          "errorCode": "INVALID_CREDENTIALS",
+                          "details": {
+                            "field": "email",
+                            "reason": "Usuario no encontrado o contraseña incorrecta"
+                          },
+                          "timestamp": "2024-01-15T10:30:00Z"
+                        }
+                        """
+                )
+            )
+        )
+    })
     public Uni<Response> login(@Valid LoginRequest request) {
         return authService.login(request)
                 .map(response -> Response.ok(response).build());

@@ -11,7 +11,7 @@ import java.util.List;
 public class SellerRepository implements PanacheRepository<SellerEntity> {
 
     public Uni<SellerEntity> findByPhone(String phone) {
-        return find("phone", phone).firstResult();
+        return find("SELECT s FROM SellerEntity s JOIN FETCH s.user JOIN FETCH s.branch b JOIN FETCH b.admin WHERE s.phone = ?1", phone).firstResult();
     }
 
     public Uni<List<SellerEntity>> findByBranchId(Long branchId) {

@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "message": "Login exitoso",
+  "data": {
+    "accessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI2MDUiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJpYXQiOjE3NTk0ODEyNDAsImV4cCI6MTc1OTQ4NDg0MCwiZ3JvdXBzIjpbIkFETUlOIl0sInR5cGUiOiJhY2Nlc3MiLCJqdGkiOiI2YjgxY2NmMS1hYjAxLTQzZTYtOTQ5Ny1kMDNjZDQxM2Q1YTIifQ.ZaXR_ztb99j2Rhj6NzqwlxqpiU0igXplfvCJfW_aMguWvsWGnmj3vCCdNZGaq_niX-vndcGViC-isYn2OSWYYMV083HDmBnqNllkcj0ebAjlUztOs4gxl50uaVIJwaKBGge4Rk7OEi8xc7i3hpp_dMPsOmwMCqMbyf_L86aJnp1OOcHgPHAgz71UhvAVKoLQcDvm4MNqZempWwZEyhqhWBWK1i1dB0OpX79G141gDBX5ISb8ucyVPqS9lNcN4EWw4f3kc3PAFKqV89L4KZVGqwclswyKPtt9TuPCVvPHWmsJ8uadJtJrhUjVGIaCneV6ulwdagVlzuEXUZJ7M6RvoA",
+    "refreshToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI2MDUiLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJpYXQiOjE3NTk0ODEyNDAsImV4cCI6MTc1OTU2NzY0MCwidHlwZSI6InJlZnJlc2giLCJqdGkiOiJmN2ViMmI4MC1mZDAwLTQyZTQtODk5Ny02Mjc5Y2ZiNWE2YzIifQ.kYjjQwcjTI6l4RXwR7vzHSKYo4PlCGt1Df1UwMn91UbVEeaDKoTDsnMkYFuoOnC4uqQMQK8ATs4YhEcz2zNcuabmpsoEfcXKz_tgT_EOjj1ZT48GcOEuPhxRlV3vnYIzhEuvsf0NsbIFjvXmTIFpJ3poP-EycX6j1bQz7OTHbIF97UZNlcA3P0xE6ECd5gwC5dqRFun1j_SDOIsPlDrJHHxAdhFxlAUrpV5IxH1H9_7j9XnHZuxiwQJYnr0q7dw6JK1obfq2h13bkN-ManJUKMjkKB-RXh-_4rVNqAw7Otm6QfTM81GlsdTJMA_OJlyFIl5LaDPpUdOw89Yx_T-glQ",
+    "expiresIn": 3600,
+    "user": {
+      "id": 605,
+      "email": "admin@corrupted-user-605.local",
+      "businessName": "Mi Empresa Actualizada",
+      "businessId": 605,
+      "role": "ADMIN",
+      "isVerified": false
+    }
+  },
+  "error": false
+}

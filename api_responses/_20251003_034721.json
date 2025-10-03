@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "message": "Admin payment management obtenido exitosamente",
+  "data": {
+    "payments": [],
+    "summary": {
+      "totalPayments": 0,
+      "pendingCount": 0,
+      "confirmedCount": 0,
+      "rejectedCount": 0,
+      "totalAmount": 0.0,
+      "confirmedAmount": 0.0,
+      "pendingAmount": 0.0,
+      "empty": true
+    },
+    "pagination": {
+      "currentPage": 0,
+      "totalPages": 0,
+      "totalElements": 0,
+      "pageSize": 20,
+      "hasNext": false,
+      "hasPrevious": false,
+      "empty": true,
+      "firstPage": false,
+      "lastPage": true
+    }
+  },
+  "error": false
+}

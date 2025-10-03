@@ -4,6 +4,7 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import org.mindrot.jbcrypt.BCrypt;
 
 import org.sky.dto.request.admin.AdminRegisterRequest;
@@ -162,25 +163,38 @@ public class AuthService {
             return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
         }
 
-        // Validar refresh token usando JwtValidator
+        // Validar refresh token usando JwtatoValidator
         return jwtValidator.isValidRefreshToken(refreshToken)
                 .chain(isValid -> {
                     if (!isValid) {
-                        return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
+                        log.warn("Invalid refresh token format or type");
+                        return Uni.createFrom().item(ApiResponse.error("Invalid refresh token format"));
                     }
                     
-                    // Parsear token para extraer userId
+                    // Parsear token para extraer userId con mejor manejo de errores
                     return jwtValidator.parseToken(refreshToken)
-                            .chain(jwt -> jwtExtractor.extractUserId(jwt))
+                            .onItem().ifNull().failWith(() -> new RuntimeException("Unable to parse refresh token"))
+                            .chain(jwt -> {
+                                try {
+                                    return jwtExtractor.extractUserId(jwt);
+                                } catch (Exception e) {
+                                    log.warn("Failed to extract userId from refresh token: " + e.getMessage());
+                                    return Uni.createFrom().failure(new RuntimeException("Invalid token content"));
+                                }
+                            })
                             .chain(userId -> userRepository.findByIdForRefresh(userId)
                                     .chain(user -> {
                                         if (user == null || !user.isActive) {
+                                            log.warn("Refresh token user not found or inactive: " + userId);
                                             return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
                                         }
                                         return tokenService.generateTokens(user)
                                             .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
-                                    }));
-                });
+                                    }))
+                            .onFailure().recoverWithItem(throwable -> {
+                                log.error("Refresh token validation failed: " + throwable.getMessage());
+                                return ApiResponse.error("Invalid refresh token");
+                            });
     }
 
 
@@ -204,8 +218,7 @@ public class AuthService {
         return sellerRepository.findByPhone(phone)
                 .chain(seller -> UserValidations.validateSeller(seller, phone))
                 .chain(seller -> validateSellerBranch(seller, phone))
-                .chain(seller -> validateAndProcessAffiliationCode(seller, affiliationCode))
-                .chain(this::updateUserLastLogin)
+                .chain(seller -> validateAffiliationCodeOnly(seller, affiliationCode))
                 .chain(seller -> generateLoginResponse(seller, affiliationCode));
     }
 
@@ -219,25 +232,10 @@ public class AuthService {
                 .map(validatedBranch -> seller);
     }
 
-    private Uni<SellerEntity> validateAndProcessAffiliationCode(SellerEntity seller, String affiliationCode) {
-        return Uni.combine()
-                .all()
-                .unis(
-                    Uni.createFrom().item(seller.branch),
-                    affiliationCodeRepository.findByAffiliationCode(affiliationCode)
-                )
-                .asTuple()
-                .chain(tuple -> {
-                    BranchEntity branch = tuple.getItem1();
-                    AffiliationCodeEntity code = tuple.getItem2();
-                    
-                    return UserValidations.validateAffiliationCode(code, affiliationCode, branch)
-                            .chain(validatedCode -> {
-                                validatedCode.remainingUses--;
-                                return affiliationCodeRepository.persist(validatedCode)
-                                        .map(updatedCode -> seller);
-                            });
-                });
+    private Uni<SellerEntity> validateAffiliationCodeOnly(SellerEntity seller, String affiliationCode) {
+        return affiliationCodeRepository.findByAffiliationCode(affiliationCode)
+                .chain(code -> UserValidations.validateAffiliationCode(code, affiliationCode, seller.branch))
+                .map(validatedCode -> seller);
     }
 
     private Uni<SellerEntity> updateUserLastLogin(SellerEntity seller) {
@@ -255,27 +253,30 @@ public class AuthService {
 
     private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(SellerEntity seller, String affiliationCode) {
         UserEntityEntity user = seller.user;
-        String accessToken = jwtGenerator.generateAccessToken(user.id, user.role, seller.id);
         
-        SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(
-            seller.id,
-            seller.sellerName,
-            user.email,
-            seller.phone,
-            seller.branch.id,
-            seller.branch.name,
-            seller.branch.code,
-            affiliationCode,
-            accessToken
-        );
-        
-        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
+        return tokenService.generateTokensForSeller(user, seller.id)
+                .chain(tokenData -> {
+                    SellerLoginWithAffiliationResponse response = new SellerLoginWithAffiliationResponse(
+                        seller.id,
+                        seller.sellerName,
+                        user.email,
+                        seller.phone,
+                        seller.branch.id,
+                        seller.branch.name,
+                        seller.branch.code,
+                        affiliationCode,
+                        tokenData.accessToken()
+                    );
+                    
+                    return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
+                });
     }
     
     // ==================================================================================
     // FORGOT PASSWORD FUNCTIONALITY
     // ==================================================================================
     
+    @WithTransaction
     public Uni<String> forgotPassword(String email) {
         return userRepository.find("email", email.toLowerCase().trim()).firstResult()
             .chain(user -> {

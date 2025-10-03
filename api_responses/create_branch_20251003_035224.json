@@ -1,0 +1,10 @@
+{
+  "message": "Authorization token required",
+  "code": "SECURITY_ERROR",
+  "details": {
+    "timestamp": "2025-10-03T08:52:24.891273Z"
+  },
+  "timestamp": "2025-10-03T08:52:24.891274Z"
+}
+401
+0

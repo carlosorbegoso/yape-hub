@@ -1,0 +1,10 @@
+{
+  "message": "Error interno del servidor: Authorization token required",
+  "code": "INTERNAL_ERROR",
+  "details": {
+    "timestamp": "2025-10-03T08:55:18.996826Z"
+  },
+  "timestamp": "2025-10-03T08:55:18.996826Z"
+}
+500
+0

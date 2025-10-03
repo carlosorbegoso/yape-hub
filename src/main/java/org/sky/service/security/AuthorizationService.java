@@ -43,20 +43,27 @@ public class AuthorizationService {
     }
 
     private Uni<String> extractToken(String authorization) {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            return Uni.createFrom().failure(new SecurityException("Authorization token required"));
+        if (authorization == null || authorization.trim().isEmpty()) {
+            return Uni.createFrom().failure(new SecurityException("Authorization header is missing"));
         }
-        return Uni.createFrom().item(authorization.substring(7));
+        if (!authorization.startsWith("Bearer ")) {
+            return Uni.createFrom().failure(new SecurityException("Authorization header must start with 'Bearer '"));
+        }
+        String token = authorization.substring(7).trim();
+        if (token.isEmpty()) {
+            return Uni.createFrom().failure(new SecurityException("Token is empty"));
+        }
+        return Uni.createFrom().item(token);
     }
 
     private Uni<org.eclipse.microprofile.jwt.JsonWebToken> validateToken(String token) {
         return jwtValidator.isValidAccessToken(token)
                 .chain(isValid -> {
                     if (Boolean.FALSE.equals(isValid)) {
-                        return Uni.createFrom().failure(new SecurityException("Invalid token"));
+                        return Uni.createFrom().failure(new SecurityException("Invalid access token - may be expired or malformed"));
                     }
                     return jwtValidator.parseToken(token)
-                            .onItem().ifNull().failWith(() -> new SecurityException("Invalid token"));
+                            .onItem().ifNull().failWith(() -> new SecurityException("Unable to parse token - invalid format"));
                 });
     }
 
