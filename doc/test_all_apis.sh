@@ -288,7 +288,7 @@ test_auth_endpoints() {
     
     # 1.5 Seller login by phone
     print_message "1.5 Probando seller login by phone..."
-    local seller_login_response=$(make_request "POST" "$BASE_URL/api/auth/seller/login-by-phone?phone=$SELLER_PHONEmake_request "POST" "$BASE_URL/api/auth/seller/login-by-phone?phone=$SELLER_PHONE&affiliationCode=$AFFILIATION_CODE" ""affiliationCode=$AFFILIATION_CODE" "" "" "seller_login")
+    local seller_login_response=$(make_request "POST" "$BASE_URL/api/auth/seller/login-by-phone?phone=$SELLER_PHONEmake_request "POST" "$BASE_URL/api/auth/seller/login-by-phone?phone=$SELLER_PHONEmake_request "POST" "$BASE_URL/api/auth/seller/login-by-phone?phone=$SELLER_PHONE&affiliationCode=$AFFILIATION_CODE" ""affiliationCode=$AFFILIATION_CODE" "" "" "seller_login"affiliationCode=$AFFILIATION_CODE" "" "" "seller_login")
     print_message "Respuesta seller login: $seller_login_response"
     
     print_success "Endpoints de autenticación probados"
@@ -302,7 +302,7 @@ test_admin_endpoints() {
     
     # 2.1 Obtener perfil de admin
     print_message "2.1 Obteniendo perfil de administrador..."
-    local profile_response=$(make_request "GET" "$BASE_URL/api/admin/profile?userId=$ADMIN_ID" "" "$auth_header" "admin_profile")
+    local profile_response=$(make_request "GET" "$BASE_URL/api/admin/profile?userId=$ADMIN_ID" "" "$auth_header" "admin_profile" "admin_profile")
     print_message "Respuesta perfil: $profile_response"
     
     # 2.2 Actualizar perfil de admin
@@ -314,7 +314,7 @@ test_admin_endpoints() {
         "email": "'$ADMIN_EMAIL'"
     }'
     
-    local update_response=$(make_request "PUT" "$BASE_URL/api/admin/profile?userId=$ADMIN_ID" "$update_data" "$auth_header" "admin_update_profile")
+    local update_response=$(make_request "PUT" "$BASE_URL/api/admin/profile?userId=$ADMIN_ID" "$update_data" "$auth_header" "admin_update_profile" "admin_update_profile")
     print_message "Respuesta actualización: $update_response"
     
     print_success "Endpoints de administradores probados"
@@ -334,7 +334,7 @@ test_branch_endpoints() {
         "address": "Av. Principal 123, Lima"
     }'
     
-    local create_branch_response=$(make_request "POST" "$BASE_URL/api/admin/branches" "$branch_data" "$auth_header" "create_branch")
+    local create_branch_response=$(make_request "POST" "$BASE_URL/api/admin/branches" "$branch_data" "$auth_header" "create_branch" "create_branch")
     print_message "Respuesta crear sucursal: $create_branch_response"
     
     # Extraer ID de sucursal
@@ -345,13 +345,13 @@ test_branch_endpoints() {
     
     # 3.2 Listar sucursales
     print_message "3.2 Listando sucursales..."
-    local list_branches_response=$(make_request "GET" "$BASE_URL/api/admin/branches?page=0&size=20&status=all" "" "$auth_header" "list_branches")
+    local list_branches_response=$(make_request "GET" "$BASE_URL/api/admin/branches?page=0make_request "GET" "$BASE_URL/api/admin/branches?page=0&size=20&status=all" "" "$auth_header"size=20make_request "GET" "$BASE_URL/api/admin/branches?page=0&size=20&status=all" "" "$auth_header"status=all" "" "$auth_header" "list_branches" "list_branches")
     print_message "Respuesta listar sucursales: $list_branches_response"
     
     # 3.3 Obtener sucursal específica
     if [ -n "$BRANCH_ID" ]; then
         print_message "3.3 Obteniendo sucursal específica..."
-        local get_branch_response=$(make_request "GET" "$BASE_URL/api/admin/branches/$BRANCH_ID" "" "$auth_header" "get_branch")
+        local get_branch_response=$(make_request "GET" "$BASE_URL/api/admin/branches/$BRANCH_ID" "" "$auth_header" "get_branch" "get_branch")
         print_message "Respuesta obtener sucursal: $get_branch_response"
         
         # 3.4 Actualizar sucursal
@@ -363,12 +363,12 @@ test_branch_endpoints() {
             "isActive": true
         }'
         
-        local update_branch_response=$(make_request "PUT" "$BASE_URL/api/admin/branches/$BRANCH_ID" "$update_branch_data" "$auth_header" "update_branch")
+        local update_branch_response=$(make_request "PUT" "$BASE_URL/api/admin/branches/$BRANCH_ID" "$update_branch_data" "$auth_header" "update_branch" "update_branch")
         print_message "Respuesta actualizar sucursal: $update_branch_response"
         
         # 3.5 Obtener vendedores de sucursal
         print_message "3.5 Obteniendo vendedores de sucursal..."
-        local branch_sellers_response=$(make_request "GET" "$BASE_URL/api/admin/branches/$BRANCH_ID/sellers?page=0&size=20" "" "$auth_header" "branch_sellers")
+        local branch_sellers_response=$(make_request "GET" "$BASE_URL/api/admin/branches/$BRANCH_ID/sellers?page=0make_request "GET" "$BASE_URL/api/admin/branches/$BRANCH_ID/sellers?page=0&size=20" "" "$auth_header"size=20" "" "$auth_header" "branch_sellers" "branch_sellers")
         print_message "Respuesta vendedores de sucursal: $branch_sellers_response"
     fi
     
@@ -383,7 +383,7 @@ test_qr_endpoints() {
     
     # 4.1 Generar código de afiliación
     print_message "4.1 Generando código de afiliación..."
-    local generate_code_response=$(make_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_ID&expirationHours=24&maxUses=10&branchId=$BRANCH_ID&notes=Test" "" "$auth_header" "generate_affiliation_code")
+    local generate_code_response=$(make_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_IDmake_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_ID&expirationHours=24&maxUses=10&branchId=$BRANCH_ID&notes=Test" "" "$auth_header"expirationHours=24make_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_ID&expirationHours=24&maxUses=10&branchId=$BRANCH_ID&notes=Test" "" "$auth_header"maxUses=10make_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_ID&expirationHours=24&maxUses=10&branchId=$BRANCH_ID&notes=Test" "" "$auth_header"branchId=$BRANCH_IDmake_request "POST" "$BASE_URL/api/generate-affiliation-code-protected?adminId=$ADMIN_ID&expirationHours=24&maxUses=10&branchId=$BRANCH_ID&notes=Test" "" "$auth_header"notes=Test" "" "$auth_header" "generate_affiliation_code" "generate_affiliation_code")
     print_message "Respuesta generar código: $generate_code_response"
     
     # Extraer código de afiliación
@@ -399,7 +399,7 @@ test_qr_endpoints() {
             "affiliationCode": "'$AFFILIATION_CODE'"
         }'
         
-        local validate_response=$(make_request "POST" "$BASE_URL/api/validate-affiliation-code" "$validate_data" "" "validate_affiliation_code")
+        local validate_response=$(make_request "POST" "$BASE_URL/api/validate-affiliation-code" "$validate_data" "" "validate_affiliation_code" "" "validate_affiliation_code")
         print_message "Respuesta validar código: $validate_response"
         
         # 4.3 Registrar vendedor con código de afiliación

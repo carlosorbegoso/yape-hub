@@ -163,7 +163,6 @@ public class AuthService {
             return Uni.createFrom().item(ApiResponse.error("Invalid refresh token"));
         }
 
-        // Validar refresh token usando JwtatoValidator
         return jwtValidator.isValidRefreshToken(refreshToken)
                 .chain(isValid -> {
                     if (!isValid) {
@@ -171,7 +170,6 @@ public class AuthService {
                         return Uni.createFrom().item(ApiResponse.error("Invalid refresh token format"));
                     }
                     
-                    // Parsear token para extraer userId con mejor manejo de errores
                     return jwtValidator.parseToken(refreshToken)
                             .onItem().ifNull().failWith(() -> new RuntimeException("Unable to parse refresh token"))
                             .chain(jwt -> {
@@ -182,25 +180,19 @@ public class AuthService {
                                     return Uni.createFrom().failure(new RuntimeException("Invalid token content"));
                                 }
                             })
-                            .chain(userId -> userRepository.findByIdForRefresh(userId)
-                                    .chain(user -> {
-                                        if (user == null || !user.isActive) {
-                                            log.warn("Refresh token user not found or inactive: " + userId);
-                                            return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
-                                        }
-                                        return tokenService.generateTokens(user)
-                                            .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
-                                    }))
-                            .onFailure().recoverWithItem(throwable -> {
-                                log.error("Refresh token validation failed: " + throwable.getMessage());
-                                return ApiResponse.error("Invalid refresh token");
+                            .chain(userId -> userRepository.findByIdForRefresh(userId))
+                            .chain(user -> {
+                                if (user == null || !user.isActive) {
+                                    log.warn("Refresh token user not found or inactive");
+                                    return Uni.createFrom().item(ApiResponse.error("User not found or inactive"));
+                                }
+                                return tokenService.generateTokens(user)
+                                    .chain(tokenData -> loginResponseBuilder.buildLoginResponseFromCachedUser(tokenData));
                             });
+                });
     }
 
-
-
-
-  @WithTransaction
+    @WithTransaction
     public Uni<ApiResponse<String>> logout(Long userId) {
         return userRepository.findById(userId)
                 .chain(user -> {
