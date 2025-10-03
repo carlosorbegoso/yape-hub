@@ -7,9 +7,7 @@ import org.sky.dto.ApiResponse;
 import org.sky.dto.billing.BillingDashboardResponse;
 import org.sky.dto.billing.BillingSummaryResponse;
 import org.sky.dto.billing.MonthlyUsageResponse;
-import org.sky.dto.billing.TokenStatusResponse;
 import org.sky.dto.billing.SubscriptionStatusResponse;
-import org.sky.service.TokenService;
 import org.sky.service.SubscriptionService;
 
 import java.util.List;
@@ -17,28 +15,24 @@ import java.util.List;
 @ApplicationScoped
 public class BillingDashboardService {
 
-    @Inject
-    TokenService tokenService;
     
     @Inject
     SubscriptionService subscriptionService;
 
     public Uni<ApiResponse<BillingDashboardResponse>> getDashboard(Long adminId, String period, String include) {
-        return tokenService.getTokenStatus(adminId)
-                .chain(tokenStatus -> subscriptionService.getSubscriptionStatus(adminId)
-                        .map(subscriptionStatus -> buildDashboard(adminId, tokenStatus, subscriptionStatus)));
+        return subscriptionService.getSubscriptionStatus(adminId)
+                .map(subscriptionStatus -> buildDashboard(adminId, subscriptionStatus));
     }
 
-    private ApiResponse<BillingDashboardResponse> buildDashboard(Long adminId, TokenStatusResponse tokenStatus, 
-                                                               SubscriptionStatusResponse subscriptionStatus) {
+    private ApiResponse<BillingDashboardResponse> buildDashboard(Long adminId, SubscriptionStatusResponse subscriptionStatus) {
         BillingDashboardResponse dashboard = new BillingDashboardResponse(
                 adminId,
-                tokenStatus,
+                null, // Sin token status
                 subscriptionStatus,
                 List.of(), // Lista vacía de historial
                 new MonthlyUsageResponse(
-                        tokenStatus.tokensUsed().longValue(),
-                        tokenStatus.tokensAvailable().longValue(),
+                        0L, // Sin tokens usados
+                        0L, // Sin tokens disponibles
                         0L, // Sin operaciones por ahora
                         "N/A" // Sin operación más usada
                 ),

@@ -31,9 +31,6 @@ public class SubscriptionPlanEntity extends PanacheEntityBase {
     @Column(name = "max_sellers", nullable = false)
     public Integer maxSellers = 2;
 
-    @Column(name = "tokens_included", nullable = false)
-    public Integer tokensIncluded = 100;
-
     @Column(name = "features", columnDefinition = "JSONB")
     public String features; // JSON string con features del plan
 
@@ -48,13 +45,12 @@ public class SubscriptionPlanEntity extends PanacheEntityBase {
     public SubscriptionPlanEntity() {}
 
     public SubscriptionPlanEntity(String name, String description, BigDecimal pricePen, String billingCycle,
-                                  Integer maxAdmins, Integer maxSellers, Integer tokensIncluded) {
+                                  Integer maxAdmins, Integer maxSellers) {
         this.name = name;
         this.description = description;
         this.pricePen = pricePen;
         this.billingCycle = billingCycle;
         this.maxAdmins = maxAdmins;
         this.maxSellers = maxSellers;
-        this.tokensIncluded = tokensIncluded;
     }
 }

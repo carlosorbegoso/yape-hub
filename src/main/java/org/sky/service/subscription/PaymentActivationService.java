@@ -4,25 +4,20 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.model.PaymentCodeEntity;
-import org.sky.service.TokenService;
 import org.sky.service.SubscriptionService;
 
 @ApplicationScoped
 public class PaymentActivationService {
 
-    @Inject
-    TokenService tokenService;
     
     @Inject
     SubscriptionService subscriptionService;
 
-    public Uni<String> activatePlanOrTokens(Long adminId, PaymentCodeEntity code) {
+    public Uni<String> activatePlan(Long adminId, PaymentCodeEntity code) {
         return Uni.createFrom().item(code)
                 .chain(c -> {
                     if (c.planId != null) {
                         return activateSubscription(adminId, c.planId);
-                    } else if (c.tokensPackage != null) {
-                        return activateTokens(adminId, c.tokensPackage);
                     }
                     return Uni.createFrom().item("Activation completed");
                 });
@@ -34,9 +29,4 @@ public class PaymentActivationService {
                      " (ID: " + subscriptionStatus.subscriptionId() + ")");
     }
 
-    private Uni<String> activateTokens(Long adminId, String tokensPackage) {
-        int tokensToAdd = Integer.parseInt(tokensPackage);
-        return tokenService.addTokens(adminId, tokensToAdd)
-                .map(result -> "Tokens added: " + tokensToAdd);
-    }
 }

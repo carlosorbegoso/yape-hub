@@ -65,12 +65,10 @@ public class BillingController {
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     return switch (type.toLowerCase()) {
-                        case "tokens" -> billingInfoService.getTokenStatus(adminId, period, include);
                         case "subscription" -> billingInfoService.getSubscriptionStatus(adminId, period, include);
                         case "payments" -> billingInfoService.getPaymentHistory(adminId, period, include);
                         case "dashboard" -> billingDashboardService.getDashboard(adminId, period, include);
                         case "plans" -> billingPlansService.getAvailablePlans(include);
-                        case "token-packages" -> billingPlansService.getTokenPackages(include);
                         default -> Uni.createFrom().failure(new IllegalArgumentException("Tipo no válido: " + type));
                     };
                 })
@@ -95,7 +93,6 @@ public class BillingController {
                     case "subscribe" -> billingOperationsService.executeSubscribe(adminId, request, validate);
                     case "upgrade" -> billingOperationsService.executeUpgrade(adminId, request, validate);
                     case "cancel" -> billingOperationsService.executeCancel(adminId, request, validate);
-                    case "purchase" -> billingOperationsService.executePurchase(adminId, request, validate);
                     case "check" -> billingOperationsService.executeCheck(adminId, request);
                     case "simulate" -> billingOperationsService.executeSimulate(adminId, request);
                     default -> Uni.createFrom().failure(new IllegalArgumentException("Acción no válida: " + action));

@@ -25,12 +25,12 @@ public class PaymentCodeService {
     private static final String YAPE_NUMBER = "977737772";
 
     @WithTransaction
-    public Uni<PaymentCodeResponse> generatePaymentCode(Long adminId, Long planId, String tokensPackage) {
+    public Uni<PaymentCodeResponse> generatePaymentCode(Long adminId, Long planId) {
         return Uni.combine().all().unis(
                 generateUniqueCode(),
-                amountCalculator.calculateAmount(planId, tokensPackage)
+                amountCalculator.calculateAmount(planId)
         ).asTuple()
-        .chain(tuple -> createPaymentCode(adminId, planId, tokensPackage, tuple.getItem1(), tuple.getItem2()));
+        .chain(tuple -> createPaymentCode(adminId, planId, tuple.getItem1(), tuple.getItem2()));
     }
 
     @WithTransaction
@@ -54,13 +54,12 @@ public class PaymentCodeService {
         return paymentCodeRepository.findValidCode(paymentCode);
     }
 
-    private Uni<PaymentCodeResponse> createPaymentCode(Long adminId, Long planId, String tokensPackage, 
+    private Uni<PaymentCodeResponse> createPaymentCode(Long adminId, Long planId, 
                                                       String paymentCode, Double amount) {
         PaymentCodeEntity paymentCodeEntity = new PaymentCodeEntity();
         paymentCodeEntity.code = paymentCode;
         paymentCodeEntity.adminId = adminId;
         paymentCodeEntity.planId = planId;
-        paymentCodeEntity.tokensPackage = tokensPackage;
         paymentCodeEntity.amountPen = BigDecimal.valueOf(amount);
         paymentCodeEntity.yapeNumber = YAPE_NUMBER;
         paymentCodeEntity.status = "pending";

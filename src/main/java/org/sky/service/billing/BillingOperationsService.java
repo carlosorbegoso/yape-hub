@@ -5,10 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.billing.PaymentRequest;
-import org.sky.dto.billing.SubscriptionStatusResponse;
-import org.sky.dto.billing.TokenStatusResponse;
 import org.sky.service.SubscriptionService;
-import org.sky.service.TokenService;
 import org.sky.service.subscription.PaymentCodeService;
 import org.sky.service.subscription.PaymentUploadService;
 
@@ -27,15 +24,13 @@ public class BillingOperationsService {
     @Inject
     SubscriptionService subscriptionService;
     
-    @Inject
-    TokenService tokenService;
 
     public Uni<ApiResponse<Object>> executeGenerateCode(Long adminId, PaymentRequest request, Boolean validate) {
-        if (!request.isValid()) {
-            return Uni.createFrom().item(ApiResponse.error("You must specify planId for subscription or tokensPackage for token purchase"));
+        if (request.planId() == null) {
+            return Uni.createFrom().item(ApiResponse.error("planId is required for subscription"));
         }
         
-        return paymentCodeService.generatePaymentCode(adminId, request.planId(), request.tokensPackage())
+        return paymentCodeService.generatePaymentCode(adminId, request.planId())
                 .map(paymentCode -> ApiResponse.success("Payment code generated successfully", paymentCode));
     }
 
@@ -71,36 +66,16 @@ public class BillingOperationsService {
                 .map(subscriptionStatus -> ApiResponse.success("Cancellation processed successfully", subscriptionStatus));
     }
 
-    public Uni<ApiResponse<Object>> executePurchase(Long adminId, PaymentRequest request, Boolean validate) {
-        if (request.tokensPackage() == null) {
-            return Uni.createFrom().item(ApiResponse.error("tokensPackage is required for purchase"));
-        }
-        
-        return paymentCodeService.generatePaymentCode(adminId, null, request.tokensPackage())
-                .map(paymentCode -> ApiResponse.success("Payment code generated for token purchase", paymentCode));
-    }
 
     public Uni<ApiResponse<Object>> executeCheck(Long adminId, PaymentRequest request) {
-        return Uni.combine().all()
-                .unis(
-                    tokenService.getTokenStatus(adminId),
-                    subscriptionService.getSubscriptionStatus(adminId)
-                )
-                .asTuple()
-                .map(tuple -> {
-                    TokenStatusResponse tokenStatus = tuple.getItem1();
-                    SubscriptionStatusResponse subscriptionStatus = tuple.getItem2();
-                    
-                    boolean hasTokens = tokenStatus.tokensAvailable() > 0;
+        return subscriptionService.getSubscriptionStatus(adminId)
+                .map(subscriptionStatus -> {
                     boolean hasActiveSubscription = subscriptionStatus.isActive();
                     
-                    String message = String.format("Tokens available: %d, Active subscription: %s", 
-                            tokenStatus.tokensAvailable(), hasActiveSubscription);
+                    String message = String.format("Active subscription: %s", hasActiveSubscription);
                     
                     return ApiResponse.success("Verification completed", Map.of(
-                            "hasTokens", hasTokens,
                             "hasActiveSubscription", hasActiveSubscription,
-                            "tokenStatus", tokenStatus,
                             "subscriptionStatus", subscriptionStatus,
                             "message", message
                     ));
@@ -108,26 +83,16 @@ public class BillingOperationsService {
     }
 
     public Uni<ApiResponse<Object>> executeSimulate(Long adminId, PaymentRequest request) {
-        return Uni.combine().all()
-                .unis(
-                    tokenService.getTokenStatus(adminId),
-                    subscriptionService.getSubscriptionStatus(adminId)
-                )
-                .asTuple()
-                .map(tuple -> {
-                    TokenStatusResponse tokenStatus = tuple.getItem1();
-                    SubscriptionStatusResponse subscriptionStatus = tuple.getItem2();
-                    
+        return subscriptionService.getSubscriptionStatus(adminId)
+                .map(subscriptionStatus -> {
                     Map<String, Object> simulation = Map.of(
-                            "currentTokens", tokenStatus.tokensAvailable(),
                             "currentPlan", subscriptionStatus.planName(),
                             "simulatedOperations", List.of(
-                                    Map.of("operation", "payment_processing", "tokensNeeded", 1, "canExecute", tokenStatus.tokensAvailable() >= 1),
-                                    Map.of("operation", "qr_generation", "tokensNeeded", 1, "canExecute", tokenStatus.tokensAvailable() >= 1),
-                                    Map.of("operation", "analytics_report", "tokensNeeded", 2, "canExecute", tokenStatus.tokensAvailable() >= 2)
+                                    Map.of("operation", "payment_processing", "canExecute", subscriptionStatus.isActive()),
+                                    Map.of("operation", "qr_generation", "canExecute", subscriptionStatus.isActive()),
+                                    Map.of("operation", "analytics_report", "canExecute", subscriptionStatus.isActive())
                             ),
                             "recommendations", List.of(
-                                    tokenStatus.tokensAvailable() < 10 ? "Consider purchasing more tokens" : "You have enough tokens",
                                     !subscriptionStatus.isActive() ? "Consider activating a subscription" : "Active subscription"
                             )
                     );

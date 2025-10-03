@@ -7,8 +7,6 @@ public record PaymentRequest(
     @JsonProperty("planId")
     Long planId,
     
-    @JsonProperty("tokensPackage")
-    String tokensPackage,
     
     @JsonProperty("paymentMethod")
     String paymentMethod,
@@ -27,11 +25,7 @@ public record PaymentRequest(
         return planId != null;
     }
     
-    public boolean isTokenPurchase() {
-        return tokensPackage != null && planId == null;
-    }
-    
     public boolean isValid() {
-        return (planId != null) ^ (tokensPackage != null);
+        return planId != null;
     }
 }

@@ -22,9 +22,6 @@ public class PaymentCodeEntity extends PanacheEntityBase {
     @Column(name = "plan_id")
     public Long planId;
 
-    @Column(name = "tokens_package", length = 50)
-    public String tokensPackage;
-
     @Column(name = "amount_pen", nullable = false, precision = 10, scale = 2)
     public BigDecimal amountPen;
 
@@ -72,8 +69,6 @@ public class PaymentCodeEntity extends PanacheEntityBase {
     public String getPaymentType() {
         if (this.planId != null) {
             return "subscription";
-        } else if (this.tokensPackage != null) {
-            return "tokens";
         }
         return "unknown";
     }

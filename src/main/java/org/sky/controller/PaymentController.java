@@ -9,7 +9,6 @@ import jakarta.ws.rs.core.Response;
 import org.sky.dto.ApiResponse;
 import org.sky.dto.payment.PaymentClaimRequest;
 import org.sky.dto.payment.PaymentRejectRequest;
-import org.sky.annotation.TokenConsumption;
 import org.sky.service.hubnotifications.HubNotificationControllerService;
 import org.sky.service.security.SecurityService;
 import org.sky.util.ControllerErrorHandler;
@@ -45,7 +44,6 @@ public class PaymentController {
     @POST
     @Path("/claim")
     @Operation(summary = "Claim payment", description = "Allow seller to claim a payment")
-    @TokenConsumption(operationType = "payment_claim", tokens = 1)
     public Uni<Response> claimPayment(@Valid PaymentClaimRequest request,
                                      @HeaderParam("Authorization") String authorization) {
         return securityService.validateJwtToken(authorization)

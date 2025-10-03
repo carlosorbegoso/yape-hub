@@ -21,8 +21,6 @@ public class SubscriptionService {
     @Inject
     AdminSubscriptionRepository adminSubscriptionRepository;
 
-    @Inject
-    TokenService tokenService;
 
   @WithTransaction
     public Uni<SubscriptionStatusResponse> getSubscriptionStatus(Long adminId) {
@@ -40,7 +38,6 @@ public class SubscriptionService {
                                 "PEN",
                                 "monthly",
                                 1,
-                                100,
                                 LocalDateTime.now(),
                                 null,
                                 false,
@@ -58,7 +55,6 @@ public class SubscriptionService {
                                     "PEN",
                                     plan.billingCycle,
                                     plan.maxSellers,
-                                    plan.tokensIncluded,
                                     subscription.startDate,
                                     subscription.endDate,
                                     subscription.isActive(),
@@ -90,28 +86,24 @@ public class SubscriptionService {
                                 subscription.planId = planId;
                                 subscription.status = "active";
                                 subscription.startDate = LocalDateTime.now();
-                                subscription.endDate = LocalDateTime.now().plusMonths(1); // Por defecto mensual
+                                // Calcular fecha de fin según el ciclo de facturación del plan
+                                subscription.endDate = calculateEndDate(plan.billingCycle);
                                 
                                 return adminSubscriptionRepository.persist(subscription)
-                                        .chain(savedSubscription -> {
-                                            // Agregar tokens incluidos en el plan
-                                            return tokenService.addTokens(adminId, plan.tokensIncluded)
-                                                    .map(tokens -> new SubscriptionStatusResponse(
-                                                            savedSubscription.id,
-                                                            savedSubscription.status,
-                                                            plan.name,
-                                                            plan.description,
-                                                            plan.pricePen.doubleValue(),
-                                                            "PEN",
-                                                            plan.billingCycle,
-                                                            plan.maxSellers,
-                                                            plan.tokensIncluded,
-                                                            savedSubscription.startDate,
-                                                            savedSubscription.endDate,
-                                                            true,
-                                                            "Suscripción activada exitosamente"
-                                                    ));
-                                        });
+                                        .map(savedSubscription -> new SubscriptionStatusResponse(
+                                                savedSubscription.id,
+                                                savedSubscription.status,
+                                                plan.name,
+                                                plan.description,
+                                                plan.pricePen.doubleValue(),
+                                                "PEN",
+                                                plan.billingCycle,
+                                                plan.maxSellers,
+                                                savedSubscription.startDate,
+                                                savedSubscription.endDate,
+                                                true,
+                                                "Suscripción activada exitosamente"
+                                        ));
                             });
                 });
     }
@@ -134,7 +126,7 @@ public class SubscriptionService {
                                 
                                 // Actualizar suscripción
                                 existingSubscription.planId = newPlanId;
-                                existingSubscription.endDate = LocalDateTime.now().plusMonths(1);
+                                existingSubscription.endDate = calculateEndDate(newPlan.billingCycle);
                                 
                                 return adminSubscriptionRepository.persist(existingSubscription)
                                         .map(updatedSubscription -> new SubscriptionStatusResponse(
@@ -146,7 +138,6 @@ public class SubscriptionService {
                                                 "PEN",
                                                 newPlan.billingCycle,
                                                 newPlan.maxSellers,
-                                                newPlan.tokensIncluded,
                                                 updatedSubscription.startDate,
                                                 updatedSubscription.endDate,
                                                 true,
@@ -180,7 +171,6 @@ public class SubscriptionService {
                                     "PEN",
                                     "none",
                                     1,
-                                    100,
                                     cancelledSubscription.startDate,
                                     cancelledSubscription.endDate,
                                     false,
@@ -214,7 +204,6 @@ public class SubscriptionService {
                                                     "PEN",
                                                     plan.billingCycle,
                                                     plan.maxSellers,
-                                                    plan.tokensIncluded,
                                                     existingSubscription.startDate,
                                                     existingSubscription.endDate,
                                                     existingSubscription.isActive(),
@@ -231,25 +220,20 @@ public class SubscriptionService {
                                 subscription.endDate = null; // Plan gratuito sin expiración
                                 
                                 return adminSubscriptionRepository.persist(subscription)
-                                        .chain(savedSubscription -> {
-                                            // Agregar tokens incluidos en el plan
-                                            return tokenService.addTokens(adminId, freePlan.tokensIncluded)
-                                                    .map(tokens -> new SubscriptionStatusResponse(
-                                                            savedSubscription.id,
-                                                            savedSubscription.status,
-                                                            freePlan.name,
-                                                            freePlan.description,
-                                                            freePlan.pricePen.doubleValue(),
-                                                            "PEN",
-                                                            freePlan.billingCycle,
-                                                            freePlan.maxSellers,
-                                                            freePlan.tokensIncluded,
-                                                            savedSubscription.startDate,
-                                                            savedSubscription.endDate,
-                                                            true,
-                                                            "Suscripción gratuita activada exitosamente"
-                                                    ));
-                                        });
+                                        .map(savedSubscription -> new SubscriptionStatusResponse(
+                                                savedSubscription.id,
+                                                savedSubscription.status,
+                                                freePlan.name,
+                                                freePlan.description,
+                                                freePlan.pricePen.doubleValue(),
+                                                "PEN",
+                                                freePlan.billingCycle,
+                                                freePlan.maxSellers,
+                                                savedSubscription.startDate,
+                                                savedSubscription.endDate,
+                                                true,
+                                                "Suscripción gratuita activada exitosamente"
+                                        ));
                             });
                 });
     }
@@ -266,14 +250,106 @@ public class SubscriptionService {
                                 .map(freePlan -> {
                                     if (freePlan == null) {
                                         // Fallback: si no existe el plan gratuito, usar límite de 1
+                                        Log.warn("⚠️ Plan Gratuito no encontrado, usando límite por defecto de 1 vendedor");
                                         return sellersNeeded <= 1;
                                     }
+                                    Log.info("📋 Usando Plan Gratuito - Límite: " + freePlan.maxSellers + ", Necesarios: " + sellersNeeded);
                                     return sellersNeeded <= freePlan.maxSellers;
                                 });
                     }
                     
                     return subscriptionPlanRepository.findById(subscription.planId)
-                            .map(plan -> sellersNeeded <= plan.maxSellers);
+                            .map(plan -> {
+                                Log.info("📋 Usando Plan: " + plan.name + " - Límite: " + plan.maxSellers + ", Necesarios: " + sellersNeeded);
+                                return sellersNeeded <= plan.maxSellers;
+                            });
+                });
+    }
+
+    /**
+     * Obtiene información detallada sobre los límites de vendedores para un admin
+     */
+    @WithTransaction
+    public Uni<SellerLimitsInfo> getSellerLimitsInfo(Long adminId) {
+        Log.info("📊 SubscriptionService.getSellerLimitsInfo() - AdminId: " + adminId);
+        
+        return adminSubscriptionRepository.findActiveByAdminId(adminId)
+                .chain(subscription -> {
+                    if (subscription == null) {
+                        // Buscar plan gratuito
+                        return subscriptionPlanRepository.findByName("Plan Gratuito")
+                                .map(freePlan -> {
+                                    if (freePlan == null) {
+                                        return new SellerLimitsInfo(1, 0, "Plan Gratuito (Fallback)", true);
+                                    }
+                                    return new SellerLimitsInfo(freePlan.maxSellers, 0, freePlan.name, true);
+                                });
+                    }
+                    
+                    return subscriptionPlanRepository.findById(subscription.planId)
+                            .map(plan -> new SellerLimitsInfo(plan.maxSellers, 0, plan.name, subscription.isActive()));
+                });
+    }
+
+    /**
+     * Clase para información de límites de vendedores
+     */
+    public record SellerLimitsInfo(
+        int maxSellers,
+        int currentSellers,
+        String planName,
+        boolean isActive
+    ) {}
+
+    /**
+     * Calcula la fecha de fin de la suscripción según el ciclo de facturación
+     */
+    private LocalDateTime calculateEndDate(String billingCycle) {
+        LocalDateTime now = LocalDateTime.now();
+        return switch (billingCycle.toLowerCase()) {
+            case "monthly" -> now.plusMonths(1);
+            case "quarterly" -> now.plusMonths(3);
+            case "semiannually" -> now.plusMonths(6);
+            case "yearly" -> now.plusYears(1);
+            case "biennially" -> now.plusYears(2);
+            default -> now.plusMonths(1); // Por defecto mensual
+        };
+    }
+
+    /**
+     * Renueva una suscripción activa
+     */
+    @WithTransaction
+    public Uni<SubscriptionStatusResponse> renewSubscription(Long adminId) {
+        Log.info("🔄 SubscriptionService.renewSubscription() - AdminId: " + adminId);
+        
+        return adminSubscriptionRepository.findActiveByAdminId(adminId)
+                .chain(subscription -> {
+                    if (subscription == null) {
+                        return Uni.createFrom().failure(new RuntimeException("No tienes una suscripción activa para renovar"));
+                    }
+                    
+                    return subscriptionPlanRepository.findById(subscription.planId)
+                            .chain(plan -> {
+                                // Extender la fecha de fin según el ciclo de facturación
+                                subscription.endDate = calculateEndDate(plan.billingCycle);
+                                
+                                return adminSubscriptionRepository.persist(subscription)
+                                        .map(renewedSubscription -> new SubscriptionStatusResponse(
+                                                renewedSubscription.id,
+                                                renewedSubscription.status,
+                                                plan.name,
+                                                plan.description,
+                                                plan.pricePen.doubleValue(),
+                                                "PEN",
+                                                plan.billingCycle,
+                                                plan.maxSellers,
+                                                renewedSubscription.startDate,
+                                                renewedSubscription.endDate,
+                                                true,
+                                                "Suscripción renovada exitosamente"
+                                        ));
+                            });
                 });
     }
 }

@@ -57,7 +57,7 @@ public class SellerService {
     JwtGenerator jwtGenerator;
 
   @WithTransaction
-    public Uni<ApiResponse<SellerRegistrationResponse>> affiliateSellerWithToken(Long adminId, AffiliateSellerRequest request) {
+    public Uni<ApiResponse<SellerRegistrationResponse>> affiliateSeller(Long adminId, AffiliateSellerRequest request) {
         return affiliationCodeRepository.findByAffiliationCode(request.affiliationCode())
                 .chain(affiliationCode -> {
                     if (affiliationCode == null || !affiliationCode.isActive) {
@@ -73,13 +73,26 @@ public class SellerService {
                             .chain(existingSellers -> {
                                 int currentSellerCount = existingSellers.size();
                                 int newSellerCount = currentSellerCount + 1;
-                                log.info("🔍 SellerService.affiliateSellerWithToken() - AdminId: " + adminId + ", CurrentSellers: " + currentSellerCount + ", NewSellerCount: " + newSellerCount);
+                                log.info("🔍 SellerService.affiliateSeller() - AdminId: " + adminId + ", CurrentSellers: " + currentSellerCount + ", NewSellerCount: " + newSellerCount);
                                 
                                 return subscriptionService.checkSubscriptionLimits(adminId, newSellerCount)
                                         .chain(withinLimits -> {
                                             log.info("🔍 SubscriptionService.checkSubscriptionLimits() - AdminId: " + adminId + ", SellersNeeded: " + newSellerCount + ", WithinLimits: " + withinLimits);
                                             if (!withinLimits) {
-                                                return Uni.createFrom().item(ApiResponse.<SellerRegistrationResponse>error("Límite de vendedores excedido según su plan de suscripción"));
+                                                // Obtener información detallada del límite para el mensaje de error
+                                                return subscriptionService.getSellerLimitsInfo(adminId)
+                                                        .map(limitsInfo -> {
+                                                            String errorMessage = String.format(
+                                                                "Límite de vendedores excedido. Plan actual: %s (máximo %d vendedores). " +
+                                                                "Intenta agregar %d vendedores pero ya tienes %d. " +
+                                                                "Considera actualizar tu plan de suscripción.",
+                                                                limitsInfo.planName(),
+                                                                limitsInfo.maxSellers(),
+                                                                newSellerCount,
+                                                                currentSellerCount
+                                                            );
+                                                            return ApiResponse.<SellerRegistrationResponse>error(errorMessage);
+                                                        });
                                             }
                                             
                                             // Verificar si el teléfono ya existe
@@ -292,7 +305,6 @@ public class SellerService {
         // Hacer las variables finales para usar en lambda
         final int finalPage = page;
         final int finalLimit = limit;
-        final int offset = (finalPage - 1) * finalLimit;
         
         return sellerRepository.find("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3 order by affiliationDate desc", 
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))

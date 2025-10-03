@@ -8,7 +8,9 @@ import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.PermitAll;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import org.sky.service.SellerService;
+import org.sky.service.SubscriptionService;
 import org.sky.service.security.SecurityService;
+import org.sky.repository.SellerRepository;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -27,6 +29,12 @@ public class SellerController {
     
     @Inject
     SellerService sellerService;
+    
+    @Inject
+    SubscriptionService subscriptionService;
+    
+    @Inject
+    SellerRepository sellerRepository;
     
     @Inject
     SecurityService securityService;
@@ -199,6 +207,46 @@ public class SellerController {
                 });
     }
     
+    @GET
+    @Path("/limits")
+    @PermitAll
+    @WithTransaction
+    @Operation(summary = "Get seller limits", description = "Get current seller limits based on subscription plan")
+    public Uni<Response> getSellerLimits(@QueryParam("adminId") Long adminId,
+                                        @HeaderParam("Authorization") String authorization) {
+        log.info("🚀 SellerController.getSellerLimits() - Endpoint llamado para adminId: " + adminId);
+        
+        // Validar autorización de admin
+        return securityService.validateAdminAuthorization(authorization, adminId)
+                .chain(userId -> {
+                    log.info("✅ Autorización exitosa para adminId: " + adminId);
+                    return subscriptionService.getSellerLimitsInfo(adminId);
+                })
+                .chain(limitsInfo -> {
+                    // Obtener el número actual de vendedores usando el repositorio directamente
+                    return sellerRepository.findByAdminId(adminId)
+                            .map(sellers -> {
+                                int currentSellers = sellers != null ? sellers.size() : 0;
+                                
+                                var response = java.util.Map.of(
+                                    "adminId", adminId,
+                                    "planName", limitsInfo.planName(),
+                                    "maxSellers", limitsInfo.maxSellers(),
+                                    "currentSellers", currentSellers,
+                                    "remainingSlots", Math.max(0, limitsInfo.maxSellers() - currentSellers),
+                                    "isActive", limitsInfo.isActive(),
+                                    "canAddMore", currentSellers < limitsInfo.maxSellers(),
+                                    "timestamp", java.time.LocalDateTime.now()
+                                );
+                                
+                                return Response.ok(org.sky.dto.ApiResponse.success("Límites de vendedores obtenidos exitosamente", response)).build();
+                            });
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.warn("❌ Error al obtener límites: " + throwable.getMessage());
+                    return securityService.handleSecurityException(throwable);
+                });
+    }
 
     // Helper method to get current user ID from JWT
     private Long getCurrentUserId() {

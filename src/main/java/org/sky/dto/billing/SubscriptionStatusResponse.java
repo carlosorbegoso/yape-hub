@@ -12,7 +12,6 @@ public record SubscriptionStatusResponse(
         @JsonProperty("currency") String currency,
         @JsonProperty("billingCycle") String billingCycle,
         @JsonProperty("maxSellers") Integer maxSellers,
-        @JsonProperty("tokensIncluded") Integer tokensIncluded,
         @JsonProperty("startDate") LocalDateTime startDate,
         @JsonProperty("endDate") LocalDateTime endDate,
         @JsonProperty("isActive") Boolean isActive,

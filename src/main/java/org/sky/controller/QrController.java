@@ -9,7 +9,6 @@ import jakarta.annotation.security.PermitAll;
 import org.sky.dto.qr.*;
 import org.sky.dto.ErrorResponse;
 import org.sky.dto.seller.AffiliateSellerRequest;
-import org.sky.annotation.TokenConsumption;
 import org.sky.service.QrService;
 import org.sky.service.security.SecurityService;
 import org.sky.service.SellerService;
@@ -61,7 +60,6 @@ public class QrController {
     @PermitAll
     @Operation(summary = "Generate affiliation code (protected)",
                description = "Generate a new affiliation code for sellers with JWT validation (ADMIN ONLY)")
-    @TokenConsumption(operationType = "affiliation_code_generation", tokens = 1)
     @APIResponses(value = {
         @APIResponse(responseCode = "201", description = "Affiliation code generated successfully"),
         @APIResponse(responseCode = "400", description = "Bad request - invalid parameters"),
@@ -169,7 +167,6 @@ public class QrController {
     @PermitAll
     @WithTransaction
     @Operation(summary = "Register seller with affiliation code", description = "Register a new seller using ONLY an affiliation code (no direct registration allowed)")
-    @TokenConsumption(operationType = "seller_registration", tokens = 1)
     @APIResponses(value = {
         @APIResponse(responseCode = "201", description = "Seller registered successfully"),
         @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code or seller data"),
@@ -208,7 +205,7 @@ public class QrController {
                                 return qrService.getAdminIdFromAffiliationCode(request.affiliationCode())
                                         .chain(adminId -> {
                                             log.info("🚀 AdminId obtenido del código: " + adminId);
-                                            return sellerService.affiliateSellerWithToken(adminId, request);
+                                            return sellerService.affiliateSeller(adminId, request);
                                         })
                                         .map(sellerResponse -> {
                                             log.info("🚀 Respuesta del servicio de registro - success: " + sellerResponse.isSuccess());
@@ -237,7 +234,6 @@ public class QrController {
     @Path("/generate-qr-base64")
     @PermitAll
     @Operation(summary = "Generate QR code with Base64", description = "Generates a QR code containing affiliation code encoded in Base64")
-    @TokenConsumption(operationType = "qr_generation", tokens = 1)
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "QR generated successfully"),
         @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code")
