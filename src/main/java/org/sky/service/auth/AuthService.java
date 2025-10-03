@@ -135,7 +135,7 @@ public class AuthService {
                             String refreshToken = jwtGenerator.generateRefreshToken(branch.admin.user.id);
 
                             UserInfo userInfo = new UserInfo(
-                                    branch.admin.user.id, branch.admin.user.email, branch.admin.businessName, branch.admin.user.role.toString(), branch.admin.user.isVerified
+                                    branch.admin.user.id, branch.admin.user.email, branch.admin.businessName, branch.admin.id, branch.admin.user.role.toString(), branch.admin.user.isVerified
                             );
 
                             LoginResponse response = new LoginResponse(accessToken, refreshToken, 3600L, userInfo);

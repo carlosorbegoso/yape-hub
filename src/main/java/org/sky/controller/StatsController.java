@@ -36,6 +36,26 @@ public class StatsController {
     private static final Logger log = Logger.getLogger(StatsController.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
+    // Record para encapsular el rango de fechas
+    public record DateRange(LocalDate startDate, LocalDate endDate) {}
+    
+    /**
+     * Valida y procesa las fechas de entrada, retornando un rango de fechas válido
+     */
+    private Uni<DateRange> validateAndProcessDateRange(String startDateStr, String endDateStr) {
+        return Uni.createFrom().item(() -> {
+            LocalDate startDate, endDate;
+            try {
+                startDate = startDateStr != null ? LocalDate.parse(startDateStr, DATE_FORMATTER) : LocalDate.now().minusDays(30);
+                endDate = endDateStr != null ? LocalDate.parse(endDateStr, DATE_FORMATTER) : LocalDate.now();
+            } catch (DateTimeParseException e) {
+                log.warn("❌ Fechas inválidas: " + e.getMessage());
+                throw new RuntimeException("Formato de fecha inválido. Use yyyy-MM-dd");
+            }
+            return new DateRange(startDate, endDate);
+        });
+    }
+    
     @GET
     @Path("/admin/summary")
     @Operation(summary = "Get admin basic statistics", 

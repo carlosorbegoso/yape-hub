@@ -34,15 +34,12 @@ public class LoginResponseBuilder {
     public Uni<ApiResponse<LoginResponse>> buildLoginResponseFromCachedUser(JwtTokenService.TokenData tokenData) {
         UserEntityEntity user = tokenData.user();
         
-        UserInfo userInfo = new UserInfo(
-            user.id, user.email, null, user.role.toString(), user.isVerified
-        );
-        
-        LoginResponse response = new LoginResponse(
-            tokenData.accessToken(), tokenData.refreshToken(), 3600L, userInfo
-        );
-        
-        return Uni.createFrom().item(ApiResponse.success("Login exitoso", response));
+        // Para usuarios en caché, necesitamos obtener la información del business
+        if (user.role == UserRole.ADMIN) {
+            return buildAdminLoginResponse(tokenData);
+        } else {
+            return buildSellerLoginResponse(tokenData);
+        }
     }
 
     private Uni<ApiResponse<LoginResponse>> buildAdminLoginResponse(JwtTokenService.TokenData tokenData) {
@@ -52,7 +49,7 @@ public class LoginResponseBuilder {
                     String businessName = admin != null ? admin.businessName : null;
                     
                     UserInfo userInfo = new UserInfo(
-                        tokenData.user().id, tokenData.user().email, businessName, tokenData.user().role.toString(), tokenData.user().isVerified
+                        tokenData.user().id, tokenData.user().email, businessName, businessId, tokenData.user().role.toString(), tokenData.user().isVerified
                     );
                     
                     LoginResponse response = new LoginResponse(
@@ -68,7 +65,6 @@ public class LoginResponseBuilder {
                 .map(seller -> {
                     Long businessId = null;
                     String businessName = null;
-                    Long sellerId = seller != null ? seller.id : null;
                     
                     if (seller != null && seller.branch != null && seller.branch.admin != null) {
                         businessId = seller.branch.admin.id;
@@ -76,7 +72,7 @@ public class LoginResponseBuilder {
                     }
                     
                     UserInfo userInfo = new UserInfo(
-                        tokenData.user().id, tokenData.user().email, businessName, tokenData.user().role.toString(), tokenData.user().isVerified
+                        tokenData.user().id, tokenData.user().email, businessName, businessId, tokenData.user().role.toString(), tokenData.user().isVerified
                     );
                     
                     LoginResponse response = new LoginResponse(
