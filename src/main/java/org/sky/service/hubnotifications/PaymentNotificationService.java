@@ -17,15 +17,12 @@ import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
-import org.sky.service.hubnotifications.PaymentNotificationDataService;
-import org.sky.service.hubnotifications.PaymentNotificationMapper;
-import org.sky.service.hubnotifications.PaymentNotificationProcessor;
-import org.sky.service.hubnotifications.PaymentNotificationValidator;
 import org.sky.service.security.SecurityService;
 import org.sky.service.websocket.WebSocketNotificationService;
 import org.sky.dto.response.seller.ConnectedSellerInfo;
@@ -70,12 +67,11 @@ public class PaymentNotificationService {
     public Uni<PendingPaymentsResponse> getPendingPaymentsForSeller(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
         return PaymentNotificationValidator.validateSellerId().apply(sellerId)
             .chain(validSellerId -> {
-                Map<String, Object> params = Map.of(
-                    "page", page,
-                    "size", size,
-                    "startDate", startDate,
-                    "endDate", endDate
-                );
+                Map<String, Object> params = new HashMap<>();
+                params.put("page", page);
+                params.put("size", size);
+                params.put("startDate", startDate);
+                params.put("endDate", endDate);
                 return PaymentNotificationValidator.validatePagination().apply(params)
                     .chain(PaymentNotificationValidator.validateDateRange()::apply);
             })
@@ -399,9 +395,6 @@ public class PaymentNotificationService {
         return dataService.findSellersByAdminId(adminId);
     }
 
-    public Uni<AdminPaymentManagementResponse> getConfirmedPaymentsForSellerPaginated(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
-        return getAllPendingPayments(page, size, startDate, endDate);
-    }
     
     /**
      * Obtiene el rol del usuario por su ID
@@ -426,40 +419,168 @@ public class PaymentNotificationService {
     }
     
     /**
-     * Obtiene pagos pendientes para un admin (todos los pagos de sus vendedores)
+     * Obtiene pagos para un admin por estado específico (todos los pagos de sus vendedores)
      */
     @WithTransaction
-    public Uni<PendingPaymentsResponse> getPendingPaymentsForAdmin(Long adminId, int page, int size, LocalDate startDate, LocalDate endDate) {
-        log.info("🔍 Getting pending payments for admin: " + adminId);
+    public Uni<AdminPaymentManagementResponse> getPaymentsForAdminByStatus(Long adminId, int page, int size, String status, LocalDate startDate, LocalDate endDate) {
+        log.info("🔍 Getting payments for admin: " + adminId + " with status: " + status);
         
-        return dataService.findPendingPaymentsForAdmin(adminId, page, size, startDate, endDate)
+        return dataService.findPaymentsForAdminByStatus(adminId, page, size, status, startDate, endDate)
             .chain(payments -> {
-                log.info("📊 Found " + payments.size() + " pending payments for admin: " + adminId);
+                log.info("📊 Found " + payments.size() + " payments for admin: " + adminId + " with status: " + status);
                 
-                return dataService.countPendingPaymentsForAdmin(adminId, startDate, endDate)
-                    .map(totalCount -> {
-                        List<PaymentNotificationResponse> paymentResponses = payments.stream()
-                            .map(PaymentNotificationMapper.ENTITY_TO_RESPONSE)
-                            .collect(Collectors.toList());
-                        
-                        long totalPages = (long) Math.ceil((double) totalCount / size);
-                        
-                        return new PendingPaymentsResponse(
-                            paymentResponses,
-                            new PaginationInfo(
-                                page,
-                                (int) totalPages,
-                                totalCount,
-                                size,
-                                page < totalPages - 1,
-                                page > 0
-                            )
-                        );
-                    });
+                return dataService.countPaymentsForAdminByStatus(adminId, status, startDate, endDate)
+                    .chain(totalCount -> calculatePaymentSummary(adminId, status, startDate, endDate)
+                        .map(summary -> {
+                            List<PaymentDetail> paymentDetails = mapPaymentsToDetails(payments);
+                            PaginationInfo pagination = PaginationInfo.create(page, totalCount, size);
+                            
+                            return new AdminPaymentManagementResponse(paymentDetails, summary, pagination);
+                        })
+                    );
             })
-            .onFailure().recoverWithItem(throwable -> {
-                log.error("❌ Error getting pending payments for admin: " + throwable.getMessage());
-                return new PendingPaymentsResponse(List.of(), new PaginationInfo(page, 0, 0, size, false, false));
+            .onFailure().invoke(throwable -> {
+                log.error("❌ Error getting payments for admin: " + throwable.getMessage());
             });
     }
+    
+    /**
+     * Calcula el PaymentSummary completo independiente de la paginación
+     * Este método obtiene TODOS los datos para el resumen, no solo los de la página actual
+     */
+    private Uni<PaymentSummary> calculatePaymentSummary(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
+        log.info("🧮 Calculating payment summary for admin: " + adminId + " with status: " + status);
+        
+        return getPaymentCounts(adminId, startDate, endDate)
+            .chain(counts -> getPaymentAmounts(adminId, startDate, endDate)
+                .map(amounts -> createConsistentSummary(status, counts, amounts))
+            );
+    }
+    
+    /**
+     * Obtiene solo el PaymentSummary para un admin (sin paginación)
+     * Útil para dashboards, reportes o cuando solo se necesita el resumen
+     */
+    @WithTransaction
+    public Uni<PaymentSummary> getPaymentSummaryForAdmin(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
+        log.info("📊 Getting payment summary for admin: " + adminId + " with status: " + status);
+        
+        return calculatePaymentSummary(adminId, status, startDate, endDate)
+            .onFailure().invoke(throwable -> {
+                log.error("❌ Error calculating payment summary for admin: " + throwable.getMessage());
+            });
+    }
+    
+    /**
+     * Obtiene conteos de pagos por estado de forma reactiva
+     */
+    private Uni<PaymentCounts> getPaymentCounts(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return dataService.countPaymentsForAdminByStatus(adminId, "PENDING", startDate, endDate)
+            .chain(pendingCount -> 
+                dataService.countPaymentsForAdminByStatus(adminId, "CLAIMED", startDate, endDate)
+                    .chain(confirmedCount ->
+                        dataService.countPaymentsForAdminByStatus(adminId, "REJECTED", startDate, endDate)
+                            .map(rejectedCount -> new PaymentCounts(pendingCount, confirmedCount, rejectedCount))
+                    )
+            );
+    }
+    
+    /**
+     * Obtiene montos de pagos por estado de forma reactiva
+     */
+    private Uni<PaymentAmounts> getPaymentAmounts(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return dataService.sumAmountForAdminByStatus(adminId, "PENDING", startDate, endDate)
+            .chain(pendingAmount -> 
+                dataService.sumAmountForAdminByStatus(adminId, "CLAIMED", startDate, endDate)
+                    .chain(confirmedAmount ->
+                        dataService.sumAmountForAdminByStatus(adminId, "REJECTED", startDate, endDate)
+                            .map(rejectedAmount -> new PaymentAmounts(pendingAmount, confirmedAmount, rejectedAmount))
+                    )
+            );
+    }
+    
+    /**
+     * Crea un PaymentSummary consistente basado en el filtro aplicado
+     */
+    private PaymentSummary createConsistentSummary(String status, PaymentCounts counts, PaymentAmounts amounts) {
+        if ("PENDING".equalsIgnoreCase(status)) {
+            return new PaymentSummary(
+                counts.pendingCount(),
+                counts.pendingCount(),
+                0L,
+                0L,
+                amounts.pendingAmount(),
+                0.0,
+                amounts.pendingAmount()
+            );
+        } else if ("CLAIMED".equalsIgnoreCase(status)) {
+            return new PaymentSummary(
+                counts.confirmedCount(),
+                0L,
+                counts.confirmedCount(),
+                0L,
+                amounts.confirmedAmount(),
+                amounts.confirmedAmount(),
+                0.0
+            );
+        } else if ("REJECTED".equalsIgnoreCase(status)) {
+            return new PaymentSummary(
+                counts.rejectedCount(),
+                0L,
+                0L,
+                counts.rejectedCount(),
+                amounts.rejectedAmount(),
+                0.0,
+                0.0
+            );
+        } else {
+            // Para múltiples estados o ALL, usar todos los datos
+            long totalPayments = counts.pendingCount() + counts.confirmedCount() + counts.rejectedCount();
+            double totalAmount = amounts.pendingAmount() + amounts.confirmedAmount() + amounts.rejectedAmount();
+            
+            return new PaymentSummary(
+                totalPayments,
+                counts.pendingCount(),
+                counts.confirmedCount(),
+                counts.rejectedCount(),
+                totalAmount,
+                amounts.confirmedAmount(),
+                amounts.pendingAmount()
+            );
+        }
+    }
+    
+    /**
+     * Mapea las entidades de pago a PaymentDetail
+     */
+    private List<PaymentDetail> mapPaymentsToDetails(List<PaymentNotificationEntity> payments) {
+        return payments.stream()
+            .map(payment -> new PaymentDetail(
+                payment.id,
+                payment.amount,
+                payment.senderName,
+                payment.yapeCode,
+                payment.status,
+                payment.createdAt,
+                payment.confirmedBy,
+                payment.confirmedAt,
+                payment.rejectedBy,
+                payment.rejectedAt,
+                payment.rejectionReason,
+                "Seller Name", // sellerName - would need to be fetched
+                "Branch Name"  // branchName - would need to be fetched
+            ))
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Record para encapsular conteos de pagos
+     */
+    private record PaymentCounts(long pendingCount, long confirmedCount, long rejectedCount) {}
+    
+    /**
+     * Record para encapsular montos de pagos
+     */
+    private record PaymentAmounts(double pendingAmount, double confirmedAmount, double rejectedAmount) {}
+
 }

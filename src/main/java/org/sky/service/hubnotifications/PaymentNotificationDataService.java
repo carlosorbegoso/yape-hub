@@ -107,4 +107,12 @@ public class PaymentNotificationDataService {
     public Uni<Long> countPaymentsForAdminByStatus(Long adminId, String status, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         return paymentRepository.countPaymentsForAdminByStatus(adminId, status, startDate, endDate);
     }
+    
+    /**
+     * Suma montos totales para un admin por estado específico
+     */
+    public Uni<Double> sumAmountForAdminByStatus(Long adminId, String status, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return paymentRepository.sumAmountForAdminByStatus(adminId, status, startDate, endDate);
+    }
+    
 }

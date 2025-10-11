@@ -123,7 +123,6 @@ public class QrController {
     @POST
     @Path("/validate-affiliation-code")
     @PermitAll
-    @WithTransaction
     @Operation(summary = "Validate affiliation code", description = "Validate an affiliation code (public endpoint for sellers)")
     @APIResponses(value = {
         @APIResponse(responseCode = "200", description = "Affiliation code validated successfully"),

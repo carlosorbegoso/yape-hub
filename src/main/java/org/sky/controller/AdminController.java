@@ -25,7 +25,6 @@ public class AdminController {
     
     @GET
     @Path("/profile")
-    @WithTransaction
     @Operation(summary = "Get admin profile", description = "Retrieve administrator profile information")
     public Uni<Response> getAdminProfile(@QueryParam("userId") Long userId) {
         return adminService.getAdminProfile(userId)

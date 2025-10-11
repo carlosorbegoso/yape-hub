@@ -21,7 +21,6 @@ public class PaymentUploadService {
     @Inject
     PaymentImageValidator imageValidator;
 
-    @WithTransaction
     public Uni<PaymentUploadResponse> uploadPaymentImage(Long adminId, String paymentCode, String imageBase64) {
         return Uni.combine().all().unis(
                 imageValidator.validateImage(imageBase64),

@@ -29,7 +29,7 @@ public class SellerRepository implements PanacheRepository<SellerEntity> {
     }
 
     public Uni<SellerEntity> findByUserId(Long userId) {
-        return find("user.id", userId).firstResult();
+        return find("SELECT s FROM SellerEntity s JOIN FETCH s.branch b JOIN FETCH b.admin WHERE s.user.id = ?1", userId).firstResult();
     }
 
     public Uni<SellerEntity> findBySellerIdAndAdminId(Long sellerId, Long adminId) {

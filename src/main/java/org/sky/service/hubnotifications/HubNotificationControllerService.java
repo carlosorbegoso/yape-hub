@@ -10,6 +10,9 @@ import org.sky.dto.response.payment.PendingPaymentsResponse;
 import org.sky.dto.response.admin.AdminPaymentManagementResponse;
 import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.service.websocket.WebSocketNotificationService;
+import org.sky.repository.SellerRepository;
+import org.jboss.logging.Logger;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,11 +22,16 @@ import java.time.format.DateTimeParseException;
 @ApplicationScoped
 public class HubNotificationControllerService {
 
+    private static final Logger log = Logger.getLogger(HubNotificationControllerService.class);
+
     @Inject
     PaymentNotificationService paymentNotificationService;
 
     @Inject
     WebSocketNotificationService webSocketNotificationService;
+
+    @Inject
+    SellerRepository sellerRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -128,7 +136,7 @@ public class HubNotificationControllerService {
         int effectiveSize = Math.min(size, limit);
         
         return validateAndParseDates(startDateStr, endDateStr)
-                .chain(dateRange -> paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, page, effectiveSize, dateRange.startDate(), dateRange.endDate()));
+                .chain(dateRange -> paymentNotificationService.getPaymentsForAdminByStatus(sellerId, page, effectiveSize, "CLAIMED", dateRange.startDate(), dateRange.endDate()));
     }
 
     public Uni<AdminPaymentManagementResponse> getAdminPaymentManagement(Long adminId, int page, int size, String status, String startDateStr, String endDateStr) {
@@ -136,33 +144,67 @@ public class HubNotificationControllerService {
                 .chain(dateRange -> paymentNotificationService.getAdminPaymentManagement(adminId, page, size, status, dateRange.startDate(), dateRange.endDate()));
     }
 
-    public Uni<AdminPaymentManagementResponse> getConfirmedPaymentsForSeller(Long sellerId, Long adminId, String startDateStr, String endDateStr) {
-        return paymentNotificationService.getConfirmedPaymentsForSellerPaginated(sellerId, 0, 20, null, null);
-    }
     
     /**
-     * Obtiene pagos pendientes filtrados por rol del usuario
+     * Obtiene pagos filtrados por rol del usuario y estado
      * - Admin: Ve todos los pagos de sus vendedores
      * - Seller: Ve solo sus propios pagos
+     * - Status: PENDING, CLAIMED, REJECTED, o ALL
      */
-    public Uni<PendingPaymentsResponse> getPendingPaymentsByRole(Long userId, Long sellerId, String startDateStr, String endDateStr, int page, int size, int limit) {
+    @WithTransaction
+    public Uni<AdminPaymentManagementResponse> getPaymentsByRoleAndStatus(Long userId, Long sellerId, String status, String startDateStr, String endDateStr, int page, int size, int limit) {
         int effectiveSize = Math.min(size, limit);
+        
+        log.info("🔍 Getting payments by role and status for userId: " + userId + ", sellerId: " + sellerId + ", status: " + status);
         
         return validateAndParseDates(startDateStr, endDateStr)
                 .chain(dateRange -> {
+                    log.info("📅 Date range parsed: " + dateRange.startDate() + " to " + dateRange.endDate());
+                    
                     // Determinar el rol del usuario
                     return paymentNotificationService.getUserRole(userId)
                             .chain(userRole -> {
+                                log.info("✅ User " + userId + " has role: " + userRole);
                                 if ("ADMIN".equals(userRole)) {
                                     // Admin: obtener todos los pagos de sus vendedores
-                                    return paymentNotificationService.getPendingPaymentsForAdmin(userId, page, effectiveSize, dateRange.startDate(), dateRange.endDate());
+                                    log.info("📊 Getting payments for admin: " + userId + " with status: " + status);
+                                    return paymentNotificationService.getPaymentsForAdminByStatus(userId, page, effectiveSize, status, dateRange.startDate(), dateRange.endDate());
                                 } else if ("SELLER".equals(userRole)) {
                                     // Seller: obtener solo sus propios pagos
-                                    return paymentNotificationService.getPendingPaymentsForSeller(userId, page, effectiveSize, dateRange.startDate(), dateRange.endDate());
+                                    // Validar que el seller no pueda usar status=ALL
+                                    if ("ALL".equalsIgnoreCase(status)) {
+                                        log.error("❌ Seller " + userId + " attempted to access ALL payments - denied");
+                                        return Uni.createFrom().failure(new SecurityException("Los vendedores no pueden acceder a todos los pagos. Use PENDING, CLAIMED o REJECTED."));
+                                    }
+                                    
+                                    // Validar que los estados solicitados sean válidos para sellers
+                                    String[] requestedStatuses = status.split(",");
+                                    for (String requestedStatus : requestedStatuses) {
+                                        String trimmedStatus = requestedStatus.trim().toUpperCase();
+                                        if (!"PENDING".equals(trimmedStatus) && !"CLAIMED".equals(trimmedStatus) && !"REJECTED".equals(trimmedStatus)) {
+                                            log.error("❌ Seller " + userId + " attempted to access invalid status: " + trimmedStatus);
+                                            return Uni.createFrom().failure(new SecurityException("Estado no válido para vendedores: " + trimmedStatus + ". Use PENDING, CLAIMED o REJECTED."));
+                                        }
+                                    }
+                                    
+                                    // Necesitamos obtener el adminId del seller
+                                    log.info("🔍 Looking up seller for userId: " + userId);
+                                    return sellerRepository.findByUserId(userId)
+                                            .chain(seller -> {
+                                                if (seller == null) {
+                                                    log.error("❌ Seller not found for userId: " + userId);
+                                                    return Uni.createFrom().failure(new SecurityException("Vendedor no encontrado para el usuario: " + userId));
+                                                }
+                                                log.info("✅ Found seller: " + seller.id + " for userId: " + userId);
+                                                // Los sellers ven los pagos de su admin (pero no ALL)
+                                                return paymentNotificationService.getPaymentsForAdminByStatus(seller.branch.admin.id, page, effectiveSize, status, dateRange.startDate(), dateRange.endDate());
+                                            });
                                 } else {
+                                    log.error("❌ Invalid user role: " + userRole + " for userId: " + userId);
                                     return Uni.createFrom().failure(new SecurityException("Rol de usuario no válido: " + userRole));
                                 }
                             });
                 });
     }
+
 }

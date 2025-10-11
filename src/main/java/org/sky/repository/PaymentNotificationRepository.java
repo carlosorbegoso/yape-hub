@@ -18,9 +18,11 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
      * Find pending payments for seller with pagination
      */
     public Uni<List<PaymentNotificationEntity>> findPendingPaymentsForSeller(Long sellerId, int page, int size, LocalDate startDate, LocalDate endDate) {
+        // Los sellers ven todos los pagos pendientes de su admin
+        // Necesitamos obtener el adminId del seller primero - esto se hace en el servicio
         return find(
-            "seller.id = ?1 AND status = 'PENDING' AND createdAt BETWEEN ?2 AND ?3 ORDER BY createdAt DESC",
-            sellerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            "status = 'PENDING' AND createdAt BETWEEN ?1 AND ?2 ORDER BY createdAt DESC",
+            startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
         ).page(page, size).list();
     }
 
@@ -38,9 +40,10 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
      * Count pending payments for seller
      */
     public Uni<Long> countPendingPaymentsForSeller(Long sellerId, LocalDate startDate, LocalDate endDate) {
+        // Los sellers ven todos los pagos pendientes de su admin
         return count(
-            "seller.id = ?1 AND status = 'PENDING' AND createdAt BETWEEN ?2 AND ?3",
-            sellerId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+            "status = 'PENDING' AND createdAt BETWEEN ?1 AND ?2",
+            startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
         );
     }
 
@@ -62,6 +65,16 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
             .chain(payment -> {
                 if (payment != null) {
                     payment.status = status;
+                    
+                    // Actualizar campos específicos según el estado
+                    if ("CLAIMED".equals(status)) {
+                        payment.confirmedAt = java.time.LocalDateTime.now();
+                        // confirmedBy se puede establecer desde el servicio si es necesario
+                    } else if ("REJECTED".equals(status)) {
+                        payment.rejectedAt = java.time.LocalDateTime.now();
+                        // rejectedBy se puede establecer desde el servicio si es necesario
+                    }
+                    
                     return persist(payment);
                 }
                 return Uni.createFrom().nullItem();
@@ -85,7 +98,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
      * Find payments by seller ID within date range for stats
      */
     public Uni<List<PaymentNotificationEntity>> findPaymentsForStatsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        return find("seller.id = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", sellerId, startDateTime, endDateTime)
+        return find("seller = ?1 and createdAt >= ?2 and createdAt <= ?3 ORDER BY createdAt DESC", sellerId, startDateTime, endDateTime)
                 .page(0, 5000)  // LÍMITE CRÍTICO: máximo 5000 pagos
                 .list();
     }
@@ -110,7 +123,7 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
      * Count payments by seller ID within date range
      */
     public Uni<Long> countPaymentsBySellerId(Long sellerId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        return count("seller.id = ?1 and createdAt >= ?2 and createdAt <= ?3", sellerId, startDateTime, endDateTime);
+        return count("seller = ?1 and createdAt >= ?2 and createdAt <= ?3", sellerId, startDateTime, endDateTime);
     }
     
     /**
@@ -223,42 +236,139 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
     }
     
     /**
-     * Find payments for admin by specific status
+     * Find payments for admin by specific status(es)
+     * Supports single status or multiple comma-separated statuses (e.g., "PENDING,CLAIMED")
      */
     public Uni<List<PaymentNotificationEntity>> findPaymentsForAdminByStatus(Long adminId, int page, int size, String status, LocalDate startDate, LocalDate endDate) {
-        if (status == null || status.trim().isEmpty()) {
-            // Si no se especifica estado, obtener todos los pagos del admin
+        if (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status)) {
+            // Si no se especifica estado o es "ALL", obtener todos los pagos del admin
             return find(
                 "adminId = ?1 AND createdAt BETWEEN ?2 AND ?3 ORDER BY createdAt DESC",
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
             ).page(page, size).list();
         } else {
-            // Si se especifica estado, filtrar por estado
-            return find(
-                "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4 ORDER BY createdAt DESC",
-                adminId, status, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
-            ).page(page, size).list();
+            // Procesar múltiples estados separados por comas
+            String[] statuses = status.split(",");
+            if (statuses.length == 1) {
+                // Un solo estado
+                return find(
+                    "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4 ORDER BY createdAt DESC",
+                    adminId, statuses[0].trim(), startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+                ).page(page, size).list();
+            } else {
+                // Múltiples estados - usar IN clause
+                StringBuilder query = new StringBuilder("adminId = ?1 AND status IN (");
+                for (int i = 0; i < statuses.length; i++) {
+                    if (i > 0) query.append(",");
+                    query.append("?").append(i + 2);
+                }
+                query.append(") AND createdAt BETWEEN ?").append(statuses.length + 2).append(" AND ?").append(statuses.length + 3).append(" ORDER BY createdAt DESC");
+                
+                Object[] params = new Object[statuses.length + 3];
+                params[0] = adminId;
+                for (int i = 0; i < statuses.length; i++) {
+                    params[i + 1] = statuses[i].trim();
+                }
+                params[statuses.length + 1] = startDate.atStartOfDay();
+                params[statuses.length + 2] = endDate.atTime(23, 59, 59);
+                
+                return find(query.toString(), params).page(page, size).list();
+            }
         }
     }
     
     /**
-     * Count payments for admin by specific status
+     * Count payments for admin by specific status(es)
+     * Supports single status or multiple comma-separated statuses (e.g., "PENDING,CLAIMED")
      */
     public Uni<Long> countPaymentsForAdminByStatus(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
-        if (status == null || status.trim().isEmpty()) {
-            // Si no se especifica estado, contar todos los pagos del admin
+        if (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status)) {
+            // Si no se especifica estado o es "ALL", contar todos los pagos del admin
             return count(
                 "adminId = ?1 AND createdAt BETWEEN ?2 AND ?3",
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
             );
         } else {
-            // Si se especifica estado, contar por estado
-            return count(
-                "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4",
-                adminId, status, startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
-            );
+            // Procesar múltiples estados separados por comas
+            String[] statuses = status.split(",");
+            if (statuses.length == 1) {
+                // Un solo estado
+                return count(
+                    "adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4",
+                    adminId, statuses[0].trim(), startDate.atStartOfDay(), endDate.atTime(23, 59, 59)
+                );
+            } else {
+                // Múltiples estados - usar IN clause
+                StringBuilder query = new StringBuilder("adminId = ?1 AND status IN (");
+                for (int i = 0; i < statuses.length; i++) {
+                    if (i > 0) query.append(",");
+                    query.append("?").append(i + 2);
+                }
+                query.append(") AND createdAt BETWEEN ?").append(statuses.length + 2).append(" AND ?").append(statuses.length + 3);
+                
+                Object[] params = new Object[statuses.length + 3];
+                params[0] = adminId;
+                for (int i = 0; i < statuses.length; i++) {
+                    params[i + 1] = statuses[i].trim();
+                }
+                params[statuses.length + 1] = startDate.atStartOfDay();
+                params[statuses.length + 2] = endDate.atTime(23, 59, 59);
+                
+                return count(query.toString(), params);
+            }
         }
     }
+
+    /**
+     * Sum total amount for payments by admin and status
+     * Supports single status or multiple comma-separated statuses
+     */
+    public Uni<Double> sumAmountForAdminByStatus(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
+        if (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status)) {
+            // Si no se especifica estado o es "ALL", sumar todos los pagos del admin
+            return find("adminId = ?1 AND createdAt BETWEEN ?2 AND ?3", 
+                    adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                .list()
+                .map(payments -> payments.stream()
+                    .mapToDouble(p -> p.amount.doubleValue())
+                    .sum());
+        } else {
+            // Procesar múltiples estados separados por comas
+            String[] statuses = status.split(",");
+            if (statuses.length == 1) {
+                // Un solo estado
+                return find("adminId = ?1 AND status = ?2 AND createdAt BETWEEN ?3 AND ?4", 
+                        adminId, statuses[0].trim(), startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+                    .list()
+                    .map(payments -> payments.stream()
+                        .mapToDouble(p -> p.amount.doubleValue())
+                        .sum());
+            } else {
+                // Múltiples estados - usar IN clause
+                StringBuilder query = new StringBuilder("adminId = ?1 AND status IN (");
+                for (int i = 0; i < statuses.length; i++) {
+                    if (i > 0) query.append(",");
+                    query.append("?").append(i + 2);
+                }
+                query.append(") AND createdAt BETWEEN ?").append(statuses.length + 2).append(" AND ?").append(statuses.length + 3);
+                
+                Object[] params = new Object[statuses.length + 3];
+                params[0] = adminId;
+                for (int i = 0; i < statuses.length; i++) {
+                    params[i + 1] = statuses[i].trim();
+                }
+                params[statuses.length + 1] = startDate.atStartOfDay();
+                params[statuses.length + 2] = endDate.atTime(23, 59, 59);
+                
+                return find(query.toString(), params)
+                    .list()
+                    .map(payments -> payments.stream()
+                        .mapToDouble(p -> p.amount.doubleValue())
+                        .sum());
+            }
+        }
+    }
+
     
     /**
      * Result records
