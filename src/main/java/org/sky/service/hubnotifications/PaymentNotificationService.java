@@ -12,6 +12,7 @@ import org.sky.dto.response.payment.PaymentNotificationResponse;
 import org.sky.dto.response.payment.PaymentSummary;
 import org.sky.dto.response.payment.PendingPaymentsResponse;
 import org.sky.dto.response.admin.AdminPaymentManagementResponse;
+import org.sky.exception.ValidationException;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.sky.service.security.SecurityService;
 import org.sky.service.websocket.WebSocketNotificationService;
 import org.sky.dto.response.seller.ConnectedSellerInfo;
 import org.sky.dto.response.seller.ConnectedSellersResponse;
@@ -40,11 +40,6 @@ public class PaymentNotificationService {
     @Inject
     PaymentNotificationProcessor processor;
 
-    @Inject
-    SecurityService securityService;
-
-    @Inject
-    PaymentNotificationMapper paymentNotificationMapper;
 
     @Inject
     WebSocketNotificationService webSocketNotificationService;
@@ -113,74 +108,7 @@ public class PaymentNotificationService {
     }
 
 
-    public Uni<AdminPaymentManagementResponse> getAllPendingPayments(int page, int size, LocalDate startDate, LocalDate endDate) {
-        Map<String, Object> params = Map.of(
-            "page", page,
-            "size", size,
-            "startDate", startDate,
-            "endDate", endDate
-        );
-        
-        return PaymentNotificationValidator.validatePagination().apply(params)
-            .chain(PaymentNotificationValidator.validateDateRange()::apply)
-            .chain(validParams -> {
-                int validPage = (Integer) validParams.get("page");
-                int validSize = (Integer) validParams.get("size");
-                LocalDate validStartDate = (LocalDate) validParams.get("startDate");
-                LocalDate validEndDate = (LocalDate) validParams.get("endDate");
-                
-                return Uni.combine().all().unis(
-                    dataService.findAllPendingPayments(validPage, validSize, validStartDate, validEndDate),
-                    dataService.countAllPendingPayments(validStartDate, validEndDate)
-                ).asTuple();
-            })
-            .chain(tuple -> {
-                List<PaymentNotificationEntity> payments = tuple.getItem1();
-                Long totalCount = tuple.getItem2();
-                
-                List<PaymentNotificationResponse> responses = payments.stream()
-                    .map(PaymentNotificationMapper.ENTITY_TO_RESPONSE)
-                    .toList();
-                
-                return Uni.createFrom().item(new AdminPaymentManagementResponse(
-                    responses.stream().map(r -> new PaymentDetail(
-                        r.paymentId(),
-                        r.amount(),
-                        r.senderName(),
-                        r.yapeCode(),
-                        r.status(),
-                        r.timestamp(),
-                        null, // confirmedBy
-                        null, // confirmedAt
-                        null, // rejectedBy
-                        null, // rejectedAt
-                        null, // rejectionReason
-                        "Seller Name", // sellerName - would need to be fetched
-                        "Branch Name"  // branchName - would need to be fetched
-                    )).toList(),
-                    new PaymentSummary(
-                        totalCount,
-                        totalCount, // pendingCount
-                        0L, // confirmedCount
-                        0L, // rejectedCount
-                        responses.stream().mapToDouble(PaymentNotificationResponse::amount).sum(), // totalAmount
-                        0.0, // confirmedAmount
-                        responses.stream().mapToDouble(PaymentNotificationResponse::amount).sum() // pendingAmount
-                    ),
-                    new PaginationInfo(
-                        page,
-                        (int) Math.ceil((double) totalCount / size),
-                        totalCount,
-                        size,
-                        page < (int) Math.ceil((double) totalCount / size),
-                        page > 1
-                    )
-                ));
-            });
-    }
-
-
-    @WithTransaction
+  @WithTransaction
     public Uni<PaymentNotificationResponse> claimPayment(Long paymentId) {
         log.info("🔍 Attempting to claim payment with ID: " + paymentId);
         
@@ -266,20 +194,20 @@ public class PaymentNotificationService {
     }
 
 
-    private Uni<PaymentNotificationResponse> sendNotificationToAllSellers(PaymentNotificationRequest request, List<SellerEntity> sellers) {
-        // Create notification for each seller asynchronously
-        List<Uni<Void>> notificationTasks = sellers.stream()
-            .map(seller -> createNotificationForSeller(request, seller).replaceWithVoid())
-            .toList();
-        
-        // Wait for all notifications to complete
-        return Uni.combine().all().unis(notificationTasks)
-            .discardItems() // Wait for all tasks to complete
-            .chain(v -> {
-                // Return the first seller's notification as the main response
-                return createNotificationForSeller(request, sellers.getFirst());
-            });
-    }
+  private Uni<PaymentNotificationResponse> sendNotificationToAllSellers(PaymentNotificationRequest request, List<SellerEntity> sellers) {
+      if(sellers.isEmpty()){
+        return Uni.createFrom().failure(ValidationException.requiredField("sellers"));
+      }
+
+     SellerEntity selectedSeller = sellers.stream()
+         .filter(seller -> seller.isActive)
+         .findFirst()
+         .orElse(sellers.getFirst());
+
+
+
+      return createNotificationForSeller(request,selectedSeller);
+  }
 
     private Uni<PaymentNotificationResponse> createNotificationForSeller(PaymentNotificationRequest request, SellerEntity seller) {
         return PaymentNotificationValidator.validateSeller().apply(seller)
@@ -310,7 +238,7 @@ public class PaymentNotificationService {
                                             .map(rejectedCount -> {
                                                 List<PaymentNotificationResponse> responses = payments.stream()
                                                     .map(PaymentNotificationMapper.ENTITY_TO_RESPONSE)
-                                                    .collect(Collectors.toList());
+                                                    .toList();
                                                 
                                                 // Calcular montos solo de la página actual para mostrar
                                                 double totalAmount = responses.stream().mapToDouble(PaymentNotificationResponse::amount).sum();
@@ -336,7 +264,7 @@ public class PaymentNotificationService {
                                                         null, // rejectionReason - would need to be fetched from entity
                                                         "Seller Name", // sellerName - would need to be fetched
                                                         "Branch Name"  // branchName - would need to be fetched
-                                                    )).collect(Collectors.toList()),
+                                                    )).toList(),
                                                     new PaymentSummary(
                                                         totalCount,
                                                         pendingCount,
@@ -351,8 +279,8 @@ public class PaymentNotificationService {
                                                         (int) Math.ceil((double) totalCount / size),
                                                         totalCount,
                                                         size,
-                                                        page < (int) Math.ceil((double) totalCount / size) - 1,
-                                                        page > 0
+                                                        page < (int) Math.ceil((double) totalCount / size),
+                                                        page > 1
                                                     )
                                                 );
                                             })
@@ -370,14 +298,7 @@ public class PaymentNotificationService {
             });
     }
 
-    public Map<String, Object> getNotificationQueueStats() {
-        return Map.of(
-            "processedCount", processor.getProcessedCount(),
-            "timestamp", java.time.LocalDateTime.now()
-        );
-    }
-
-    /**
+  /**
      * Obtiene vendedores conectados con información completa incluyendo estado WebSocket
      */
     @WithTransaction
@@ -485,22 +406,8 @@ public class PaymentNotificationService {
                 .map(amounts -> createConsistentSummary(status, counts, amounts))
             );
     }
-    
-    /**
-     * Obtiene solo el PaymentSummary para un admin (sin paginación)
-     * Útil para dashboards, reportes o cuando solo se necesita el resumen
-     */
-    @WithTransaction
-    public Uni<PaymentSummary> getPaymentSummaryForAdmin(Long adminId, String status, LocalDate startDate, LocalDate endDate) {
-        log.info("📊 Getting payment summary for admin: " + adminId + " with status: " + status);
-        
-        return calculatePaymentSummary(adminId, status, startDate, endDate)
-            .onFailure().invoke(throwable -> {
-                log.error("❌ Error calculating payment summary for admin: " + throwable.getMessage());
-            });
-    }
-    
-    /**
+
+  /**
      * Obtiene conteos de pagos por estado de forma reactiva
      */
     private Uni<PaymentCounts> getPaymentCounts(Long adminId, LocalDate startDate, LocalDate endDate) {

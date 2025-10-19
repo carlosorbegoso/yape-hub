@@ -84,20 +84,4 @@ public class PaymentNotificationProcessor {
         timerIds.remove(sellerId);
     }
 
-    public int getProcessedCount() {
-        return processedCount.get();
-    }
-
-    public int getQueueSize(Long sellerId) {
-        List<PaymentNotificationResponse> queue = notificationQueue.get(sellerId);
-        return queue != null ? queue.size() : 0;
-    }
-
-    public Uni<Void> clearQueue(Long sellerId) {
-        return Uni.createFrom().item(() -> {
-            notificationQueue.remove(sellerId);
-            timerIds.remove(sellerId);
-            return null;
-        });
-    }
 }

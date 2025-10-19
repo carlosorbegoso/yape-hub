@@ -6,10 +6,8 @@ import jakarta.inject.Inject;
 
 import org.sky.dto.request.payment.PaymentClaimRequest;
 import org.sky.dto.request.payment.PaymentRejectRequest;
-import org.sky.dto.response.payment.PendingPaymentsResponse;
 import org.sky.dto.response.admin.AdminPaymentManagementResponse;
 import org.sky.dto.response.payment.PaymentNotificationResponse;
-import org.sky.service.websocket.WebSocketNotificationService;
 import org.sky.repository.SellerRepository;
 import org.jboss.logging.Logger;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
@@ -27,17 +25,12 @@ public class HubNotificationControllerService {
     @Inject
     PaymentNotificationService paymentNotificationService;
 
-    @Inject
-    WebSocketNotificationService webSocketNotificationService;
 
     @Inject
     SellerRepository sellerRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    // ==================================================================================
-    // BUSINESS LOGIC METHODS - SIN VALIDACIONES DE SEGURIDAD (debe hacerse en Controller)
-    // ==================================================================================
 
     public record DateRange(java.time.LocalDate startDate, java.time.LocalDate endDate) {}
 
@@ -78,19 +71,7 @@ public class HubNotificationControllerService {
         return paymentNotificationService.rejectPayment(request.paymentId(), request.reason());
     }
 
-    public Uni<PendingPaymentsResponse> getPendingPayments(Long sellerId, Long adminId, String startDateStr, String endDateStr, int page, int size, int limit) {
-        int effectiveSize = Math.min(size, limit);
-        
-        return validateAndParseDates(startDateStr, endDateStr)
-                .chain(dateRange -> paymentNotificationService.getPendingPaymentsForSeller(
-                    sellerId, page, effectiveSize, dateRange.startDate(), dateRange.endDate()));
-    }
-
-    public Uni<org.sky.dto.response.seller.ConnectedSellersResponse> getConnectedSellersForAdmin(Long adminId) {
-        return paymentNotificationService.getConnectedSellersForAdmin(adminId);
-    }
-
-    public Uni<java.util.Map<String, Object>> getAllSellersStatusForAdmin(Long adminId) {
+  public Uni<java.util.Map<String, Object>> getAllSellersStatusForAdmin(Long adminId) {
         return paymentNotificationService.getAllSellersStatusForAdmin(adminId)
                 .chain(sellers -> {
                     java.util.List<java.util.Map<String, Object>> simpleSellers = sellers.stream()
@@ -120,37 +101,7 @@ public class HubNotificationControllerService {
                 });
     }
 
-    public Uni<AdminPaymentManagementResponse> getPendingPaymentsForAdmin(Long adminId, Long sellerId, String startDateStr, String endDateStr, int page, int size, int limit) {
-        int effectiveSize = Math.min(size, limit);
-        
-        return validateAndParseDates(startDateStr, endDateStr)
-                .chain(dateRange -> paymentNotificationService.getPendingPaymentsForSeller(
-                    sellerId, page, effectiveSize, dateRange.startDate(), dateRange.endDate()))
-                .chain(pendingResponse -> 
-                    validateAndParseDates(startDateStr, endDateStr)
-                        .chain(dates -> paymentNotificationService.getAdminPaymentManagement(adminId, page, effectiveSize, "PENDING", dates.startDate(), dates.endDate()))
-                );
-    }
 
-    public Uni<AdminPaymentManagementResponse> getPendingPaymentsForSeller(Long sellerId, Long adminId, String startDateStr, String endDateStr, int page, int size, int limit) {
-        int effectiveSize = Math.min(size, limit);
-        
-        return validateAndParseDates(startDateStr, endDateStr)
-                .chain(dateRange -> paymentNotificationService.getPaymentsForAdminByStatus(sellerId, page, effectiveSize, "CLAIMED", dateRange.startDate(), dateRange.endDate()));
-    }
-
-    public Uni<AdminPaymentManagementResponse> getAdminPaymentManagement(Long adminId, int page, int size, String status, String startDateStr, String endDateStr) {
-        return validateAndParseDates(startDateStr, endDateStr)
-                .chain(dateRange -> paymentNotificationService.getAdminPaymentManagement(adminId, page, size, status, dateRange.startDate(), dateRange.endDate()));
-    }
-
-    
-    /**
-     * Obtiene pagos filtrados por rol del usuario y estado
-     * - Admin: Ve todos los pagos de sus vendedores
-     * - Seller: Ve solo sus propios pagos
-     * - Status: PENDING, CLAIMED, REJECTED, o ALL
-     */
     @WithTransaction
     public Uni<AdminPaymentManagementResponse> getPaymentsByRoleAndStatus(Long userId, Long sellerId, String status, String startDateStr, String endDateStr, int page, int size, int limit) {
         int effectiveSize = Math.min(size, limit);

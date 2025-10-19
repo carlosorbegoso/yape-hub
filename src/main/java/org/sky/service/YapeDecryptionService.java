@@ -22,9 +22,6 @@ public class YapeDecryptionService {
      * Desencripta la notificación de Yape y extrae los datos de la transacción
      */
     public YapeNotificationResponse decryptYapeNotification(String encryptedNotification, String deviceFingerprint) {
-        log.info("🔓 YapeDecryptionService.decryptYapeNotification() - Iniciando desencriptación");
-        log.info("🔓 Device fingerprint: " + deviceFingerprint);
-        
         try {
             // Validar que la notificación no esté vacía
             if (encryptedNotification == null || encryptedNotification.trim().isEmpty()) {
@@ -54,8 +51,7 @@ public class YapeDecryptionService {
                 java.time.LocalDateTime.now(),
                 "Transacción procesada exitosamente"
             );
-            
-            log.info("✅ Desencriptación exitosa - Transacción: " + transactionData.transactionId);
+
             return response;
             
         } catch (Exception e) {
@@ -70,21 +66,11 @@ public class YapeDecryptionService {
      */
     private String simulateDecryption(String encryptedNotification, String deviceFingerprint) {
         try {
-            log.info("🔐 Iniciando desencriptación con deviceFingerprint: " + deviceFingerprint);
-            
-            // Si es Base64, decodificar primero
             if (isValidBase64(encryptedNotification)) {
                 byte[] decodedBytes = Base64.getDecoder().decode(encryptedNotification);
                 String decodedString = new String(decodedBytes);
-                log.info("🔓 Notificación Base64 decodificada: " + decodedString);
-                
-                // Simular desencriptación usando deviceFingerprint como clave
-                String decryptedMessage = decryptWithFingerprint(decodedString, deviceFingerprint);
-                log.info("🔓 Mensaje desencriptado: " + decryptedMessage);
-                return decryptedMessage;
+              return decryptWithFingerprint(decodedString, deviceFingerprint);
             } else {
-                // Si no es Base64, usar directamente como texto plano
-                log.info("🔓 Notificación como texto plano: " + encryptedNotification);
                 return encryptedNotification;
             }
             
@@ -99,9 +85,6 @@ public class YapeDecryptionService {
      */
     private String decryptWithFingerprint(String encryptedMessage, String deviceFingerprint) {
         try {
-            log.info("🔐 Desencriptando con fingerprint: " + deviceFingerprint);
-            
-            // Simular desencriptación XOR simple (en producción usar AES, RSA, etc.)
             StringBuilder decrypted = new StringBuilder();
             byte[] fingerprintBytes = deviceFingerprint.getBytes();
             

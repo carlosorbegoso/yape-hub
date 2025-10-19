@@ -56,11 +56,6 @@ public class SellerController {
                                      @QueryParam("page") @DefaultValue("1") int page,
                                      @QueryParam("limit") @DefaultValue("20") int limit,
                                      @HeaderParam("Authorization") String authorization) {
-        log.info("🚀 SellerController.getMySellers() - Endpoint llamado para adminId: " + adminId);
-        log.info("🚀 Parámetros de paginación - page: " + page + ", limit: " + limit);
-        log.info("🚀 Desde: " + startDateStr + ", Hasta: " + endDateStr);
-        
-        // Validar parámetros de fecha
         final LocalDate startDate, endDate;
         try {
             if (startDateStr != null && endDateStr != null) {
@@ -80,15 +75,13 @@ public class SellerController {
         // Validar autorización de admin
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
-                    log.info("✅ Autorización exitosa para adminId: " + adminId);
                     return sellerService.getSellersByAdmin(adminId, page, limit, startDate, endDate);
                 })
                 .map(response -> {
                     if (response.isSuccess()) {
-                        log.info("✅ Retornando lista de vendedores exitosamente");
                         return Response.ok(response).build();
                     } else {
-                        log.warn("⚠️ Error al obtener lista de vendedores: " + response.message());
+
                         return Response.status(400).entity(response).build();
                     }
                 })

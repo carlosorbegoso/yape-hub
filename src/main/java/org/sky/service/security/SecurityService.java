@@ -26,10 +26,6 @@ public class SecurityService {
         return authorizationService.validateSellerAuthorization(authorization, sellerId);
     }
 
-    public Uni<Long> validateAdminCanAccessSeller(String authorization, Long adminId, Long sellerId) {
-        return authorizationService.validateAdminCanAccessSeller(authorization, adminId, sellerId);
-    }
-
   public Response handleSecurityException(Throwable throwable) {
         return securityErrorHandler.handleSecurityException(throwable);
     }

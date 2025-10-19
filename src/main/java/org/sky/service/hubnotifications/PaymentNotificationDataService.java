@@ -51,17 +51,11 @@ public class PaymentNotificationDataService {
         return paymentRepository.findPendingPaymentsForSeller(sellerId, page, size, startDate, endDate);
     }
 
-    public Uni<List<PaymentNotificationEntity>> findAllPendingPayments(int page, int size, java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        return paymentRepository.findAllPendingPayments(page, size, startDate, endDate);
-    }
 
     public Uni<Long> countPendingPaymentsForSeller(Long sellerId, java.time.LocalDate startDate, java.time.LocalDate endDate) {
         return paymentRepository.countPendingPaymentsForSeller(sellerId, startDate, endDate);
     }
 
-    public Uni<Long> countAllPendingPayments(java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        return paymentRepository.countAllPendingPayments(startDate, endDate);
-    }
 
     public Uni<PaymentNotificationEntity> findPaymentById(Long paymentId) {
         return paymentRepository.findById(paymentId);

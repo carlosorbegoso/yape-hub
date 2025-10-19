@@ -7,19 +7,22 @@ import org.sky.dto.response.ApiResponse;
 import org.sky.dto.request.auth.LoginRequest;
 import org.sky.dto.response.auth.LoginResponse;
 import org.sky.model.UserEntityEntity;
+import org.sky.service.auth.JwtTokenService;
+import org.sky.service.auth.LoginResponseBuilder;
 import org.sky.service.auth.LoginStrategy;
+import org.sky.service.auth.UserValidations;
 
 @ApplicationScoped
 public class CachedLoginStrategy implements LoginStrategy {
 
     @Inject
-    org.sky.service.auth.UserValidations userValidationService;
+    UserValidations userValidationService;
     
     @Inject
-    org.sky.service.auth.JwtTokenService tokenService;
+    JwtTokenService tokenService;
     
     @Inject
-    org.sky.service.auth.LoginResponseBuilder loginResponseBuilder;
+    LoginResponseBuilder loginResponseBuilder;
 
     @Override
     public Uni<ApiResponse<LoginResponse>> execute(LoginRequest request) {

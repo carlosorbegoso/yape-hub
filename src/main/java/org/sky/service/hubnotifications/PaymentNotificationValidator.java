@@ -6,6 +6,8 @@ import org.sky.dto.request.payment.PaymentNotificationRequest;
 import org.sky.exception.ValidationException;
 import org.sky.model.SellerEntity;
 
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.LongFunction;
 
@@ -40,7 +42,7 @@ public class PaymentNotificationValidator {
                 throw ValidationException.requiredField("seller");
             }
             
-            if (!seller.isActive) {
+            if (Boolean.FALSE.equals(seller.isActive)) {
                 throw ValidationException.invalidField("seller", seller.id.toString(), "is not active");
             }
             
@@ -94,17 +96,17 @@ public class PaymentNotificationValidator {
         });
     }
 
-    public static Function<java.util.Map<String, Object>, Uni<java.util.Map<String, Object>>> validateDateRange() {
+    public static Function<Map<String, Object>, Uni<Map<String, Object>>> validateDateRange() {
         return params -> Uni.createFrom().item(() -> {
-            java.time.LocalDate startDate = (java.time.LocalDate) params.get("startDate");
-            java.time.LocalDate endDate = (java.time.LocalDate) params.get("endDate");
+            LocalDate startDate = (LocalDate) params.get("startDate");
+            LocalDate endDate = (LocalDate) params.get("endDate");
             
             if (startDate == null) {
-                startDate = java.time.LocalDate.now().minusDays(30);
+                startDate = LocalDate.now().minusDays(30);
             }
             
             if (endDate == null) {
-                endDate = java.time.LocalDate.now();
+                endDate = LocalDate.now();
             }
             
             if (startDate.isAfter(endDate)) {

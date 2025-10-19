@@ -4,7 +4,6 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
-import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import org.mindrot.jbcrypt.BCrypt;
 
 import org.sky.dto.request.admin.AdminRegisterRequest;
@@ -16,7 +15,6 @@ import org.sky.dto.response.common.UserInfo;
 // Removed ValidationException import - using RuntimeException instead
 import org.sky.model.AdminEntity;
 import org.sky.model.BusinessType;
-import org.sky.model.AffiliationCodeEntity;
 import org.sky.model.BranchEntity;
 import org.sky.model.SellerEntity;
 import org.sky.model.UserEntityEntity;
@@ -34,7 +32,6 @@ import org.sky.util.jwt.JwtExtractor;
 import org.sky.util.jwt.JwtGenerator;
 import org.sky.util.jwt.JwtValidator;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -165,7 +162,7 @@ public class AuthService {
 
         return jwtValidator.isValidRefreshToken(refreshToken)
                 .chain(isValid -> {
-                    if (!isValid) {
+                    if (Boolean.FALSE.equals(isValid)) {
                         log.warn("Invalid refresh token format or type");
                         return Uni.createFrom().item(ApiResponse.error("Invalid refresh token format"));
                     }
@@ -230,20 +227,7 @@ public class AuthService {
                 .map(validatedCode -> seller);
     }
 
-    private Uni<SellerEntity> updateUserLastLogin(SellerEntity seller) {
-        UserEntityEntity user = seller.user;
-        if (user == null) {
-            return Uni.createFrom().failure(
-                new RuntimeException("Usuario no encontrado: " + seller.phone)
-            );
-        }
-        
-        user.lastLogin = LocalDateTime.now();
-        return userRepository.persist(user)
-                .map(updatedUser -> seller);
-    }
-
-    private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(SellerEntity seller, String affiliationCode) {
+  private Uni<ApiResponse<SellerLoginWithAffiliationResponse>> generateLoginResponse(SellerEntity seller, String affiliationCode) {
         UserEntityEntity user = seller.user;
         
         return tokenService.generateTokensForSeller(user, seller.id)

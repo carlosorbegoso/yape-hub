@@ -192,29 +192,12 @@ public class StatsCalculationTemplate {
                                                     Long adminId) {
         return complianceSecurityStrategy.calculate(payments, startDate, endDate, adminId).map(complianceSecurity -> (Object) complianceSecurity);
     }
-    
-    // Método final que construye el resultado
+
     @SuppressWarnings("unchecked")
     private ParallelStatsResult buildResult(Object basicStats, Object performanceMetrics, Object dailySales, 
                                           Object hourlySales, Object weeklySales, Object monthlySales, 
                                           Object topSellers, Object sellerGoals, Object sellerPerformance, 
                                           Object systemMetrics, Object financialOverview, Object complianceSecurity) {
-        log.info("✅ StatsCalculationTemplate: Construyendo resultado final con 12 resultados");
-        
-        // Log de debugging para verificar que las estrategias se ejecutaron
-        log.info("🔍 BasicStats: " + (basicStats != null ? basicStats.getClass().getSimpleName() : "null"));
-        log.info("🔍 PerformanceMetrics: " + (performanceMetrics != null ? performanceMetrics.getClass().getSimpleName() : "null"));
-        log.info("🔍 DailySales: " + (dailySales != null ? dailySales.getClass().getSimpleName() : "null"));
-        log.info("🔍 HourlySales: " + (hourlySales != null ? hourlySales.getClass().getSimpleName() : "null"));
-        log.info("🔍 WeeklySales: " + (weeklySales != null ? weeklySales.getClass().getSimpleName() : "null"));
-        log.info("🔍 MonthlySales: " + (monthlySales != null ? monthlySales.getClass().getSimpleName() : "null"));
-        log.info("🔍 TopSellers: " + (topSellers != null ? topSellers.getClass().getSimpleName() : "null"));
-        log.info("🔍 SellerGoals: " + (sellerGoals != null ? sellerGoals.getClass().getSimpleName() : "null"));
-        log.info("🔍 SellerPerformance: " + (sellerPerformance != null ? sellerPerformance.getClass().getSimpleName() : "null"));
-        log.info("🔍 SystemMetrics: " + (systemMetrics != null ? systemMetrics.getClass().getSimpleName() : "null"));
-        log.info("🔍 FinancialOverview: " + (financialOverview != null ? financialOverview.getClass().getSimpleName() : "null"));
-        log.info("🔍 ComplianceSecurity: " + (complianceSecurity != null ? complianceSecurity.getClass().getSimpleName() : "null"));
-        
         try {
             return StatsResultBuilder.newBuilder()
                 .withBasicStats((org.sky.service.stats.calculators.StatisticsCalculator.BasicStats) basicStats)

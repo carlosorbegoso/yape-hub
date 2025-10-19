@@ -60,25 +60,28 @@ public class BranchService {
         return branchRepository.findByAdminIdWithPagination(adminId, status, validatedPage, validatedSize)
                 .map(result -> {
                     List<BranchResponse> branchResponses = responseBuilder.buildListResponse(result.branches());
-                    
-                    int totalPages = (int) Math.ceil((double) result.totalCount() / validatedSize);
-                    
-                    PaginationInfo paginationInfo =
-                        new PaginationInfo(
-                            validatedPage,
-                            totalPages,
-                            result.totalCount(),
-                            validatedSize,
-                            validatedPage < totalPages,
-                            validatedPage > 1
-                        );
-                    
-                    BranchListResponse response = new BranchListResponse(branchResponses, paginationInfo);
+
+                  PaginationInfo paginationInfo = getPaginationInfo(result, validatedSize, validatedPage);
+
+                  BranchListResponse response = new BranchListResponse(branchResponses, paginationInfo);
                     return ApiResponse.success("Branches retrieved successfully", response);
                 });
     }
 
-    @WithTransaction
+  private static PaginationInfo getPaginationInfo(BranchRepository.BranchPaginationResult result, int validatedSize, int validatedPage) {
+    int totalPages = (int) Math.ceil((double) result.totalCount() / validatedSize);
+
+    return new PaginationInfo(
+        validatedPage,
+        totalPages,
+        result.totalCount(),
+        validatedSize,
+        validatedPage < totalPages,
+        validatedPage > 1
+    );
+  }
+
+  @WithTransaction
     public Uni<ApiResponse<BranchResponse>> getBranchById(Long adminId, Long branchId) {
         return validationService.validateBranchExists(adminId, branchId)
                 .chain(branch -> responseBuilder.buildResponseWithSellersCount(branch, 
