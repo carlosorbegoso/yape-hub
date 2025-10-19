@@ -26,9 +26,6 @@ public class DeviceFingerprintService {
      * Valida el device fingerprint
      */
     public void validateDeviceFingerprint(String deviceFingerprint) {
-        log.info("🔍 DeviceFingerprintService.validateDeviceFingerprint() - Validando device fingerprint");
-        log.info("🔍 Device fingerprint: " + deviceFingerprint);
-        
         // Validar formato
         if (deviceFingerprint == null || deviceFingerprint.trim().isEmpty()) {
             throw ValidationException.invalidField("deviceFingerprint", deviceFingerprint, 
@@ -43,13 +40,13 @@ public class DeviceFingerprintService {
         
         // Validar si es un device fingerprint conocido
         if (!isKnownDeviceFingerprint(deviceFingerprint)) {
-            log.warn("⚠️ Device fingerprint desconocido: " + deviceFingerprint);
+            //log.warn("⚠️ Device fingerprint desconocido: " + deviceFingerprint);
             // En producción, podrías querer rechazar device fingerprints desconocidos
             // throw ValidationException.invalidField("deviceFingerprint", deviceFingerprint, 
             //     "Device fingerprint no autorizado");
         }
         
-        log.info("✅ Device fingerprint válido: " + deviceFingerprint);
+
     }
     
     /**

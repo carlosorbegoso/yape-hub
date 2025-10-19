@@ -31,7 +31,6 @@ public class YapeDecryptionService {
             
             // Simular desencriptación usando deviceFingerprint como clave
             String decryptedData = simulateDecryption(encryptedNotification, deviceFingerprint);
-            log.info("🔓 Datos desencriptados: " + decryptedData);
             
             // Extraer información de la transacción
             YapeTransactionData transactionData = extractTransactionData(decryptedData);
@@ -40,19 +39,19 @@ public class YapeDecryptionService {
             validateTransactionData(transactionData);
             
             // Crear respuesta
-            YapeNotificationResponse response = new YapeNotificationResponse(
-                System.currentTimeMillis(), // notificationId
-                transactionData.transactionId,
-                transactionData.amount,
-                transactionData.senderPhone,
-                transactionData.senderName,
-                transactionData.receiverPhone,
-                transactionData.status,
-                java.time.LocalDateTime.now(),
-                "Transacción procesada exitosamente"
-            );
 
-            return response;
+          return new YapeNotificationResponse(
+              System.currentTimeMillis(), // notificationId
+              transactionData.transactionId,
+              transactionData.amount,
+              transactionData.senderPhone,
+              transactionData.senderName,
+              transactionData.receiverPhone,
+              transactionData.status,
+              java.time.LocalDateTime.now(),
+              "Transacción procesada exitosamente"
+          );
+
             
         } catch (Exception e) {
             log.error("❌ Error en desencriptación: " + e.getMessage());
@@ -96,7 +95,6 @@ public class YapeDecryptionService {
             }
             
             String result = decrypted.toString();
-            log.info("🔓 Desencriptación exitosa: " + result);
             return result;
             
         } catch (Exception e) {
@@ -110,18 +108,15 @@ public class YapeDecryptionService {
      */
     private YapeTransactionData extractTransactionData(String decryptedData) {
         YapeTransactionData data = new YapeTransactionData();
-        
-        log.info("🔍 Extrayendo datos de: " + decryptedData);
+
         
         // Extraer el texto del mensaje desde el JSON
         String messageText = extractTextFromJson(decryptedData);
-        log.info("📝 Texto extraído del JSON: " + messageText);
         
         // Extraer monto (formato: "S/ 0.1")
         var amountMatcher = AMOUNT_PATTERN.matcher(messageText);
         if (amountMatcher.find()) {
             data.amount = Double.parseDouble(amountMatcher.group(1));
-            log.info("💰 Monto extraído: " + data.amount);
         } else {
             log.warn("⚠️ No se pudo extraer el monto del texto: " + messageText);
         }
@@ -130,12 +125,10 @@ public class YapeDecryptionService {
         var yapeCodeMatcher = YAPE_CODE_PATTERN.matcher(messageText);
         if (yapeCodeMatcher.find()) {
             String yapeCode = yapeCodeMatcher.group(1);
-            log.info("🔑 Código de Yape extraído: " + yapeCode);
             
             // Generar Transaction ID único: YAPE_codigoYape
             // El deduplicationHash del frontend maneja la prevención de duplicados
             data.transactionId = "YAPE_" + yapeCode;
-            log.info("🆔 Transaction ID generado: " + data.transactionId);
         } else {
             log.warn("⚠️ No se pudo extraer el código de Yape del texto: " + messageText);
         }
@@ -144,7 +137,6 @@ public class YapeDecryptionService {
         var senderNameMatcher = SENDER_NAME_PATTERN.matcher(messageText);
         if (senderNameMatcher.find()) {
             data.senderName = senderNameMatcher.group(1).trim();
-            log.info("👤 Remitente extraído: " + data.senderName);
         } else {
             log.warn("⚠️ No se pudo extraer el nombre del remitente del texto: " + messageText);
         }
@@ -155,9 +147,7 @@ public class YapeDecryptionService {
         
         // Estado por defecto para mensajes de Yape
         data.status = "COMPLETED";
-        
-        log.info("✅ Datos extraídos - Monto: " + data.amount + ", Transaction ID: " + data.transactionId);
-        
+
         return data;
     }
     
@@ -204,9 +194,6 @@ public class YapeDecryptionService {
             throw ValidationException.invalidField("senderName", data.senderName, 
                 "Nombre del remitente inválido");
         }
-        
-        // Los teléfonos son opcionales ya que no están en el mensaje de Yape
-        log.info("✅ Validación exitosa - Monto: " + data.amount + ", Transaction ID: " + data.transactionId + ", Remitente: " + data.senderName);
     }
     
     /**

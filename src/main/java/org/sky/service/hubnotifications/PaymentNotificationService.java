@@ -18,15 +18,12 @@ import org.sky.model.PaymentRejectionEntity;
 import org.sky.model.SellerEntity;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.sky.service.websocket.WebSocketNotificationService;
-import org.sky.dto.response.seller.ConnectedSellerInfo;
-import org.sky.dto.response.seller.ConnectedSellersResponse;
 import org.sky.util.DeadlockRetryService;
 
 @ApplicationScoped
@@ -219,129 +216,7 @@ public class PaymentNotificationService {
             });
     }
 
-    @WithTransaction
-    public Uni<AdminPaymentManagementResponse> getAdminPaymentManagement(Long adminId, int page, int size, String status, LocalDate startDate, LocalDate endDate) {
-        log.info("🔍 Getting admin payment management for adminId: " + adminId + ", status: " + status);
-        
-        return dataService.findPaymentsForAdminByStatus(adminId, page, size, status, startDate, endDate)
-            .chain(payments -> {
-                log.info("📊 Found " + payments.size() + " payments for admin: " + adminId + " with status: " + status);
-                
-                // Obtener estadísticas del total de pagos del admin
-                return dataService.countPaymentsForAdminByStatus(adminId, null, startDate, endDate)
-                    .chain(totalCount -> 
-                        dataService.countPaymentsForAdminByStatus(adminId, "PENDING", startDate, endDate)
-                            .chain(pendingCount ->
-                                dataService.countPaymentsForAdminByStatus(adminId, "CONFIRMED", startDate, endDate)
-                                    .chain(confirmedCount ->
-                                        dataService.countPaymentsForAdminByStatus(adminId, "REJECTED", startDate, endDate)
-                                            .map(rejectedCount -> {
-                                                List<PaymentNotificationResponse> responses = payments.stream()
-                                                    .map(PaymentNotificationMapper.ENTITY_TO_RESPONSE)
-                                                    .toList();
-                                                
-                                                // Calcular montos solo de la página actual para mostrar
-                                                double totalAmount = responses.stream().mapToDouble(PaymentNotificationResponse::amount).sum();
-                                                double confirmedAmount = responses.stream()
-                                                    .filter(r -> "CONFIRMED".equals(r.status()))
-                                                    .mapToDouble(PaymentNotificationResponse::amount).sum();
-                                                double pendingAmount = responses.stream()
-                                                    .filter(r -> "PENDING".equals(r.status()))
-                                                    .mapToDouble(PaymentNotificationResponse::amount).sum();
-                                                
-                                                return new AdminPaymentManagementResponse(
-                                                    responses.stream().map(r -> new PaymentDetail(
-                                                        r.paymentId(),
-                                                        r.amount(),
-                                                        r.senderName(),
-                                                        r.yapeCode(),
-                                                        r.status(),
-                                                        r.timestamp(),
-                                                        null, // confirmedBy - would need to be fetched from entity
-                                                        null, // confirmedAt - would need to be fetched from entity
-                                                        null, // rejectedBy - would need to be fetched from entity
-                                                        null, // rejectedAt - would need to be fetched from entity
-                                                        null, // rejectionReason - would need to be fetched from entity
-                                                        "Seller Name", // sellerName - would need to be fetched
-                                                        "Branch Name"  // branchName - would need to be fetched
-                                                    )).toList(),
-                                                    new PaymentSummary(
-                                                        totalCount,
-                                                        pendingCount,
-                                                        confirmedCount,
-                                                        rejectedCount,
-                                                        totalAmount,
-                                                        confirmedAmount,
-                                                        pendingAmount
-                                                    ),
-                                                    new PaginationInfo(
-                                                        page,
-                                                        (int) Math.ceil((double) totalCount / size),
-                                                        totalCount,
-                                                        size,
-                                                        page < (int) Math.ceil((double) totalCount / size),
-                                                        page > 1
-                                                    )
-                                                );
-                                            })
-                                    )
-                            )
-                    );
-            })
-            .onFailure().recoverWithItem(throwable -> {
-                log.error("❌ Error getting admin payment management: " + throwable.getMessage());
-                return new AdminPaymentManagementResponse(
-                    List.of(), 
-                    PaymentSummary.empty(), 
-                    new PaginationInfo(page, 0, 0, size, false, false)
-                );
-            });
-    }
-
-  /**
-     * Obtiene vendedores conectados con información completa incluyendo estado WebSocket
-     */
-    @WithTransaction
-    public Uni<ConnectedSellersResponse> getConnectedSellersForAdmin(Long adminId) {
-        log.info("🔍 Getting connected sellers for admin: " + adminId);
-        
-        return dataService.findSellersByAdminId(adminId)
-            .chain(sellers -> {
-                log.info("📊 Found " + sellers.size() + " sellers for admin: " + adminId);
-                
-                // Obtener estado de conexión WebSocket de forma reactiva
-                return Uni.createFrom().item(() -> {
-                    Map<Long, Boolean> webSocketStatus = webSocketNotificationService.getRealTimeConnectionStatus();
-                    
-                    List<ConnectedSellerInfo> connectedSellers = sellers.stream()
-                        .map(seller -> {
-                            boolean isConnected = webSocketStatus.getOrDefault(seller.id, false);
-                            LocalDateTime lastSeen = LocalDateTime.now().minusMinutes(isConnected ? 0 : 30); // Simulado
-                            
-                            return new ConnectedSellerInfo(
-                                seller.id,
-                                seller.sellerName != null ? seller.sellerName : "Vendedor " + seller.id,
-                                seller.email != null ? seller.email : "email@example.com",
-                                seller.phone != null ? seller.phone : "+51999999999",
-                                seller.branch != null ? seller.branch.id : 0L,
-                                seller.branch != null ? seller.branch.name : "Sucursal",
-                                isConnected,
-                                lastSeen
-                            );
-                        })
-                        .collect(Collectors.toList());
-                    
-                    log.info("✅ Processed " + connectedSellers.size() + " sellers with WebSocket status");
-                    return ConnectedSellersResponse.create(adminId, connectedSellers);
-                });
-            })
-            .onFailure().recoverWithItem(throwable -> {
-                log.error("❌ Error getting connected sellers: " + throwable.getMessage());
-                return ConnectedSellersResponse.create(adminId, List.of());
-            });
-    }
-
-    public Uni<List<SellerEntity>> getAllSellersStatusForAdmin(Long adminId) {
+  public Uni<List<SellerEntity>> getAllSellersStatusForAdmin(Long adminId) {
         return dataService.findSellersByAdminId(adminId);
     }
 

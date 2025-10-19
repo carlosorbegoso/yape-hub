@@ -2,6 +2,7 @@ package org.sky.service.websocket;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 import io.vertx.core.Vertx;
 import io.smallrye.mutiny.Uni;
@@ -9,174 +10,158 @@ import io.smallrye.mutiny.Uni;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class WebSocketNotificationService {
-    
-    @Inject
-    Vertx vertx;
-    
-    private static final Logger log = Logger.getLogger(WebSocketNotificationService.class);
-    
-    private final Map<Long, jakarta.websocket.Session> webSocketSessions = new ConcurrentHashMap<>();
-    private final Map<Long, AtomicLong> lastActivityTime = new ConcurrentHashMap<>();
-    private Long cleanupTimerId;
-    
-    // Optimized timeouts for low-resource performance
-    private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes - reduced CPU usage by 90%
-    private static final long SESSION_TIMEOUT_MS = 1800000;  // 30 minutes - better user experience
-    
-    public void registerSession(Long sellerId, jakarta.websocket.Session session) {
-        webSocketSessions.put(sellerId, session);
-        lastActivityTime.put(sellerId, new AtomicLong(System.currentTimeMillis()));
-        log.info("📱 Registered WebSocket session for seller " + sellerId + ". Total sessions: " + webSocketSessions.size());
-        
-        if (cleanupTimerId == null) {
-            startCleanupTimer();
+
+  @Inject
+  Vertx vertx;
+
+  private static final Logger log = Logger.getLogger(WebSocketNotificationService.class);
+
+  private final Map<Long, Session> webSocketSessions = new ConcurrentHashMap<>();
+  private final Map<Long, AtomicLong> lastActivityTime = new ConcurrentHashMap<>();
+  private Long cleanupTimerId;
+
+  // Optimized timeouts for low-resource performance
+  private static final long CLEANUP_INTERVAL_MS = 300000; // 5 minutes - reduced CPU usage by 90%
+  private static final long SESSION_TIMEOUT_MS = 1800000;  // 30 minutes - better user experience
+
+  public void registerSession(Long sellerId, Session session) {
+    try {
+      webSocketSessions.put(sellerId, session);
+      lastActivityTime.put(sellerId, new AtomicLong(System.currentTimeMillis()));
+      log.info("📱 Registered WebSocket session for seller " + sellerId +
+          ". Total sessions: " + webSocketSessions.size());
+
+      if (cleanupTimerId == null) {
+        startCleanupTimer();
+      }
+    } catch (Exception e) {
+      log.error("❌ Error registering WebSocket session for seller " + sellerId, e);
+    }
+  }
+
+  public void unregisterSession(Long sellerId) {
+    try {
+      Session removedSession = webSocketSessions.remove(sellerId);
+      lastActivityTime.remove(sellerId);
+
+      log.info("📱 Unregistered WebSocket session for seller " + sellerId +
+          ". Total sessions: " + webSocketSessions.size() +
+          ". Session was " + (removedSession != null ? "found" : "not found"));
+    } catch (Exception e) {
+      log.error("❌ Error unregistering WebSocket session for seller " + sellerId, e);
+    }
+  }
+
+  /**
+   * Optimized real-time notification sending with immediate delivery and robust error handling
+   */
+  public Uni<Void> sendNotificationReactive(Long sellerId, String message) {
+    return Uni.createFrom().item(() -> {
+      try {
+        log.info("🔍 Attempting to send notification to seller " + sellerId);
+        log.info("📋 Current WebSocket sessions: " +
+            webSocketSessions.entrySet().stream()
+                .map(entry -> "Seller " + entry.getKey() + ": " +
+                    (entry.getValue() != null && entry.getValue().isOpen() ? "OPEN" : "CLOSED"))
+                .collect(Collectors.joining(", ")));
+
+        Session session = webSocketSessions.get(sellerId);
+
+        // Enhanced logging for connection status
+        if (session == null) {
+          log.warn("⚠️ No WebSocket session found for seller " + sellerId +
+              ". Available sessions: " + webSocketSessions.keySet());
+          return null;
         }
-    }
-    
-    public void unregisterSession(Long sellerId) {
-        webSocketSessions.remove(sellerId);
-        lastActivityTime.remove(sellerId);
-        log.info("📱 Unregistered WebSocket session for seller " + sellerId + ". Total sessions: " + webSocketSessions.size());
-    }
-    
-    /**
-     * Optimized real-time notification sending with immediate delivery
-     */
-    public Uni<Void> sendNotificationReactive(Long sellerId, String message) {
-        return Uni.createFrom().item(() -> {
-            jakarta.websocket.Session session = webSocketSessions.get(sellerId);
-            if (session != null && session.isOpen()) {
-                try {
-                    // Send message immediately for real-time performance
-                    session.getAsyncRemote().sendText(message);
-                    
-                    // Update activity immediately
-                    AtomicLong lastActivity = lastActivityTime.get(sellerId);
-                    if (lastActivity != null) {
-                        lastActivity.set(System.currentTimeMillis());
-                    }
-                    
-                    log.debug("⚡ Real-time notification sent to seller " + sellerId);
-                    return null;
-                } catch (Exception e) {
-                    log.error("❌ Error sending real-time notification to seller " + sellerId + ": " + e.getMessage());
-                    unregisterSession(sellerId);
-                    throw new RuntimeException(e);
-                }
-            } else {
-                log.warn("⚠️ Seller " + sellerId + " not connected for real-time notification");
-                return null;
-            }
-        });
-    }
-    
-    /**
-     * Legacy method for backward compatibility - now uses reactive approach
-     */
-    public void sendNotification(Long sellerId, String message) {
-        sendNotificationReactive(sellerId, message)
-            .subscribe()
-            .with(
-                success -> {},
-                failure -> log.error("Failed to send notification to seller " + sellerId, failure)
-            );
-    }
-    
-    
-    
-    public boolean isSellerConnected(Long sellerId) {
-        jakarta.websocket.Session session = webSocketSessions.get(sellerId);
-        return session != null && session.isOpen();
-    }
-    
-    public int getConnectedSellersCount() {
-        return webSocketSessions.size();
-    }
-    
-    public java.util.Set<Long> getConnectedSellerIds() {
-        java.util.Set<Long> connectedIds = webSocketSessions.entrySet().stream()
-                .filter(entry -> entry.getValue() != null && entry.getValue().isOpen())
-                .map(Map.Entry::getKey)
-                .collect(java.util.stream.Collectors.toSet());
-        log.info("📱 getConnectedSellerIds() - Total sessions: " + webSocketSessions.size() + ", Connected: " + connectedIds.size());
-        return connectedIds;
-    }
-    
-    
-    private void startCleanupTimer() {
-        if (cleanupTimerId != null) {
-            return;
+
+        if (!session.isOpen()) {
+          log.warn("⚠️ WebSocket session for seller " + sellerId + " is not open");
+          unregisterSession(sellerId);
+          return null;
         }
-        
-        cleanupTimerId = vertx.setPeriodic(CLEANUP_INTERVAL_MS, timerId -> {
-            cleanupInactiveSessions();
-        });
-    }
-    
-    private void cleanupInactiveSessions() {
-        long currentTime = System.currentTimeMillis();
-        java.util.List<Long> inactiveSellers = new java.util.ArrayList<>();
-        
-        for (Map.Entry<Long, AtomicLong> entry : lastActivityTime.entrySet()) {
-            Long sellerId = entry.getKey();
-            AtomicLong lastActivity = entry.getValue();
-            
-            if (lastActivity != null) {
-                long timeSinceLastActivity = currentTime - lastActivity.get();
-                if (timeSinceLastActivity > SESSION_TIMEOUT_MS) {
-                    inactiveSellers.add(sellerId);
-                }
-            }
-        }
-        
-        for (Long sellerId : inactiveSellers) {
-            jakarta.websocket.Session session = webSocketSessions.get(sellerId);
-            if (session != null && !session.isOpen()) {
-                unregisterSession(sellerId);
-            }
-        }
-    }
-    
-    public void updateActivity(Long sellerId) {
+
+        // Send message
+        session.getAsyncRemote().sendText(message);
+
+        // Update last activity
         AtomicLong lastActivity = lastActivityTime.get(sellerId);
         if (lastActivity != null) {
-            lastActivity.set(System.currentTimeMillis());
+          lastActivity.set(System.currentTimeMillis());
         }
+
+        log.debug("⚡ Real-time notification sent to seller " + sellerId);
+        return null;
+
+      } catch (Exception e) {
+        log.error("❌ Comprehensive error sending notification to seller " + sellerId +
+            ": " + e.getMessage(), e);
+
+        // Remove the problematic session
+        unregisterSession(sellerId);
+
+        // Potential fallback mechanisms could be added here
+        return null;
+      }
+    });
+  }
+
+  private void startCleanupTimer() {
+    if (cleanupTimerId != null) return;
+
+    cleanupTimerId = vertx.setPeriodic(CLEANUP_INTERVAL_MS, timerId -> {
+      try {
+        cleanupInactiveSessions();
+      } catch (Exception e) {
+        log.error("❌ Error during WebSocket session cleanup", e);
+      }
+    });
+  }
+
+  private void cleanupInactiveSessions() {
+    long currentTime = System.currentTimeMillis();
+    java.util.List<Long> inactiveSellers = new java.util.ArrayList<>();
+
+    // Identify inactive sellers
+    for (Map.Entry<Long, AtomicLong> entry : lastActivityTime.entrySet()) {
+      Long sellerId = entry.getKey();
+      AtomicLong lastActivity = entry.getValue();
+
+      if (lastActivity != null) {
+        long timeSinceLastActivity = currentTime - lastActivity.get();
+        if (timeSinceLastActivity > SESSION_TIMEOUT_MS) {
+          inactiveSellers.add(sellerId);
+        }
+      }
     }
-    
-    /**
-     * Broadcast message to multiple sellers with optimized real-time delivery
-     */
-    public Uni<Void> broadcastToSellersReactive(java.util.Set<Long> sellerIds, String message) {
-        return Uni.createFrom().item(() -> {
-            final int[] sentCount = {0};
-            for (Long sellerId : sellerIds) {
-                if (isSellerConnected(sellerId)) {
-                    sendNotificationReactive(sellerId, message)
-                        .subscribe()
-                        .with(
-                            success -> sentCount[0]++,
-                            failure -> log.warn("Failed to broadcast to seller " + sellerId, failure)
-                        );
-                }
-            }
-            log.info("📡 Broadcast sent to " + sentCount[0] + " connected sellers");
-            return null;
-        });
+
+    // Remove inactive sessions
+    for (Long sellerId : inactiveSellers) {
+      Session session = webSocketSessions.get(sellerId);
+      if (session == null || !session.isOpen()) {
+        unregisterSession(sellerId);
+      }
     }
-    
-    /**
-     * Get real-time connection status for all sellers
-     */
-    public java.util.Map<Long, Boolean> getRealTimeConnectionStatus() {
-        java.util.Map<Long, Boolean> status = new ConcurrentHashMap<>();
-        webSocketSessions.forEach((sellerId, session) -> {
-            status.put(sellerId, session != null && session.isOpen());
-        });
-        return status;
+
+    log.info("🧹 WebSocket cleanup completed. Removed " + inactiveSellers.size() + " inactive sessions.");
+  }
+
+  public void updateActivity(Long sellerId) {
+    AtomicLong lastActivity = lastActivityTime.get(sellerId);
+    if (lastActivity != null) {
+      lastActivity.set(System.currentTimeMillis());
     }
-    
+  }
+
+  public boolean isSellerConnected(Long sellerId) {
+    Session session = webSocketSessions.get(sellerId);
+    log.info("🔍 Checking connection status for seller " + sellerId +
+        ". Session: " + session +
+        ", Is Open: " + (session != null && session.isOpen()));
+    return session != null && session.isOpen();
+  }
+
 }

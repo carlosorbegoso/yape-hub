@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.smallrye.config._private.ConfigLogging.log;
+
 @ApplicationScoped
 public class PaymentNotificationProcessor {
 
@@ -22,22 +24,32 @@ public class PaymentNotificationProcessor {
     private final AtomicInteger processedCount = new AtomicInteger(0);
 
 
-    public Uni<Void> processNotificationQueue(Long sellerId) {
-        return Uni.createFrom().item(() -> {
-            List<PaymentNotificationResponse> notifications = notificationQueue.remove(sellerId);
-            timerIds.remove(sellerId);
-            
-            if (notifications != null && !notifications.isEmpty()) {
-                if (notifications.size() == 1) {
-                    sendIndividualNotification(sellerId, notifications.get(0));
-                } else {
-                    sendGroupedNotification(sellerId, notifications);
-                }
-                processedCount.incrementAndGet();
-            }
-            return null;
-        });
-    }
+  public Uni<Void> processNotificationQueue(Long sellerId) {
+    return Uni.createFrom().item(() -> {
+      List<PaymentNotificationResponse> notifications = notificationQueue.remove(sellerId);
+      timerIds.remove(sellerId);
+
+      if (notifications != null && !notifications.isEmpty()) {
+        // Check WebSocket connection status
+        if (!webSocketNotificationService.isSellerConnected(sellerId)) {
+          log.warn("⚠️ Seller " + sellerId + " not connected. Storing notifications for later.");
+          return null;
+        }
+
+        try {
+          if (notifications.size() == 1) {
+            sendIndividualNotification(sellerId, notifications.get(0));
+          } else {
+            sendGroupedNotification(sellerId, notifications);
+          }
+          processedCount.incrementAndGet();
+        } catch (Exception e) {
+          log.error("❌ Error processing notification queue for seller " + sellerId, e);
+        }
+      }
+      return null;
+    });
+  }
 
     public Uni<Void> addToQueue(Long sellerId, PaymentNotificationResponse notification) {
         return Uni.createFrom().item(() -> {

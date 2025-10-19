@@ -1,6 +1,5 @@
 package org.sky.service.security;
 
-import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,9 +15,7 @@ public class AuthorizationService {
     
     @Inject
     JwtExtractor jwtExtractor;
-    
-    @Inject
-    SellerRepository sellerRepository;
+
 
     public Uni<Long> validateAdminAuthorization(String authorization, Long adminId) {
         return validateJwtToken(authorization)
@@ -30,13 +27,7 @@ public class AuthorizationService {
                 .chain(userId -> validateSellerToken(authorization, sellerId));
     }
 
-    @WithTransaction
-    public Uni<Long> validateAdminCanAccessSeller(String authorization, Long adminId, Long sellerId) {
-        return validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> validateSellerAccess(userId, sellerId));
-    }
-
-    private Uni<Long> validateJwtToken(String authorization) {
+  private Uni<Long> validateJwtToken(String authorization) {
         return extractToken(authorization)
                 .chain(this::validateToken)
                 .chain(this::extractUserId);
@@ -107,13 +98,4 @@ public class AuthorizationService {
         return Uni.createFrom().item(userId);
     }
 
-    private Uni<Long> validateSellerAccess(Long userId, Long sellerId) {
-        return sellerRepository.findBySellerIdAndAdminId(sellerId, userId)
-                .chain(seller -> {
-                    if (seller == null) {
-                        return Uni.createFrom().failure(new SecurityException("Not authorized to access this seller"));
-                    }
-                    return Uni.createFrom().item(userId);
-                });
-    }
 }

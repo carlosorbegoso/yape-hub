@@ -1,5 +1,6 @@
 package org.sky.service;
 
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -1008,7 +1009,7 @@ public class StatsService {
     /**
      * Calcula métricas de crecimiento comparando con período anterior
      */
-    @WithTransaction
+    @WithSession
     private Map<String, Double> calculateGrowthMetrics(Long adminId, LocalDate startDate, LocalDate endDate) {
         long periodLengthDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
         LocalDate previousEndDate = startDate.minusDays(1);
@@ -1026,7 +1027,7 @@ public class StatsService {
                     double salesGrowth = previousSales > 0 ? 
                         ((calculateCurrentPeriodSales(adminId, startDate, endDate) - previousSales) / previousSales) * 100 : 0.0;
                     double transactionGrowth = previousTransactions > 0 ? 
-                        ((calculateCurrentPeriodTransactions(adminId, startDate, endDate) - previousTransactions) / previousTransactions) * 100 : 0.0;
+                        ((double) (calculateCurrentPeriodTransactions(adminId, startDate, endDate) - previousTransactions) / previousTransactions) * 100 : 0.0;
                     double averageGrowth = previousAverage > 0 ? 
                         ((calculateCurrentPeriodAverage(adminId, startDate, endDate) - previousAverage) / previousAverage) * 100 : 0.0;
                     
@@ -1047,7 +1048,7 @@ public class StatsService {
         }
     }
     
-    @WithTransaction
+    @WithSession
     private double calculateCurrentPeriodSales(Long adminId, LocalDate startDate, LocalDate endDate) {
         try {
             return paymentNotificationRepository.findPaymentsForStatsByAdminId(
@@ -1071,7 +1072,7 @@ public class StatsService {
         }
     }
     
-    @WithTransaction
+    @WithSession
     private double calculateCurrentPeriodAverage(Long adminId, LocalDate startDate, LocalDate endDate) {
         try {
             return paymentNotificationRepository.findPaymentsForStatsByAdminId(

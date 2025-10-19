@@ -76,7 +76,7 @@ public class WebSocketSessionManager {
 
         try {
             String errorResponse = createErrorMessage(errorMessage);
-            session.getAsyncRemote().sendText(errorResponse, result -> handleSendResult(result));
+            session.getAsyncRemote().sendText(errorResponse, this::handleSendResult);
         } catch (Exception e) {
             log.error("Error sending error message: " + e.getMessage());
         }
@@ -105,18 +105,25 @@ public class WebSocketSessionManager {
                            errorMessage, System.currentTimeMillis());
     }
 
-    public Uni<Void> handleConnection(Session session, String sellerIdParam) {
-        log.info("🔌 Handling WebSocket connection for seller: " + sellerIdParam);
-        
-        return validateSellerId(sellerIdParam)
-                .chain(sellerId -> configureAndAuthenticate(session, sellerId))
-                .onFailure().recoverWithUni(throwable -> sendErrorAndClose(session, throwable.getMessage()));
-    }
+  public Uni<Void> handleConnection(Session session, String sellerIdParam) {
+    log.info("🔌 Handling WebSocket connection for seller: " + sellerIdParam);
+    log.info("🔍 Session Query Parameters: " + session.getRequestParameterMap());
+    log.info("🔍 Session Query String: " + session.getQueryString());
+
+    return validateSellerId(sellerIdParam)
+        .chain(sellerId -> {
+          log.info("✅ Validated seller ID: " + sellerId);
+          return configureAndAuthenticate(session, sellerId);
+        })
+        .onFailure().invoke(throwable -> {
+          log.error("❌ WebSocket connection failed: " + throwable.getMessage(), throwable);
+        });
+  }
 
     public Uni<Long> validateSellerId(String sellerIdParam) {
         return Uni.createFrom().item(() -> {
             try {
-                Long sellerId = Long.parseLong(sellerIdParam);
+                long sellerId = Long.parseLong(sellerIdParam);
                 if (sellerId <= 0) {
                     throw new IllegalArgumentException("Invalid seller ID: " + sellerId);
                 }
@@ -127,23 +134,30 @@ public class WebSocketSessionManager {
         });
     }
 
-    private Uni<Void> configureAndAuthenticate(Session session, Long sellerId) {
-        configureSessionProperties(session, sellerId);
-        
-        return tokenExtractor.extractTokenFromSession(session)
-                .chain(token -> {
-                    if (token == null) {
-                        throw new SecurityException("Authentication token required");
-                    }
-                    
-                    String authorization = "Bearer " + token;
-                    return securityService.validateSellerAuthorization(authorization, sellerId)
-                            .chain(userId -> {
-                                log.info("✅ Authentication successful for seller " + sellerId + ", userId: " + userId);
-                                return registerSessionAndSendWelcome(sellerId, session);
-                            });
-                });
-    }
+  private Uni<Void> configureAndAuthenticate(Session session, Long sellerId) {
+    configureSessionProperties(session, sellerId);
+
+    return tokenExtractor.extractTokenFromSession(session)
+        .chain(token -> {
+          if (token == null) {
+            log.error("❌ No token found in WebSocket session for seller " + sellerId);
+            return Uni.createFrom().failure(new SecurityException("No authentication token"));
+          }
+
+          // Add more detailed logging for token validation
+          log.info("🔍 Attempting to validate token for seller " + sellerId);
+
+          String authorization = "Bearer " + token;
+          return securityService.validateSellerAuthorization(authorization, sellerId)
+              .chain(userId -> {
+                log.info("✅ Authentication successful for seller " + sellerId + ", userId: " + userId);
+                return registerSessionAndSendWelcome(sellerId, session);
+              })
+              .onFailure().invoke(throwable -> {
+                log.error("❌ Token validation failed for seller " + sellerId + ": " + throwable.getMessage());
+              });
+        });
+  }
 
     private void configureSessionProperties(Session session, Long sellerId) {
         session.setMaxTextMessageBufferSize(maxTextMessageBufferSize);

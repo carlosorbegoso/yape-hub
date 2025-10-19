@@ -5,7 +5,10 @@ import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.SellerEntity;
 
+import java.time.LocalDateTime;
 import java.util.List;
+
+import static io.smallrye.config._private.ConfigLogging.log;
 
 @ApplicationScoped
 public class SellerRepository implements PanacheRepository<SellerEntity> {
@@ -21,12 +24,51 @@ public class SellerRepository implements PanacheRepository<SellerEntity> {
     public Uni<List<SellerEntity>> findByAdminId(Long adminId) {
         return find("SELECT s FROM SellerEntity s JOIN FETCH s.branch b WHERE b.admin.id = ?1 ORDER BY s.id", adminId).range(0, 50).list(); // Limited to 50 for low-resource efficiency
     }
-    
-    public Uni<List<SellerEntity>> findActiveSellersByAdminId(Long adminId) {
-        return find("branch.admin.id = ?1 and isActive = true", adminId)
-                .page(0, 100)  // LÍMITE: máximo 100 sellers
-                .list();
-    }
+
+  public Uni<SellerPaginationResult> findSellersByAdminWithPagination(
+      Long adminId,
+      LocalDateTime startDate,
+      LocalDateTime endDate,
+      int page,
+      int size
+  ) {
+    return count(
+        "branch.admin.id = ?1 AND affiliationDate >= ?2 AND affiliationDate <= ?3",
+        adminId, startDate, endDate
+    )
+        .chain(totalCount -> {
+          // If no sellers found, return empty result
+          if (totalCount == 0) {
+            return Uni.createFrom().item(
+                new SellerPaginationResult(List.of(), 0L)
+            );
+          }
+
+          // Calculate total pages, ensuring at least 1
+          int totalPages = Math.max(1, (int) Math.ceil((double) totalCount / size));
+
+          // Validate and adjust page number
+          int validPage = Math.min(Math.max(page, 1), totalPages);
+
+          return find(
+              "SELECT s FROM SellerEntity s " +
+                  "JOIN FETCH s.branch b " +
+                  "WHERE b.admin.id = ?1 " +
+                  "AND s.affiliationDate >= ?2 " +
+                  "AND s.affiliationDate <= ?3 " +
+                  "ORDER BY s.affiliationDate DESC",
+              adminId, startDate, endDate)
+              .page(validPage - 1, size)
+              .list()
+              .map(sellers -> {
+                log.info("Pagination Debug - Total Count: " + totalCount +
+                    ", Total Pages: " + totalPages +
+                    ", Requested Page: " + page +
+                    ", Valid Page: " + validPage);
+                return new SellerPaginationResult(sellers, totalCount);
+              });
+        });
+  }
 
     public Uni<SellerEntity> findByUserId(Long userId) {
         return find("SELECT s FROM SellerEntity s JOIN FETCH s.branch b JOIN FETCH b.admin WHERE s.user.id = ?1", userId).firstResult();

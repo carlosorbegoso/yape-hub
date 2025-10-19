@@ -7,6 +7,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.annotation.security.PermitAll;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import org.sky.dto.response.ErrorResponse;
+import org.sky.exception.ValidationException;
 import org.sky.service.SellerService;
 import org.sky.service.SubscriptionService;
 import org.sky.service.security.SecurityService;
@@ -67,16 +69,12 @@ public class SellerController {
                 startDate = endDate.minusDays(30);
             }
         } catch (DateTimeParseException e) {
-            log.warn("❌ Fechas inválidas: " + e.getMessage());
             return Uni.createFrom().item(Response.status(400)
                     .entity(org.sky.dto.response.ApiResponse.error("Formato de fecha inválido. Use yyyy-MM-dd")).build());
         }
-        
-        // Validar autorización de admin
+
         return securityService.validateAdminAuthorization(authorization, adminId)
-                .chain(userId -> {
-                    return sellerService.getSellersByAdmin(adminId, page, limit, startDate, endDate);
-                })
+                .chain(userId -> sellerService.getSellersByAdmin(adminId, page, limit, startDate, endDate))
                 .map(response -> {
                     if (response.isSuccess()) {
                         return Response.ok(response).build();
@@ -87,10 +85,8 @@ public class SellerController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.warn("❌ Error de autorización: " + throwable.getMessage());
-                    // Si es una ValidationException, crear ErrorResponse manualmente
-                    if (throwable instanceof org.sky.exception.ValidationException) {
-                        org.sky.exception.ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        org.sky.dto.response.ErrorResponse errorResponse = new org.sky.dto.response.ErrorResponse(
+                    if (throwable instanceof ValidationException validationException) {
+                      ErrorResponse errorResponse = new ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -98,7 +94,7 @@ public class SellerController {
                         );
                         return Response.status(validationException.getStatus()).entity(errorResponse).build();
                     }
-                    // Para otros errores, usar el manejo de seguridad
+
                     return securityService.handleSecurityException(throwable);
                 });
     }

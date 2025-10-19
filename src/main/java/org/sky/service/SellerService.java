@@ -48,12 +48,7 @@ public class SellerService {
     
     @Inject
     SellerRepository sellerRepository;
-    
-    @Inject
-    JwtExtractor jwtExtractor;
-    
-    @Inject
-    JwtValidator jwtValidator;
+
     
     @Inject
     JwtGenerator jwtGenerator;
@@ -75,8 +70,7 @@ public class SellerService {
                             .chain(existingSellers -> {
                                 int currentSellerCount = existingSellers.size();
                                 int newSellerCount = currentSellerCount + 1;
-                                log.info("🔍 SellerService.affiliateSeller() - AdminId: " + adminId + ", CurrentSellers: " + currentSellerCount + ", NewSellerCount: " + newSellerCount);
-                                
+
                                 return subscriptionService.checkSubscriptionLimits(adminId, newSellerCount)
                                         .chain(withinLimits -> {
                                             log.info("🔍 SubscriptionService.checkSubscriptionLimits() - AdminId: " + adminId + ", SellersNeeded: " + newSellerCount + ", WithinLimits: " + withinLimits);
@@ -290,68 +284,62 @@ public class SellerService {
                     }
                 });
     }
-    
+  public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId, int page, int limit, LocalDate startDate, LocalDate endDate) {
 
-    /**
-     * Obtiene todos los vendedores afiliados a un administrador específico con paginación
-     */
-    public Uni<ApiResponse<SellerListResponse>> getSellersByAdmin(Long adminId, int page, int limit, LocalDate startDate, LocalDate endDate) {
-        log.info("🚀 SellerService.getSellersByAdmin() - AdminId: " + adminId);
-        log.info("🚀 Página: " + page + ", Limit: " + limit);
-        log.info("🚀 Desde: " + startDate + ", Hasta: " + endDate);
-        
-        // Validar parámetros de paginación
-        if (page < 1) page = 1;
-        if (limit < 1 || limit > 100) limit = 20; // Máximo 100 elementos por página
-        
-        // Hacer las variables finales para usar en lambda
-        final int finalPage = page;
-        final int finalLimit = limit;
-        
-        return sellerRepository.find("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3 order by affiliationDate desc", 
-                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .page(finalPage - 1, finalLimit)  // OPTIMIZADO: Paginación en BD
-                .list()
-                .chain(paginatedSellers -> {
-                    // Obtener conteo total para la información de paginación
-                    return sellerRepository.count("branch.admin.id = ?1 and affiliationDate >= ?2 and affiliationDate <= ?3", 
-                            adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                            .map(totalCount -> {
-                                int totalPages = (int) Math.ceil((double) totalCount / finalLimit);
-                    
-                                List<SellerResponse> sellerResponses = paginatedSellers.stream()
-                                        .map(seller -> new SellerResponse(
-                                                seller.id,
-                                                seller.sellerName,
-                                                seller.email,
-                                                seller.phone,
-                                                seller.branch.id,
-                                                seller.branch.name,
-                                                seller.isActive,
-                                                seller.isOnline,
-                                                seller.totalPayments,
-                                                seller.totalAmount,
-                                                seller.lastPayment,
-                                                seller.affiliationDate
-                                        ))
-                                        .collect(Collectors.toList());
-                    
-                                PaginationInfo pagination = new PaginationInfo(
-                                        finalPage, // currentPage
-                                        totalPages, // totalPages
-                                        totalCount, // totalItems - CORREGIDO
-                                        finalLimit, // itemsPerPage
-                                        finalPage < totalPages, // hasNext
-                                        finalPage > 1 // hasPrevious
-                                );
-                    
-                                SellerListResponse listResponse = new SellerListResponse(
-                                        sellerResponses,
-                                        pagination
-                                );
-                    
-                                return ApiResponse.success("Vendedores obtenidos exitosamente", listResponse);
-                            });
-                });
-    }
+    // Normalize pagination parameters
+    final int finalPage = Math.max(page, 1);
+    final int finalLimit = limit < 1 || limit > 100 ? 20 : limit;
+
+    return sellerRepository.findSellersByAdminWithPagination(
+            adminId,
+            startDate.atStartOfDay(),
+            endDate.atTime(23,59,59),
+            finalPage,
+            finalLimit
+        )
+        .map(result -> {
+          int totalPages = result.totalCount() > 0
+              ? (int) Math.ceil((double) result.totalCount() / finalLimit)
+              : 1;
+
+          List<SellerResponse> sellerResponses = result.sellers().stream()
+              .map(seller -> new SellerResponse(
+                  seller.id,
+                  seller.sellerName,
+                  seller.email,
+                  seller.phone,
+                  seller.branch.id,
+                  seller.branch.name,
+                  seller.isActive,
+                  seller.isOnline,
+                  seller.totalPayments,
+                  seller.totalAmount,
+                  seller.lastPayment,
+                  seller.affiliationDate
+              ))
+              .toList();
+
+          PaginationInfo pagination = new PaginationInfo(
+              1, // Always use page 1 for zero count
+              totalPages, // Total pages (at least 1)
+              result.totalCount(), // Total items
+              finalLimit, // Items per page
+              false, // hasNext
+              false // hasPrevious
+          );
+
+          SellerListResponse listResponse = new SellerListResponse(
+              sellerResponses,
+              pagination
+          );
+
+
+          return ApiResponse.success(
+              result.totalCount() > 0
+                  ? "Vendedores obtenidos exitosamente"
+                  : "No se encontraron vendedores en el rango de fechas especificado",
+              listResponse
+          );
+        });
+  }
 }
