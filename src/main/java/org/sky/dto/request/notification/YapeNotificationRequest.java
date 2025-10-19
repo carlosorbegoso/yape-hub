@@ -3,6 +3,9 @@ package org.sky.dto.request.notification;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record YapeNotificationRequest(
     @NotNull(message = "AdminId es requerido")
     Long adminId,

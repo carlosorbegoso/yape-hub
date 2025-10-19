@@ -3,6 +3,9 @@ package org.sky.dto.response.seller;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerResponse(
     Long sellerId,
     String name,

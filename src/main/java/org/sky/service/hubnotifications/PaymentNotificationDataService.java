@@ -13,6 +13,7 @@ import org.sky.repository.PaymentRejectionRepository;
 import org.sky.repository.SellerRepository;
 import org.sky.repository.UserRepository;
 import org.sky.model.UserEntityEntity;
+import org.sky.util.DeadlockRetryService;
 
 import java.util.List;
 
@@ -30,9 +31,15 @@ public class PaymentNotificationDataService {
 
     @Inject
     UserRepository userRepository;
+    
+    @Inject
+    DeadlockRetryService deadlockRetryService;
 
     public Uni<PaymentNotificationEntity> savePaymentNotification(PaymentNotificationEntity payment) {
-        return paymentRepository.persist(payment);
+        return deadlockRetryService.executeWithRetry(
+            () -> paymentRepository.persist(payment),
+            "savePaymentNotification(id=" + payment.id + ")"
+        );
     }
 
     @WithTransaction
@@ -61,7 +68,10 @@ public class PaymentNotificationDataService {
     }
 
     public Uni<PaymentNotificationEntity> updatePaymentStatus(Long paymentId, String status) {
-        return paymentRepository.updatePaymentStatus(paymentId, status);
+        return deadlockRetryService.executeWithRetry(
+            () -> paymentRepository.updatePaymentStatus(paymentId, status),
+            "updatePaymentStatus(id=" + paymentId + ", status=" + status + ")"
+        );
     }
 
     public Uni<PaymentRejectionEntity> savePaymentRejection(PaymentRejectionEntity rejection) {
@@ -70,7 +80,10 @@ public class PaymentNotificationDataService {
 
     public Uni<PaymentNotificationEntity> createPaymentForSeller(PaymentNotificationRequest request, SellerEntity seller) {
         PaymentNotificationEntity payment = PaymentNotificationMapper.REQUEST_WITH_SELLER_TO_ENTITY.apply(request).apply(seller);
-        return savePaymentNotification(payment);
+        return deadlockRetryService.executeWithRetry(
+            () -> savePaymentNotification(payment),
+            "createPaymentForSeller(adminId=" + request.adminId() + ", sellerId=" + seller.id + ")"
+        );
     }
     
     /**

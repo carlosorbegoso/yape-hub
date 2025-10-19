@@ -3,6 +3,9 @@ package org.sky.dto.request.stats;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 /**
  * Request object para cálculos de estadísticas de seller
  */

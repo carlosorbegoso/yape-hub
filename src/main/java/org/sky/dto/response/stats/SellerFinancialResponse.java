@@ -4,6 +4,9 @@ import org.sky.dto.response.common.Period;
 
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerFinancialResponse(
     Long sellerId,
     Double totalRevenue,

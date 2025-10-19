@@ -1,10 +1,12 @@
 package org.sky.dto.response.seller;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.time.LocalDateTime;
 
 /**
  * DTO para información de vendedor conectado
  */
+@RegisterForReflection
 public record ConnectedSellerInfo(
     Long sellerId,
     String sellerName,

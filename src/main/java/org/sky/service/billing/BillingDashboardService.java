@@ -6,7 +6,6 @@ import jakarta.inject.Inject;
 import org.sky.dto.response.ApiResponse;
 import org.sky.dto.response.billing.BillingDashboardResponse;
 import org.sky.dto.response.billing.BillingSummaryResponse;
-import org.sky.dto.response.billing.MonthlyUsageResponse;
 import org.sky.dto.response.billing.SubscriptionStatusResponse;
 import org.sky.service.SubscriptionService;
 
@@ -30,12 +29,6 @@ public class BillingDashboardService {
                 null, // Sin token status
                 subscriptionStatus,
                 List.of(), // Lista vacía de historial
-                new MonthlyUsageResponse(
-                        0L, // Sin tokens usados
-                        0L, // Sin tokens disponibles
-                        0L, // Sin operaciones por ahora
-                        "N/A" // Sin operación más usada
-                ),
                 new BillingSummaryResponse(
                         0.0, // Sin gastos por ahora
                         "PEN",

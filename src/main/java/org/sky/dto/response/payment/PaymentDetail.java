@@ -2,6 +2,9 @@ package org.sky.dto.response.payment;
 
 import java.time.LocalDateTime;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record PaymentDetail(
     Long paymentId,
     Double amount,

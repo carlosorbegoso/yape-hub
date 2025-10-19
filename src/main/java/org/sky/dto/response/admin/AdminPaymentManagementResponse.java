@@ -6,6 +6,9 @@ import org.sky.dto.response.payment.PaymentSummary;
 
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record AdminPaymentManagementResponse(
     List<PaymentDetail> payments,
     PaymentSummary summary,

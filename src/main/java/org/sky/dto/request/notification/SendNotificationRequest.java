@@ -4,6 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.sky.model.NotificationEntity;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SendNotificationRequest(
     @NotNull(message = "Target type is required")
     NotificationEntity.TargetType targetType,

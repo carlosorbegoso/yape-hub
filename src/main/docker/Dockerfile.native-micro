@@ -6,9 +6,11 @@
 #
 # Before building the container image run:
 #
-# ./gradlew build -Dquarkus.native.enabled=true
-#
-# Then, build the image with:
+#./gradlew clean build -x test \
+ #  -Dquarkus.package.jar.enabled=false \
+ #  -Dquarkus.native.enabled=true \
+ #  -Dquarkus.native.container-build=true \
+ #  -Dquarkus.native.additional-build-args="--gc=serial"
 #
 # docker build -f src/main/docker/Dockerfile.native-micro -t quarkus/yape-hub .
 #

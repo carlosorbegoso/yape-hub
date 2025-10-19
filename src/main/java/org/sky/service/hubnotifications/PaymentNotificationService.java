@@ -27,6 +27,7 @@ import org.sky.service.security.SecurityService;
 import org.sky.service.websocket.WebSocketNotificationService;
 import org.sky.dto.response.seller.ConnectedSellerInfo;
 import org.sky.dto.response.seller.ConnectedSellersResponse;
+import org.sky.util.DeadlockRetryService;
 
 @ApplicationScoped
 public class PaymentNotificationService {
@@ -47,6 +48,9 @@ public class PaymentNotificationService {
 
     @Inject
     WebSocketNotificationService webSocketNotificationService;
+    
+    @Inject
+    DeadlockRetryService deadlockRetryService;
 
 
     public Uni<PaymentNotificationResponse> processPaymentNotification(PaymentNotificationRequest request) {
@@ -183,8 +187,20 @@ public class PaymentNotificationService {
         return PaymentNotificationValidator.validatePaymentId().apply(paymentId)
             .chain(validPaymentId -> {
                 log.info("✅ Payment ID validation passed: " + validPaymentId);
-                return dataService.findPaymentById(validPaymentId);
-            })
+                
+                // Usar retry automático para manejar deadlocks
+                return deadlockRetryService.executeWithRetry(
+                    () -> claimPaymentInternal(validPaymentId),
+                    "claimPayment(" + validPaymentId + ")"
+                );
+            });
+    }
+    
+    /**
+     * Implementación interna del claim payment con retry automático
+     */
+    private Uni<PaymentNotificationResponse> claimPaymentInternal(Long paymentId) {
+        return dataService.findPaymentById(paymentId)
             .chain(payment -> {
                 if (payment == null) {
                     log.warn("❌ Payment not found with ID: " + paymentId);
@@ -215,7 +231,20 @@ public class PaymentNotificationService {
     @WithTransaction
     public Uni<PaymentNotificationResponse> rejectPayment(Long paymentId, String reason) {
         return PaymentNotificationValidator.validatePaymentId().apply(paymentId)
-            .chain(validPaymentId -> dataService.findPaymentById(validPaymentId))
+            .chain(validPaymentId -> {
+                // Usar retry automático para manejar deadlocks
+                return deadlockRetryService.executeWithRetry(
+                    () -> rejectPaymentInternal(validPaymentId, reason),
+                    "rejectPayment(" + validPaymentId + ")"
+                );
+            });
+    }
+    
+    /**
+     * Implementación interna del reject payment con retry automático
+     */
+    private Uni<PaymentNotificationResponse> rejectPaymentInternal(Long paymentId, String reason) {
+        return dataService.findPaymentById(paymentId)
             .chain(payment -> {
                 if (payment == null) {
                     return Uni.createFrom().failure(org.sky.exception.ValidationException.requiredField("payment"));

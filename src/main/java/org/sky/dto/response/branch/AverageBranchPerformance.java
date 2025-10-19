@@ -1,5 +1,8 @@
 package org.sky.dto.response.branch;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record AverageBranchPerformance(
     Double averageSales,
     Double averageTransactions,

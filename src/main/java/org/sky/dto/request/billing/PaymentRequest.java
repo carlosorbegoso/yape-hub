@@ -1,5 +1,8 @@
 package org.sky.dto.request.billing;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record PaymentRequest(
     Long planId,
     String paymentMethod,

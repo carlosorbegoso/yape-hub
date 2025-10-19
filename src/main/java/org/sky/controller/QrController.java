@@ -90,15 +90,6 @@ public class QrController {
             @Parameter(description = "Additional notes")
             @QueryParam("notes") String notes) {
 
-        log.info("🚀 QrController.generateAffiliationCodeProtected() - Endpoint llamado");
-        log.info("🚀 Parámetros recibidos:");
-        log.info("🚀   - adminId: " + adminId);
-        log.info("🚀   - expirationHours: " + expirationHours);
-        log.info("🚀   - maxUses: " + maxUses);
-        log.info("🚀   - branchId: " + branchId);
-        log.info("🚀   - notes: " + notes);
-        log.info("🚀   - authorization: " + (authorization != null ? authorization.substring(0, Math.min(20, authorization.length())) + "..." : "null"));
-
         return securityService.validateAdminAuthorization(authorization, adminId)
                 .chain(userId -> {
                     log.info("🚀 Validación exitosa, llamando a QrService.generateAffiliationCode()");
@@ -129,11 +120,7 @@ public class QrController {
         @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code")
     })
     public Uni<Response> validateAffiliationCode(ValidateAffiliationCodeRequest request) {
-        
-        log.info("🚀 QrController.validateAffiliationCode() - Endpoint llamado");
-        log.info("🚀 Parámetros recibidos:");
-        log.info("🚀   - affiliationCode: " + request.affiliationCode());
-        
+
         return qrService.validateAffiliationCode(request.affiliationCode())
                 .map(response -> {
                     log.info("🚀 Respuesta del servicio recibida - success: " + response.isSuccess());
@@ -147,9 +134,8 @@ public class QrController {
                 })
                 .onFailure().recoverWithItem(throwable -> {
                     log.error("❌ Error en validateAffiliationCode: " + throwable.getMessage());
-                    if (throwable instanceof ValidationException) {
-                        ValidationException validationException = (org.sky.exception.ValidationException) throwable;
-                        ErrorResponse errorResponse = new ErrorResponse(
+                    if (throwable instanceof ValidationException validationException) {
+                      ErrorResponse errorResponse = new ErrorResponse(
                             validationException.getMessage(),
                             validationException.getErrorCode(),
                             validationException.getDetails(),
@@ -177,13 +163,7 @@ public class QrController {
         @APIResponse(responseCode = "404", description = "Affiliation code not found or expired")
     })
     public Uni<Response> registerSeller(@Valid AffiliateSellerRequest request) {
-        
-        log.info("🚀 QrController.registerSeller() - Registro de vendedor con código de afiliación");
-        log.info("🚀 Parámetros recibidos:");
-        log.info("🚀   - sellerName: " + request.sellerName());
-        log.info("🚀   - phone: " + request.phone());
-        log.info("🚀   - affiliationCode: " + request.affiliationCode());
-        
+
         // Primero validamos el código de afiliación
         return qrService.validateAffiliationCode(request.affiliationCode())
                 .chain(validationResponse -> {
@@ -243,10 +223,6 @@ public class QrController {
         @APIResponse(responseCode = "400", description = "Bad request - invalid affiliation code")
     })
     public Uni<Response> generateQrBase64(@Valid ValidateAffiliationCodeRequest request) {
-        log.info("🚀 QrController.generateQrBase64() - Endpoint llamado");
-        log.info("🚀 Parámetros recibidos:");
-        log.info("🚀   - affiliationCode: " + request.affiliationCode());
-        
         return qrService.generateQrBase64(request.affiliationCode())
                 .map(result -> {
                     log.info("🚀 QR Base64 generado exitosamente");
@@ -272,11 +248,6 @@ public class QrController {
         @APIResponse(responseCode = "400", description = "Bad request - invalid QR data or phone")
     })
     public Uni<Response> loginWithQr(@Valid QrLoginRequest request) {
-        log.info("🚀 QrController.loginWithQr() - Endpoint llamado");
-        log.info("🚀 Parámetros recibidos:");
-        log.info("🚀   - qrData: " + (request.qrData() != null ? request.qrData().substring(0, Math.min(50, request.qrData().length())) + "..." : "null"));
-        log.info("🚀   - phone: " + request.phone());
-        
         return qrService.loginWithQr(request.qrData(), request.phone())
                 .map(result -> {
                     log.info("🚀 Login con QR exitoso");

@@ -2,6 +2,9 @@ package org.sky.dto.response.stats;
 
 import org.sky.dto.response.common.Period;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record FinancialAnalyticsResponse(
     Double totalRevenue,
     String currency,

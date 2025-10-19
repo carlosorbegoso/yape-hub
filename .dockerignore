@@ -1,5 +1,11 @@
 *
-!build/*-runner
-!build/*-runner.jar
-!build/lib/*
-!build/quarkus-app/*
+# Incluir el directorio build completo
+!build/
+!build/**
+
+# Excluir cosas innecesarias dentro de build si quieres optimizar
+build/classes
+build/generated
+build/resources
+build/tmp
+build/reports

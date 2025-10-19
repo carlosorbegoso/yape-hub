@@ -1,5 +1,8 @@
 package org.sky.dto.response.admin;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SecurityMetrics(
     Long failedLoginAttempts,
     Long suspiciousActivities,

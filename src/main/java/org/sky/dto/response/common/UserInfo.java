@@ -1,5 +1,8 @@
 package org.sky.dto.response.common;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record UserInfo(
     Long id,
     String email,
@@ -8,14 +11,11 @@ public record UserInfo(
     String role,
     Boolean isVerified
 ) {
-    // Constructor compacto - validaciones y normalizaciones
     public UserInfo {
-        // Validaciones y fix automático para datos corruptos
         if (id == null) {
             throw new IllegalArgumentException("User ID cannot be null");
         }
-        
-        // Auto-fix for corrupted email data - specifically for user ID 605
+
         if (email == null || email.trim().isEmpty()) {
             if (id != null && id == 605L) {
                 email = "admin@corrupted-user-" + id + ".local"; // Default email for corrupted user

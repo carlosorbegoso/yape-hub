@@ -3,6 +3,9 @@ package org.sky.dto.response.seller;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 /**
  * DTO para respuesta de vendedores conectados
  */

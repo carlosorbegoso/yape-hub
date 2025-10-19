@@ -1,5 +1,8 @@
 package org.sky.dto.response.stats;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SystemMetrics(
     OverallSystemHealth overallSystemHealth,
     PaymentSystemMetrics paymentSystemMetrics,

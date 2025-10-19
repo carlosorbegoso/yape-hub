@@ -1,5 +1,8 @@
 package org.sky.dto.response.seller;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerGoals(
     Double dailyTarget,
     Double weeklyTarget,

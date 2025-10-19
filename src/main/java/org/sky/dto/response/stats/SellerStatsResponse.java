@@ -5,6 +5,9 @@ import org.sky.dto.response.seller.SellerSummaryStats;
 
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerStatsResponse(
     Long sellerId,
     String sellerName,

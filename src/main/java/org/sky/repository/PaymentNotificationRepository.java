@@ -4,15 +4,20 @@ import io.quarkus.hibernate.reactive.panache.PanacheRepository;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.sky.model.PaymentNotificationEntity;
+import org.sky.util.DeadlockRetryService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class PaymentNotificationRepository implements PanacheRepository<PaymentNotificationEntity> {
+    
+    @Inject
+    DeadlockRetryService deadlockRetryService;
     
     /**
      * Find pending payments for seller with pagination
@@ -61,6 +66,16 @@ public class PaymentNotificationRepository implements PanacheRepository<PaymentN
      * Update payment status
      */
     public Uni<PaymentNotificationEntity> updatePaymentStatus(Long paymentId, String status) {
+        return deadlockRetryService.executeWithRetry(
+            () -> updatePaymentStatusInternal(paymentId, status),
+            "updatePaymentStatus(id=" + paymentId + ", status=" + status + ")"
+        );
+    }
+    
+    /**
+     * Implementación interna del update payment status con retry automático
+     */
+    private Uni<PaymentNotificationEntity> updatePaymentStatusInternal(Long paymentId, String status) {
         return findById(paymentId)
             .chain(payment -> {
                 if (payment != null) {

@@ -1,5 +1,8 @@
 package org.sky.dto.response.payment;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record PaymentSummary(
     Long totalPayments,
     Long pendingCount,

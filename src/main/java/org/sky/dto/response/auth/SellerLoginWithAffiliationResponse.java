@@ -1,5 +1,8 @@
 package org.sky.dto.response.auth;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerLoginWithAffiliationResponse(
     Long sellerId,
     String sellerName,

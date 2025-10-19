@@ -1,282 +1,131 @@
-# Yape Hub API
+# 🐳 Docker Native Build - Guía Completa
 
-Un sistema completo de gestión de pagos construido con Quarkus que permite a las empresas gestionar pagos Yape, vendedores y transacciones a través de una API REST robusta.
+Esta guía te ayudará a construir y ejecutar Yape Hub como una **imagen nativa de Docker** usando Quarkus y GraalVM.
 
-## 🚀 Características
+## 📋 Requisitos Previos
 
-- **Gestión de Usuarios**: Registro de administradores y vendedores con autenticación JWT
-- **Gestión de Negocios**: Soporte multi-sucursal con controles administrativos
-- **Gestión de Vendedores**: Afiliación, gestión y seguimiento de rendimiento de vendedores
-- **Procesamiento de Transacciones**: Procesamiento de pagos Yape con flujos de confirmación
-- **Dashboard y Analytics**: Dashboards en tiempo real para administradores y vendedores
-- **Sistema de Notificaciones**: Notificaciones push para transacciones y eventos del sistema
-- **Generación de Códigos QR**: Códigos QR dinámicos para pagos y afiliaciones
-- **Sistema de Afiliación**: Onboarding seguro de vendedores con códigos únicos
-- **Reportes**: Reportes completos de transacciones y analytics
-- **Documentación API**: Documentación completa OpenAPI/Swagger
-- **WebSocket**: Notificaciones en tiempo real para vendedores
-- **Gestión de Sucursales**: Administración completa de sucursales por administrador
+- **Docker** instalado
+- **Gradle** (incluido en el proyecto)
+- **PostgreSQL** corriendo
+- Al menos **4GB de RAM libre** para el build nativo
 
-## 🛠 Technology Stack
+## 🏗️ Construcción de la Imagen Nativa
 
-- **Framework**: Quarkus (Java 21)
-- **Database**: PostgreSQL with Hibernate ORM
-- **Authentication**: JWT (JSON Web Tokens)
-- **API Documentation**: OpenAPI/Swagger
-- **Validation**: Bean Validation
-- **Security**: SmallRye JWT
-- **QR Code Generation**: ZXing library
-- **Email**: Quarkus Mailer
-- **Build Tool**: Gradle
+### Paso 1: Construir el Binario Nativo
 
-## 📋 Prerequisites
-
-- Java 21
-- PostgreSQL database
-- Maven/Gradle
-
-## 🚀 Quick Start
-
-### 1. Database Setup
-
-Create a PostgreSQL database:
-
-```sql
-CREATE DATABASE yapechamo;
-CREATE USER yapechamo WITH PASSWORD 'yapechamo123';
-GRANT ALL PRIVILEGES ON DATABASE yapechamo TO yapechamo;
-```
-
-### 2. Configuration
-
-Update database credentials in `src/main/resources/application.properties`:
-
-```properties
-quarkus.datasource.username=yapechamo
-quarkus.datasource.password=yapechamo123
-quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/yapechamo
-```
-
-### 3. Run the Application
+Ejecuta el siguiente comando (toma 3-5 minutos):
 
 ```bash
-./gradlew quarkusDev
+./gradlew clean build -x test \
+  -Dquarkus.package.jar.enabled=false \
+  -Dquarkus.native.enabled=true \
+  -Dquarkus.native.container-build=true \
+  -Dquarkus.native.additional-build-args="--gc=serial"
 ```
 
-The API will be available at `http://localhost:8080`
+**Explicación de los parámetros:**
+- `clean` - Limpia builds anteriores
+- `build` - Construye el proyecto
+- `-x test` - Omite tests (opcional, quítalo si quieres ejecutar tests)
+- `-Dquarkus.package.jar.enabled=false` - No genera JAR
+- `-Dquarkus.native.enabled=true` - Habilita compilación nativa
+- `-Dquarkus.native.container-build=true` - Compila dentro de un contenedor (no necesitas GraalVM instalado)
+- `--gc=serial` - Usa Serial GC (único soportado en GraalVM)
 
-### 4. Acceder a la Documentación de la API
-
-- **Swagger UI**: `http://localhost:8080/swagger-ui`
-- **OpenAPI JSON**: `http://localhost:8080/openapi`
-- **Documentación Completa**: [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
-
-## 📚 Documentación de la API
-
-La documentación completa de la API está disponible en [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
-
-### Endpoints Principales
-
-#### **Autenticación**
-- `POST /api/auth/admin/register` - Registro de administrador
-- `POST /api/auth/login` - Login general (admin/seller)
-- `POST /api/auth/seller/login-by-phone` - Login de vendedor con código de afiliación
-- `POST /api/login-with-qr` - Login de vendedor usando QR
-
-#### **Administradores**
-- `GET /api/admin/profile` - Gestión de perfil
-- `GET /api/admin/sellers/my-sellers` - Listar vendedores
-- `GET /api/admin/branches` - Gestión de sucursales
-- `POST /api/generate-affiliation-code-protected` - Generar códigos de afiliación
-- `GET /api/stats/admin` - Estadísticas y analytics
-
-#### **Vendedores**
-- `GET /api/payments/pending` - Pagos pendientes
-- `POST /api/payments/claim` - Reclamar pago
-- `POST /api/payments/reject` - Rechazar pago
-- `GET /api/stats/seller` - Estadísticas del vendedor
-
-#### **Públicos**
-- `POST /api/validate-affiliation-code` - Validar código de afiliación
-- `POST /api/generate-qr-base64` - Generar QR con Base64
-- `POST /api/seller/register` - Registro de vendedor
-
-#### **WebSocket**
-- `ws://localhost:8080/ws/payments/{sellerId}?token={jwt_token}` - Notificaciones en tiempo real
-
-## 🏗 Project Structure
-
-```
-src/main/java/org/sky/
-├── controller/          # REST API controllers
-├── service/            # Business logic services
-├── model/              # JPA entities
-├── dto/                # Data transfer objects
-└── util/               # Utility classes
-```
-
-## 🔧 Development
-
-### Running in Development Mode
+### Paso 2: Construir la Imagen Docker
 
 ```bash
-./gradlew quarkusDev
+docker build -f src/main/docker/Dockerfile.native-micro -t quarkus/yape-hub:latest .
 ```
 
-This enables live coding with automatic reloading.
+## 🚀 Ejecución del Contenedor
 
-### Building the Application
+### Ejecutar con Variables de Entorno
 
 ```bash
-./gradlew build
+docker run -d \
+  --name yape-hub \
+  -p 8080:8080 \
+  -e QUARKUS_PROFILE=prod \
+  -e QUARKUS_DATASOURCE_REACTIVE_URL=postgresql://192.168.3.47:5432/yapechamo \
+  -e QUARKUS_DATASOURCE_USERNAME=yapechamo \
+  -e QUARKUS_DATASOURCE_PASSWORD=yapechamo123 \
+  quarkus/yape-hub:latest
 ```
 
-### Running Tests
+**Nota**: Cambia `192.168.3.47` por la IP de tu base de datos. Si PostgreSQL está en tu máquina local (macOS/Windows), usa `host.docker.internal` en lugar de la IP.
+
+## 📊 Verificación
+
+### Ver logs del contenedor
 
 ```bash
-./gradlew test
+docker logs -f yape-hub
 ```
 
-### Building Native Executable
+### Verificar Health Check
 
 ```bash
-./gradlew build -Dquarkus.native.enabled=true
+curl http://localhost:8080/q/health
 ```
 
-## 🐳 Docker Support
-
-Build Docker image:
+### Detener el contenedor
 
 ```bash
-./gradlew build -Dquarkus.native.enabled=true
-docker build -f src/main/docker/Dockerfile.native -t yapechamo-api .
+docker stop yape-hub
 ```
 
-## 🔐 Security Features
+## 🔧 Troubleshooting
 
-- **Password Hashing**: BCrypt with salt
-- **JWT Authentication**: Secure token-based authentication
-- **Input Validation**: Bean Validation annotations
-- **SQL Injection Protection**: Hibernate ORM with parameterized queries
-- **CORS Configuration**: Configurable cross-origin resource sharing
-- **Rate Limiting**: Protection against abuse
+### No se puede conectar a la base de datos
 
-## 📊 Monitoring
+Si PostgreSQL está en tu máquina local, usa:
+```bash
+-e QUARKUS_DATASOURCE_REACTIVE_URL=postgresql://host.docker.internal:5432/yapechamo
+```
 
-### Health Checks
+### El puerto 8080 está en uso
 
-- **Health Check**: `GET /q/health`
-- **Metrics**: `GET /q/metrics`
-- **Info**: `GET /q/info`
+Usa otro puerto:
+```bash
+docker run -d --name yape-hub -p 8081:8080 -e QUARKUS_PROFILE=prod quarkus/yape-hub:latest
+```
 
-## 🚀 Deployment
+## 📈 Ventajas del Build Nativo
 
-### Environment Variables
+- ✅ **Startup ultra-rápido**: ~50ms vs 2-3 segundos en JVM
+- ✅ **Bajo consumo de memoria**: ~50-100MB vs 200-300MB en JVM
+- ✅ **Imagen más pequeña**: ~80-120MB vs 200-300MB
+- ✅ **Ideal para microservicios y contenedores**
+
+## 🎯 Resumen de Comandos Rápidos
 
 ```bash
-# Database
-QUARKUS_DATASOURCE_USERNAME=yapechamo
-QUARKUS_DATASOURCE_PASSWORD=yapechamo123
-QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://localhost:5432/yapechamo
+# 1. Build nativo (una sola vez, toma 3-5 minutos)
+./gradlew clean build -x test \
+  -Dquarkus.package.jar.enabled=false \
+  -Dquarkus.native.enabled=true \
+  -Dquarkus.native.container-build=true \
+  -Dquarkus.native.additional-build-args="--gc=serial"
 
-# Email
-EMAIL_USERNAME=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
+# 2. Construir imagen Docker
+docker build -f src/main/docker/Dockerfile.native-micro -t quarkus/yape-hub:latest .
 
-# JWT
-JWT_SECRET=your-jwt-secret-key
+# 3. Ejecutar contenedor
+docker run -d --name yape-hub -p 8080:8080 \
+  -e QUARKUS_PROFILE=prod \
+  -e QUARKUS_DATASOURCE_REACTIVE_URL=postgresql://192.168.3.47:5432/yapechamo \
+  -e QUARKUS_DATASOURCE_USERNAME=yapechamo \
+  -e QUARKUS_DATASOURCE_PASSWORD=yapechamo123 \
+  quarkus/yape-hub:latest
+
+# 4. Ver logs
+docker logs -f yape-hub
+
+# 5. Verificar salud
+curl http://localhost:8080/q/health
 ```
-
-### Production Checklist
-
-1. Set up PostgreSQL database
-2. Configure environment variables
-3. Set up SSL certificates
-4. Configure reverse proxy (nginx)
-5. Set up monitoring and logging
-
-## 📝 Ejemplos de la API
-
-### Registro de Administrador
-
-```bash
-curl -X POST http://localhost:8080/api/auth/admin/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "businessName": "Mi Negocio SRL",
-    "email": "admin@minegocio.com",
-    "password": "SecurePass123!",
-    "phone": "+51987654321",
-    "address": "Av. Principal 123, Lima",
-    "contactName": "Juan Pérez"
-  }'
-```
-
-### Login de Administrador
-
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@minegocio.com",
-    "password": "SecurePass123!",
-    "deviceFingerprint": "device_unique_id_123",
-    "role": "ADMIN"
-  }'
-```
-
-### Login de Vendedor con Código de Afiliación
-
-```bash
-curl -X POST "http://localhost:8080/api/auth/seller/login-by-phone?phone=987654321&affiliationCode=AFF646424" \
-  -H "accept: application/json"
-```
-
-### Generar Código QR
-
-```bash
-curl -X POST http://localhost:8080/api/generate-qr-base64 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "affiliationCode": "AFF646424"
-  }'
-```
-
-### Login con QR
-
-```bash
-curl -X POST http://localhost:8080/api/login-with-qr \
-  -H "Content-Type: application/json" \
-  -d '{
-    "qrData": "eyJhZmZpbGlhdGlvbkNvZGUiOiJBRkY2NDY0MjQiLCJicmFuY2hJZCI6NjA1LCJhZG1pbklkIjo2MDUsImV4cGlyZXNBdCI6IjIwMjUtMDktMTZUMjI6MzY6MjEuMDU3ODQxIiwibWF4VXNlcyI6MX0=",
-    "phone": "987654321"
-  }'
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Soporte
-
-Para soporte y preguntas:
-
-- **Documentación Completa**: [ENDPOINTS_BY_ROLE.md](./ENDPOINTS_BY_ROLE.md)
-- **Swagger UI**: `http://localhost:8080/swagger-ui`
-- **OpenAPI JSON**: `http://localhost:8080/openapi`
-- **Issues**: Crear issues en GitHub
-- **Email**: support@yapechamo.com
 
 ---
 
-**Versión**: 1.0.0  
-**Última Actualización**: Enero 2025  
-**Autor**: Yape Hub Development Team
+**Nota**: Cambia `192.168.3.47` por la IP de tu base de datos PostgreSQL, o usa `host.docker.internal` en macOS/Windows si PostgreSQL está en tu máquina local.

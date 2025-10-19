@@ -7,6 +7,9 @@ import org.sky.model.BusinessType;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record AdminProfileResponse(
     Long id,
     String email,

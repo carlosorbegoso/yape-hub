@@ -3,13 +3,12 @@ plugins {
     id 'io.quarkus'
 }
 
-// Optimización de recursos para build más eficiente
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
 }
 
-// Optimización de compilación para JVM 21
+
 compileJava {
     options.encoding = 'UTF-8'
     options.compilerArgs = ['-parameters']
@@ -88,17 +87,13 @@ dependencies {
 group = 'org.sky'
 version = '1.0.0-SNAPSHOT'
 
-test {
-    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
-    maxParallelForks = 1  // Reducir uso de memoria en tests
-    forkEvery = 1
-}
 
 compileTestJava {
     options.encoding = 'UTF-8'
 }
 
-// Configuración para Native Build optimizado
+
 quarkus {
     finalName = 'yape-hub-optimized'
 }
+

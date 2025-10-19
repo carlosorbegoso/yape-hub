@@ -1,10 +1,11 @@
 package org.sky.dto.request.auth;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.sky.model.UserRole;
-
+@RegisterForReflection
 public record LoginRequest(
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")

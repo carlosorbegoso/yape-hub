@@ -7,6 +7,9 @@ import org.sky.dto.response.seller.*;
 
 import java.util.List;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 /**
  * Respuesta completa de analytics para administrador
  */

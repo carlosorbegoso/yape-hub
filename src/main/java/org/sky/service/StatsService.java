@@ -11,6 +11,8 @@ import org.sky.dto.response.seller.*;
 import org.sky.dto.response.branch.*;
 import org.sky.model.PaymentNotificationEntity;
 import org.sky.repository.PaymentNotificationRepository;
+import org.sky.repository.SellerRepository;
+import org.sky.service.hubnotifications.PaymentNotificationService;
 // Import removido para evitar warnings
 import org.sky.service.stats.calculators.*;
 import org.sky.service.stats.algorithms.OptimizedPredictionAlgorithms;
@@ -32,7 +34,11 @@ public class StatsService {
     @Inject
     PaymentNotificationRepository paymentNotificationRepository;
 
+    @Inject
+    PaymentNotificationService paymentNotificationService;
     
+    @Inject
+    SellerRepository sellerRepository;
     
     @Inject
     StatisticsCalculator statisticsCalculator;
@@ -124,7 +130,6 @@ public class StatsService {
                 // Usar datos de las nuevas estrategias
                 Map<String, Object> sellerGoalsData = result.sellerGoals();
                 Map<String, Object> sellerPerformanceData = result.sellerPerformance();
-                Map<String, Object> systemMetricsData = result.systemMetrics();
                 
                 // Convertir Map a objetos DTO
                 SellerGoals sellerGoals = convertToSellerGoals(sellerGoalsData);
@@ -447,118 +452,8 @@ public class StatsService {
             ));
     }
 
-    /**
-     * Obtiene resumen rápido (método requerido por StatsController)
-     */
-    @WithTransaction
-    public Uni<Map<String, Object>> getQuickSummary(Long adminId, LocalDate startDate, LocalDate endDate) {
-        log.info("🔍 getQuickSummary requested for adminId: " + adminId + " from: " + startDate + " to: " + endDate);
-        
-        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-            .map(payments -> {
-                log.info("📊 Found " + payments.size() + " payments for adminId: " + adminId);
-                
-                if (payments.isEmpty()) {
-                    log.warn("⚠️ No payments found for adminId: " + adminId + 
-                            " in date range: " + startDate + " to " + endDate);
-                } else {
-                    log.info("✅ Sample payment data - first payment: ID=" + 
-                            (payments.get(0).id) + ", amount=" + payments.get(0).amount + 
-                            ", createdAt=" + payments.get(0).createdAt);
-                }
-                
-                double totalSales = calculateTotalSales(payments);
-                long totalTransactions = payments.size();
-                double averageTransactionValue = calculateAverageTransactionValue(payments);
-                
-                // Métricas adicionales del dashboard
-                long pendingPayments = payments.stream()
-                    .mapToLong(p -> "PENDING".equals(p.status) ? 1 : 0)
-                    .sum();
-                long confirmedPayments = payments.stream()
-                    .mapToLong(p -> "CONFIRMED".equals(p.status) ? 1 : 0)
-                    .sum();
-                long rejectedPayments = payments.stream()
-                    .mapToLong(p -> "REJECTED".equals(p.status) ? 1 : 0)
-                    .sum();
-                
-                double claimRate = totalTransactions > 0 ? 
-                    (double) confirmedPayments / totalTransactions * 100 : 0.0;
-                
-                double averageConfirmationTime = calculateAverageConfirmationTime(payments);
-                
-                // Calcular crecimiento comparando con período anterior
-                Map<String, Double> growthMetrics = calculateGrowthMetrics(adminId, startDate, endDate);
-                
-                log.info("📊 Calculated complete dashboard stats: sales=" + totalSales + 
-                        ", transactions=" + totalTransactions + 
-                        ", avgValue=" + averageTransactionValue +
-                        ", pending=" + pendingPayments +
-                        ", confirmed=" + confirmedPayments);
-                
-                Map<String, Object> dashboardData = new HashMap<>();
-                dashboardData.put("totalSales", totalSales);
-                dashboardData.put("totalTransactions", totalTransactions);
-                dashboardData.put("averageTransactionValue", averageTransactionValue);
-                dashboardData.put("salesGrowth", growthMetrics.getOrDefault("salesGrowth", 0.0));
-                dashboardData.put("transactionGrowth", growthMetrics.getOrDefault("transactionGrowth", 0.0));
-                dashboardData.put("averageGrowth", growthMetrics.getOrDefault("averageGrowth", 0.0));
-                dashboardData.put("pendingPayments", pendingPayments);
-                dashboardData.put("confirmedPayments", confirmedPayments);
-                dashboardData.put("rejectedPayments", rejectedPayments);
-                dashboardData.put("claimRate", Math.round(claimRate * 100.0) / 100.0);
-                dashboardData.put("averageConfirmationTime", Math.round(averageConfirmationTime * 10.0) / 10.0);
-                
-                return dashboardData;
-            });
-    }
 
-    /**
-     * Obtiene analytics de seller (método requerido por StatsController)
-     */
-    public Uni<Map<String, Object>> getSellerAnalyticsSummary(Long sellerId, LocalDate startDate, LocalDate endDate, 
-                                                              String include, String period, String metric, 
-                                                              String granularity, Double confidence, Integer days) {
-        return getAnalyticsSummary(sellerId, startDate, endDate, include, period, metric, granularity, confidence, days)
-            .map(response -> Map.<String, Object>of(
-                "overview", response.overview(),
-                "dailySales", response.dailySales(),
-                "performanceMetrics", response.performanceMetrics()
-            ));
-    }
 
-    /**
-     * Obtiene analytics financieros (método requerido por StatsController)
-     */
-    public Uni<Map<String, Object>> getFinancialAnalytics(Long adminId, LocalDate startDate, LocalDate endDate, 
-                                                          String include, String currency, Double taxRate) {
-        return getAdminAnalytics(adminId, startDate, endDate)
-            .map(response -> Map.<String, Object>of(
-                "financialOverview", response.financialOverview(),
-                "overview", response.overview()
-            ));
-    }
-
-    /**
-     * Obtiene analytics financieros de seller (método requerido por StatsController)
-     */
-    public Uni<Map<String, Object>> getSellerFinancialAnalytics(Long sellerId, LocalDate startDate, LocalDate endDate, 
-                                                               String include, String currency, Double commissionRate) {
-        return getAnalyticsSummary(sellerId, startDate, endDate, include, null, null, null, null, null)
-            .map(response -> Map.<String, Object>of(
-                "financialOverview", response.financialOverview(),
-                "overview", response.overview()
-            ));
-    }
-
-    /**
-     * Obtiene reporte de transparencia de pagos (método requerido por StatsController)
-     */
-    public Uni<Map<String, Object>> getPaymentTransparencyReport(Long adminId, LocalDate startDate, LocalDate endDate, 
-                                                               Boolean includeFees, Boolean includeTaxes, Boolean includeCommissions) {
-        return generatePaymentTransparencyReport(adminId, startDate, endDate);
-    }
     
     // ==================================================================================
     // MÉTODOS PARA GENERAR DATOS ADICIONALES
@@ -568,17 +463,6 @@ public class StatsService {
      * Genera comparaciones de vendedores basadas en estadísticas básicas
      */
     private SellerComparisons generateSellerComparisons(org.sky.service.stats.calculators.StatisticsCalculator.BasicStats basicStats) {
-        // Usar datos reales para comparaciones inteligentes
-        double totalSales = basicStats.totalSales();
-        long totalTransactions = basicStats.totalTransactions();
-        
-        // Basado en datos reales: 2.2 (domingo) y 5.1 (lunes)
-        // Simular comparaciones con datos históricos reales
-        double previousWeekSales = totalSales * 0.85; // Basado en tendencia real
-        double previousMonthSales = totalSales * 0.70;
-        double personalBestSales = totalSales * 1.15; // Lunes fue un buen día
-        double averageSales = totalSales * 0.90;
-        
         // Retornar comparaciones con datos derivados de estadísticas reales
         return SellerComparisons.empty(); // Por ahora usar empty hasta arreglar constructores
     }
@@ -589,14 +473,12 @@ public class StatsService {
     private SellerTrends generateSellerTrends(org.sky.service.stats.calculators.StatisticsCalculator.BasicStats basicStats) {
         // Usar datos reales: 2.2 (domingo) y 5.1 (lunes)
         List<Double> salesData = Arrays.asList(2.2, 5.1); // Datos reales de ventas
-        List<Double> transactionData = Arrays.asList(22.0, 51.0); // Datos reales de transacciones
         
         Map<String, Double> salesStats = OptimizedPredictionAlgorithms.AdvancedStatistics.calculateComprehensiveStats(salesData);
-        Map<String, Double> transactionStats = OptimizedPredictionAlgorithms.AdvancedStatistics.calculateComprehensiveStats(transactionData);
         
         // Calcular tendencias reales basadas en datos históricos
         String salesTrend = calcSalesTrend(salesData);
-        String transactionTrend = calcTransactionTrend(transactionData);
+        String transactionTrend = calcTransactionTrend(Arrays.asList(22.0, 51.0)); // Datos reales de transacciones
         double growthRate = salesStats.get("cv"); // Usando coeficiente de variación
         double volatility = salesStats.get("std");
         
@@ -1122,27 +1004,6 @@ public class StatsService {
     // MÉTODOS AUXILIARES PARA DASHBOARD COMPLETO
     // ==================================================================================
     
-    /**
-     * Calcula el tiempo promedio de confirmación en horas
-     */
-    private double calculateAverageConfirmationTime(List<PaymentNotificationEntity> payments) {
-        List<PaymentNotificationEntity> confirmedPayments = payments.stream()
-            .filter(p -> "CONFIRMED".equals(p.status) && p.confirmedAt != null)
-            .collect(Collectors.toList());
-            
-        if (confirmedPayments.isEmpty()) return 0.0;
-        
-        double totalHours = confirmedPayments.stream()
-            .mapToDouble(p -> {
-                if (p.confirmedAt != null && p.createdAt != null) {
-                    return java.time.Duration.between(p.createdAt, p.confirmedAt).toHours();
-                }
-                return 0.0;
-            })
-            .sum();
-            
-        return totalHours / confirmedPayments.size();
-    }
     
     /**
      * Calcula métricas de crecimiento comparando con período anterior
@@ -1220,5 +1081,40 @@ public class StatsService {
         } catch (Exception e) {
             return 0.0;
         }
+    }
+    
+    // ==================================================================================
+    // MÉTODOS PARA ENDPOINT UNIFICADO
+    // ==================================================================================
+    
+    /**
+     * Obtiene el rol del usuario delegando al PaymentNotificationService
+     */
+    public Uni<String> getUserRole(Long userId) {
+        return paymentNotificationService.getUserRole(userId);
+    }
+    
+    /**
+     * Valida que un seller pertenezca al usuario autenticado
+     */
+    @WithTransaction
+    public Uni<Boolean> validateSellerOwnership(Long userId, Long sellerId) {
+        log.info("🔍 Validating seller ownership: userId=" + userId + ", sellerId=" + sellerId);
+        
+        return sellerRepository.findByUserId(userId)
+                .map(seller -> {
+                    if (seller == null) {
+                        log.warn("❌ Seller not found for userId: " + userId);
+                        return false;
+                    }
+                    
+                    boolean isValid = seller.id.equals(sellerId);
+                    log.info("✅ Seller ownership validation: " + isValid + " for sellerId: " + sellerId);
+                    return isValid;
+                })
+                .onFailure().recoverWithItem(throwable -> {
+                    log.error("❌ Error validating seller ownership: " + throwable.getMessage());
+                    return false;
+                });
     }
 }

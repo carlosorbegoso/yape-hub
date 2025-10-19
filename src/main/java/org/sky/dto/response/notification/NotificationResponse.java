@@ -4,6 +4,9 @@ import org.sky.model.NotificationEntity;
 
 import java.time.LocalDateTime;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record NotificationResponse(
     Long id,
     NotificationEntity.TargetType targetType,

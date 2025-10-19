@@ -2,6 +2,9 @@ package org.sky.dto.response.branch;
 
 import java.time.LocalDateTime;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record BranchPerformanceData(
     Long branchId,
     String branchName,

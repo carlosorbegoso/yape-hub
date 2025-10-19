@@ -1,11 +1,13 @@
 package org.sky.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import java.time.Instant;
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@RegisterForReflection
 public record ErrorResponse(
     String message,
     String code,

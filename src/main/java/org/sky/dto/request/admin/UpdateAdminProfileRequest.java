@@ -2,6 +2,9 @@ package org.sky.dto.request.admin;
 
 import jakarta.validation.constraints.Pattern;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record UpdateAdminProfileRequest(
     String businessName,
     

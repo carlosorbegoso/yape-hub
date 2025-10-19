@@ -3,6 +3,9 @@ package org.sky.dto.request.seller;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record AffiliateSellerRequest(
     @NotBlank(message = "Seller name is required")
     String sellerName,

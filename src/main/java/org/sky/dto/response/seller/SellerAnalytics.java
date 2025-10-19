@@ -4,6 +4,9 @@ import org.sky.dto.response.stats.PerformanceIndicators;
 import org.sky.dto.response.stats.SalesDistribution;
 import org.sky.dto.response.stats.TransactionPatterns;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
+@RegisterForReflection
 public record SellerAnalytics(
     SalesDistribution salesDistribution,
     TransactionPatterns transactionPatterns,
