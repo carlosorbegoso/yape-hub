@@ -22,7 +22,6 @@ public class AdminController {
     
     @Inject
     AdminService adminService;
-    
     @GET
     @Path("/profile")
     @Operation(summary = "Get admin profile", description = "Retrieve administrator profile information")
