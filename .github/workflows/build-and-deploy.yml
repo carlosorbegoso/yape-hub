@@ -9,7 +9,8 @@ on:
 jobs:
   build-and-deploy:
     if: github.event_name == 'push'
-    uses: ${{ github.repository_owner }}/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
+    # ✅ CORRECTO
+    uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
     secrets:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
