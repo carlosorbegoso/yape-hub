@@ -17,3 +17,6 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DB_JDBC_URL: ${{ secrets.DB_JDBC_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
