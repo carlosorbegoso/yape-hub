@@ -11,7 +11,6 @@ jobs:
     if: github.event_name == 'push'
     uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
     secrets:
-
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       SSH_HOST: ${{ secrets.SSH_HOST }}
