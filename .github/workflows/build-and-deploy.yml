@@ -9,7 +9,6 @@ on:
 jobs:
   build-and-deploy:
     if: github.event_name == 'push'
-    # ✅ CORRECTO
     uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
     secrets:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
