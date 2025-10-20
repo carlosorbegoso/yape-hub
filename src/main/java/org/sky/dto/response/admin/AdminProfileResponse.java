@@ -1,7 +1,6 @@
 package org.sky.dto.response.admin;
 
 import org.sky.dto.response.common.BranchInfo;
-import org.sky.model.AdminEntity;
 import org.sky.model.BusinessType;
 
 import java.time.LocalDateTime;
@@ -77,25 +76,5 @@ public record AdminProfileResponse(
                 .toList() : List.of()
         );
     }
-    
-    // Constructor con branches personalizadas
-    public static AdminProfileResponse withBranches(AdminEntity admin, List<BranchInfo> customBranches) {
-        if (admin == null || admin.user == null) {
-            throw new IllegalArgumentException("Admin and user cannot be null");
-        }
-        
-        return new AdminProfileResponse(
-            admin.id,
-            admin.user.email,
-            admin.businessName,
-            admin.businessType,
-            admin.ruc,
-            null, // phone no está en UserEntityEntity
-            admin.address,
-            admin.contactName,
-            admin.user.isVerified,
-            admin.createdAt,
-            customBranches != null ? customBranches : List.of()
-        );
-    }
+
 }

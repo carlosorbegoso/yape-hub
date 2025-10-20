@@ -4,13 +4,13 @@
 # Uso: ./send_notification.sh [monto] [mensaje]
 
 # Configuración
-ADMIN_ID=605
+ADMIN_ID=1
 DEVICE_FINGERPRINT="a1b2c3d4e5f6789a"
 BASE_URL="http://localhost:8080"
 API_URL="$BASE_URL/api/notifications/yape-notifications"
 
 # Credenciales para login automático
-EMAIL="calo@hotmail.com"
+EMAIL="carlos@hotmail.com"
 PASSWORD="Sky22234Ts*t"
 
 # Parámetros por defecto

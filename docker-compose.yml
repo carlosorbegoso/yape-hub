@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${DOCKER_IMAGE}
+    container_name: ${APP_NAME}
+    ports:
+      - "8080:8080"  # Cambia el primer puerto si necesitas otro (ej: 9090:8080)
+    environment:
+      # Quarkus config
+      - QUARKUS_HTTP_HOST=0.0.0.0
+      - QUARKUS_PROFILE=prod
+
+      # Base de datos (desde secrets de GitHub)
+      - QUARKUS_DATASOURCE_JDBC_URL=${DB_JDBC_URL}
+      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME}
+      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - QUARKUS_DATASOURCE_DB_KIND=postgresql
+
+      # JPA/Hibernate
+      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate
+      - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
+
+      # Logging
+      - QUARKUS_LOG_LEVEL=INFO
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
