@@ -23,6 +23,8 @@ Ejecuta el siguiente comando (toma 3-5 minutos):
   -Dquarkus.native.additional-build-args="--gc=serial"
 ```
 
+
+
 **Explicación de los parámetros:**
 - `clean` - Limpia builds anteriores
 - `build` - Construye el proyecto
