@@ -1,18 +1,46 @@
-name: Simple Production Deploy
+# ============================================
+# EJEMPLO PARA MICROSERVICIOS
+# ============================================
+# 
+# INSTRUCCIONES:
+# 1. Ve a tu microservicio
+# 2. Crea/edita .github/workflows/ci-cd.yml
+# 3. Copia este código completo
+# 4. Guarda y haz commit
+#
+# ============================================
+
+name: Smart CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
-  production-deploy:
-    uses: carlosorbegoso/workflow-templates/.github/workflows/simple-production.yml@main
+  smart-pipeline:
+    uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
     secrets:
+      # PRODUCCIÓN (obligatorios)
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_PAT: ${{ secrets.GHCR_PAT }}
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+      # REGISTRY (opcionales)
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+      
+      # DESARROLLO (opcionales - usa producción si no existen)
+      DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+      DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+      DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+      DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+      DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
+      DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+      
+      # CALIDAD (opcional)
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
