@@ -7,7 +7,7 @@ quarkus:
     # Default reactive Postgres ssl mode: try SSL but fall back to non-SSL if the server doesn't support it
     reactive:
       postgresql:
-        ssl-mode: ${DB_SSL_MODE:allow}
+        ssl-mode: ${DB_SSL_MODE:disable}
 
   smallrye-jwt:
     enabled: false
