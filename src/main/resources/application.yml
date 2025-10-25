@@ -1,10 +1,13 @@
-
 quarkus:
   http:
     host: 0.0.0.0
 
   datasource:
     db-kind: postgresql
+    # Default reactive Postgres ssl mode: try SSL but fall back to non-SSL if the server doesn't support it
+    reactive:
+      postgresql:
+        ssl-mode: ${DB_SSL_MODE:allow}
 
   smallrye-jwt:
     enabled: false
