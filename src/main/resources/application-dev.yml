@@ -1,6 +1,4 @@
-# =============================================================================
-# CONFIGURACIÓN PARA DESARROLLO
-# =============================================================================
+
 quarkus:
   http:
     port: 8080
@@ -14,15 +12,10 @@ quarkus:
     password: yapechamo123
     reactive:
       url: postgresql://localhost:5432/yapechamo
+      max-size: 10
+      idle-timeout: 5M
       postgresql:
         ssl-mode: disable
-      max-size: 10
-      min-size: 2
-      idle-timeout: 5M
-      max-lifetime: 30M
-      acquisition-timeout: 10S
-      validation-query: "SELECT 1"
-      validation-timeout: 5S
 
   hibernate-orm:
     database:

@@ -1010,78 +1010,83 @@ public class StatsService {
      * Calcula métricas de crecimiento comparando con período anterior
      */
     @WithSession
-    private Map<String, Double> calculateGrowthMetrics(Long adminId, LocalDate startDate, LocalDate endDate) {
+    public Uni<Map<String, Double>> calculateGrowthMetrics(Long adminId, LocalDate startDate, LocalDate endDate) {
         long periodLengthDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
         LocalDate previousEndDate = startDate.minusDays(1);
         LocalDate previousStartDate = startDate.minusDays(periodLengthDays);
         
-        try {
-            return paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                    adminId, previousStartDate.atStartOfDay(), previousEndDate.atTime(23, 59, 59))
-                .map(previousPeriodPayments -> {
-                    double previousSales = calculateTotalSales(previousPeriodPayments);
-                    long previousTransactions = previousPeriodPayments.size();
-                    double previousAverage = calculateAverageTransactionValue(previousPeriodPayments);
-                    
-                    // Calcular crecimiento
-                    double salesGrowth = previousSales > 0 ? 
-                        ((calculateCurrentPeriodSales(adminId, startDate, endDate) - previousSales) / previousSales) * 100 : 0.0;
-                    double transactionGrowth = previousTransactions > 0 ? 
-                        ((double) (calculateCurrentPeriodTransactions(adminId, startDate, endDate) - previousTransactions) / previousTransactions) * 100 : 0.0;
-                    double averageGrowth = previousAverage > 0 ? 
-                        ((calculateCurrentPeriodAverage(adminId, startDate, endDate) - previousAverage) / previousAverage) * 100 : 0.0;
-                    
-                    return Map.<String, Double>of(
-                        "salesGrowth", Math.round(salesGrowth * 10.0) / 10.0,
-                        "transactionGrowth", Math.round(transactionGrowth * 10.0) / 10.0,
-                        "averageGrowth", Math.round(averageGrowth * 10.0) / 10.0
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, previousStartDate.atStartOfDay(), previousEndDate.atTime(23, 59, 59))
+            .chain(previousPeriodPayments -> {
+                double previousSales = calculateTotalSales(previousPeriodPayments);
+                long previousTransactions = previousPeriodPayments.size();
+                double previousAverage = calculateAverageTransactionValue(previousPeriodPayments);
+                
+                // Obtener datos del período actual de forma reactiva
+                return calculateCurrentPeriodSales(adminId, startDate, endDate)
+                    .chain(currentSales -> 
+                        calculateCurrentPeriodTransactions(adminId, startDate, endDate)
+                            .chain(currentTransactions ->
+                                calculateCurrentPeriodAverage(adminId, startDate, endDate)
+                                    .map(currentAverage -> {
+                                        // Calcular crecimiento
+                                        double salesGrowth = previousSales > 0 ? 
+                                            ((currentSales - previousSales) / previousSales) * 100 : 0.0;
+                                        double transactionGrowth = previousTransactions > 0 ? 
+                                            ((double) (currentTransactions - previousTransactions) / previousTransactions) * 100 : 0.0;
+                                        double averageGrowth = previousAverage > 0 ? 
+                                            ((currentAverage - previousAverage) / previousAverage) * 100 : 0.0;
+                                        
+                                        return Map.<String, Double>of(
+                                            "salesGrowth", Math.round(salesGrowth * 10.0) / 10.0,
+                                            "transactionGrowth", Math.round(transactionGrowth * 10.0) / 10.0,
+                                            "averageGrowth", Math.round(averageGrowth * 10.0) / 10.0
+                                        );
+                                    })
+                            )
                     );
-                })
-                .await().indefinitely();
-        } catch (Exception e) {
-            log.warn("⚠️ Error calculating growth metrics: " + e.getMessage());
-            return Map.of(
-                "salesGrowth", 0.0,
-                "transactionGrowth", 0.0,
-                "averageGrowth", 0.0
-            );
-        }
+            })
+            .onFailure().recoverWithItem(throwable -> {
+                log.warn("⚠️ Error calculating growth metrics: " + throwable.getMessage());
+                return Map.of(
+                    "salesGrowth", 0.0,
+                    "transactionGrowth", 0.0,
+                    "averageGrowth", 0.0
+                );
+            });
     }
     
     @WithSession
-    private double calculateCurrentPeriodSales(Long adminId, LocalDate startDate, LocalDate endDate) {
-        try {
-            return paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                    adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .map(this::calculateTotalSales)
-                .await().indefinitely();
-        } catch (Exception e) {
-            return 0.0;
-        }
+    public Uni<Double> calculateCurrentPeriodSales(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+            .map(this::calculateTotalSales)
+            .onFailure().recoverWithItem(throwable -> {
+                log.warn("⚠️ Error calculating current period sales: " + throwable.getMessage());
+                return 0.0;
+            });
     }
     
     @WithTransaction
-    private long calculateCurrentPeriodTransactions(Long adminId, LocalDate startDate, LocalDate endDate) {
-        try {
-            return paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                    adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .map(List::size)
-                .await().indefinitely();
-        } catch (Exception e) {
-            return 0L;
-        }
+    public Uni<Long> calculateCurrentPeriodTransactions(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+            .map(payments -> (long) payments.size())
+            .onFailure().recoverWithItem(throwable -> {
+                log.warn("⚠️ Error calculating current period transactions: " + throwable.getMessage());
+                return 0L;
+            });
     }
     
     @WithSession
-    private double calculateCurrentPeriodAverage(Long adminId, LocalDate startDate, LocalDate endDate) {
-        try {
-            return paymentNotificationRepository.findPaymentsForStatsByAdminId(
-                    adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
-                .map(this::calculateAverageTransactionValue)
-                .await().indefinitely();
-        } catch (Exception e) {
-            return 0.0;
-        }
+    public Uni<Double> calculateCurrentPeriodAverage(Long adminId, LocalDate startDate, LocalDate endDate) {
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+            .map(this::calculateAverageTransactionValue)
+            .onFailure().recoverWithItem(throwable -> {
+                log.warn("⚠️ Error calculating current period average: " + throwable.getMessage());
+                return 0.0;
+            });
     }
     
     // ==================================================================================

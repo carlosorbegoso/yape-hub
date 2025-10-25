@@ -1,6 +1,3 @@
-# =============================================================================
-# CONFIGURACIÓN PARA PRODUCCIÓN
-# =============================================================================
 quarkus:
   http:
     port: ${PORT:8080}
@@ -14,15 +11,10 @@ quarkus:
     password: ${DB_PASSWORD:yapechamo123}
     reactive:
       url: ${DATABASE_URL:postgresql://localhost:5432/yapechamo}
+      max-size: ${DB_POOL_MAX_SIZE:20}
+      idle-timeout: ${DB_IDLE_TIMEOUT:10M}
       postgresql:
         ssl-mode: ${DB_SSL_MODE:require}
-      max-size: ${DB_POOL_MAX_SIZE:20}
-      min-size: ${DB_POOL_MIN_SIZE:5}
-      idle-timeout: ${DB_IDLE_TIMEOUT:10M}
-      max-lifetime: ${DB_MAX_LIFETIME:60M}
-      acquisition-timeout: ${DB_ACQUISITION_TIMEOUT:30S}
-      validation-query: "SELECT 1"
-      validation-timeout: ${DB_VALIDATION_TIMEOUT:10S}
 
   hibernate-orm:
     database:
