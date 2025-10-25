@@ -10,6 +10,8 @@ jobs:
   build-and-deploy:
     if: github.event_name == 'push'
     uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
+    with:
+      use_ghcr: true
     secrets:
       DOCKER_USERNAME: ${{ github.actor }}
       DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
