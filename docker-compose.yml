@@ -21,9 +21,9 @@ services:
       - QUARKUS_PROFILE=prod
 
       # Variables de base de datos
-      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME}
-      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - QUARKUS_DATASOURCE_JDBC_URL=${DB_JDBC_URL:-jdbc:postgresql://localhost:5432/yape_hub}
+      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME:-yapechamo}
+      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD:-yapechamo123}
+      - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL:-postgresql://167.172.117.133:5432/yapechamo}
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
 
       # Configuración JPA
