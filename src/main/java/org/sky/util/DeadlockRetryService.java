@@ -29,9 +29,7 @@ public class DeadlockRetryService {
         return executeWithRetryInternal(operation, operationName, maxRetries, initialDelay, 0);
     }
     
-    /**
-     * Implementación interna recursiva para los reintentos
-     */
+
     private <T> Uni<T> executeWithRetryInternal(Supplier<Uni<T>> operation, String operationName, 
                                                int maxRetries, Duration currentDelay, int attempt) {
         
