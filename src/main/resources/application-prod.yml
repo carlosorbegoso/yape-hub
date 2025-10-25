@@ -1,0 +1,58 @@
+# =============================================================================
+# CONFIGURACIÓN PARA PRODUCCIÓN
+# =============================================================================
+quarkus:
+  http:
+    port: ${PORT:8080}
+    cors:
+      origins: ${CORS_ORIGINS:https://yapechamo.com,https://www.yapechamo.com}
+      headers: "accept,authorization,content-type,x-requested-with"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+  
+  datasource:
+    username: ${DB_USERNAME:yapechamo}
+    password: ${DB_PASSWORD:yapechamo123}
+    reactive:
+      url: ${DATABASE_URL:postgresql://localhost:5432/yapechamo}
+      postgresql:
+        ssl-mode: ${DB_SSL_MODE:require}
+      max-size: ${DB_POOL_MAX_SIZE:20}
+      min-size: ${DB_POOL_MIN_SIZE:5}
+      idle-timeout: ${DB_IDLE_TIMEOUT:10M}
+      max-lifetime: ${DB_MAX_LIFETIME:60M}
+      acquisition-timeout: ${DB_ACQUISITION_TIMEOUT:30S}
+      validation-query: "SELECT 1"
+      validation-timeout: ${DB_VALIDATION_TIMEOUT:10S}
+
+  hibernate-orm:
+    database:
+      generation: ${DB_GENERATION:validate}
+    log:
+      sql: false
+
+  smallrye-openapi:
+    servers: ${API_SERVERS:https://api.yapechamo.com}
+
+  mailer:
+    from: ${MAILER_FROM:noreply@yapechamo.com}
+    host: ${MAILER_HOST:smtp.gmail.com}
+    port: ${MAILER_PORT:587}
+    username: ${MAILER_USERNAME:}
+    password: ${MAILER_PASSWORD:}
+    start-tls: required
+
+# MicroProfile JWT Configuration
+mp:
+  jwt:
+    verify:
+      issuer: ${JWT_ISSUER:https://api.yapechamo.com}
+
+# Custom JWT Configuration
+jwt:
+  issuer: ${JWT_ISSUER:https://api.yapechamo.com}
+  secret: ${JWT_SECRET:}
+
+# Application Configuration
+yapechamo:
+  app:
+    environment: "production"

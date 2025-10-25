@@ -1,0 +1,57 @@
+# =============================================================================
+# CONFIGURACIÓN PARA DESARROLLO
+# =============================================================================
+quarkus:
+  http:
+    port: 8080
+    cors:
+      origins: "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000"
+      headers: "accept,authorization,content-type,x-requested-with"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+  
+  datasource:
+    username: yapechamo
+    password: yapechamo123
+    reactive:
+      url: postgresql://localhost:5432/yapechamo
+      postgresql:
+        ssl-mode: disable
+      max-size: 10
+      min-size: 2
+      idle-timeout: 5M
+      max-lifetime: 30M
+      acquisition-timeout: 10S
+      validation-query: "SELECT 1"
+      validation-timeout: 5S
+
+  hibernate-orm:
+    database:
+      generation: update
+    log:
+      sql: true
+
+  smallrye-openapi:
+    servers: "http://localhost:8080"
+
+  mailer:
+    from: yapechamo@example.com
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    start-tls: required
+
+# MicroProfile JWT Configuration
+mp:
+  jwt:
+    verify:
+      issuer: "http://localhost:8080"
+
+# Custom JWT Configuration
+jwt:
+  issuer: "http://localhost:8080"
+
+# Application Configuration
+yapechamo:
+  app:
+    environment: "development"

@@ -19,6 +19,8 @@ MESSAGE=${2:-"Cliente Test"}
 
 # Asegurar que AMOUNT tenga formato con punto decimal (ej. 30.60)
 AMOUNT=$(printf "%.2f" "$AMOUNT")
+# Asegurar que AMOUNT tenga formato con punto decimal (ej. 30.60)
+AMOUNT=$(printf "%.2f" "$AMOUNT")
 echo "🚀 Generando notificación de Yape..."
 echo "💰 Monto: S/ $AMOUNT"
 echo "👤 Cliente: $MESSAGE"
@@ -78,7 +80,21 @@ echo "🔐 Hash de deduplicación: $DEDUPLICATION_HASH"
 # Si necesitas usar un device fingerprint específico, descomenta y ajusta la siguiente línea:
 # DEVICE_FINGERPRINT="033a6d1cdc2a1920bc956959e2e77a12"
 
-# Generar payload "encriptado" a partir del mensaje. Por defecto usamos base64 para evitar dependencias.
+# El servicio espera: base64( XOR( plaintextJSON, deviceFingerprint ) )
+# Construimos un JSON con la clave `text` (o `fullText`) que el backend busca.
+PLAINTEXT_JSON=$(printf '%s' "{\"text\": \"$FULL_MESSAGE\"}")
+
+# Generar ENCRYPTED_NOTIFICATION aplicando XOR con device fingerprint y luego base64 (usando Python para evitar implementaciones complejas en bash)
+# Pasamos el plaintext y el fingerprint como argumentos a Python para evitar problemas de escaping en el heredoc.
+ENCRYPTED_NOTIFICATION=$(python3 - "$PLAINTEXT_JSON" "$DEVICE_FINGERPRINT" <<'PY'
+import sys, base64
+plaintext = sys.argv[1]
+finger = sys.argv[2]
+# XOR each character with fingerprint
+xored = ''.join(chr(ord(a) ^ ord(finger[i % len(finger)])) for i, a in enumerate(plaintext))
+print(base64.b64encode(xored.encode()).decode())
+PY
+)
 # Si el backend espera un esquema de cifrado concreto (AES, RSA, etc.), reemplaza esta generación por el algoritmo correcto.
 # El servicio espera: base64( XOR( plaintextJSON, deviceFingerprint ) )
 # Construimos un JSON con la clave `text` (o `fullText`) que el backend busca.

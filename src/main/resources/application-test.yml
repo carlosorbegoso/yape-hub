@@ -1,0 +1,47 @@
+# =============================================================================
+# CONFIGURACIÓN PARA TESTING
+# =============================================================================
+quarkus:
+  http:
+    port: 8081
+    cors:
+      origins: "*"
+      headers: "accept,authorization,content-type,x-requested-with"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
+  
+  datasource:
+    db-kind: h2
+    username: sa
+    password: ""
+    jdbc:
+      url: "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+
+  hibernate-orm:
+    database:
+      generation: drop-and-create
+    log:
+      sql: false
+  
+  sql-load-script: import-test.sql
+
+  smallrye-openapi:
+    servers: "http://localhost:8081"
+
+  mailer:
+    mock: true
+
+# MicroProfile JWT Configuration
+mp:
+  jwt:
+    verify:
+      issuer: "http://localhost:8081"
+
+# Custom JWT Configuration
+jwt:
+  issuer: "http://localhost:8081"
+  secret: "test-secret-key-for-testing-purposes-only"
+
+# Application Configuration
+yapechamo:
+  app:
+    environment: "test"
