@@ -1,24 +1,82 @@
-name: Build and Deploy Quarkus Native
+# ============================================
+# COPIA ESTE ARCHIVO COMPLETO
+# ============================================
+# 
+# 1. Ve a tu microservicio
+# 2. Abre .github/workflows/build-and-deploy.yml (o como se llame)
+# 3. BORRA todo el contenido
+# 4. PEGA este código completo
+# 5. Guarda y haz commit
+#
+# ============================================
+
+name: Smart CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, feature/*]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
-  build-and-deploy:
-    if: github.event_name == 'push'
-    uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
-    with:
-      use_ghcr: true
-      push_to_registry: true
+  smart-pipeline:
+    uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
     secrets:
+      # PRODUCCIÓN (los mismos secrets que ya tienes)
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}  # Opcional
-      GHCR_PAT: ${{ secrets.GHCR_PAT }}            # Opcional
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      
+      # REGISTRY (los mismos que ya tienes)
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+      
+      # DESARROLLO (nuevos - opcionales)
+      # Si no los configuras, usará los de producción
+      DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+      DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+      DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+      DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+      DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
+      DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+      
+      # CALIDAD (nuevo - opcional)
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+# ============================================
+# COMPORTAMIENTO AUTOMÁTICO:
+# ============================================
+#
+# 📋 PULL REQUEST (cualquier rama):
+#   ✅ Tests básicos únicamente
+#   ⏱️ Tiempo: 3-5 minutos
+#   🚫 Sin build, sin deploy
+#
+# 🚀 PUSH A MAIN (producción):
+#   ✅ Build + Push + Deploy
+#   ⏱️ Tiempo: 5-8 minutos  
+#   🚫 Sin tests (máxima velocidad)
+#
+# 🔧 PUSH A DEVELOP/FEATURE (desarrollo):
+#   ✅ Tests + Quality + Security + Build + Deploy
+#   ⏱️ Tiempo: 15-20 minutos
+#   📊 Pipeline completo con análisis
+#
+# ============================================
+# SECRETS NECESARIOS:
+# ============================================
+#
+# MÍNIMOS (los que ya tienes):
+# - SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH
+# - DB_USERNAME, DB_PASSWORD
+# - GHCR_USERNAME, GHCR_PAT
+#
+# OPCIONALES (para entornos separados):
+# - DEV_SSH_HOST, DEV_SSH_USER, DEV_SSH_PRIVATE_KEY, DEV_DEPLOY_PATH
+# - DEV_DB_USERNAME, DEV_DB_PASSWORD
+# - SONAR_TOKEN (para análisis de calidad)
+#
+# ============================================
