@@ -7,9 +7,7 @@ import org.sky.exception.ValidationException;
 
 import java.util.Map;
 
-/**
- * Utility class for handling controller errors - SIMPLIFIED VERSION
- */
+
 public class ControllerErrorHandler {
     
     private static final Logger log = Logger.getLogger(ControllerErrorHandler.class);
