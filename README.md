@@ -15,7 +15,6 @@ Esta guía te ayudará a construir y ejecutar Yape Hub como una **imagen nativa 
 ### Paso 1: Construir el Binario Nativo
 
 Ejecuta el siguiente comando (toma 3-5 minutos):
-
 ```bash
 ./gradlew clean build -x test \
   -Dquarkus.package.jar.enabled=false \
