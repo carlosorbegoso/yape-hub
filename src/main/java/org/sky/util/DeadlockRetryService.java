@@ -19,14 +19,7 @@ public class DeadlockRetryService {
     private static final int MAX_RETRIES = 3;
     private static final Duration INITIAL_DELAY = Duration.ofMillis(100);
     private static final double BACKOFF_MULTIPLIER = 2.0;
-    
-    /**
-     * Ejecuta una operación con reintentos automáticos en caso de deadlock
-     * 
-     * @param operation Operación a ejecutar
-     * @param operationName Nombre de la operación para logging
-     * @return Uni con el resultado de la operación
-     */
+
     public <T> Uni<T> executeWithRetry(Supplier<Uni<T>> operation, String operationName) {
         return executeWithRetry(operation, operationName, MAX_RETRIES, INITIAL_DELAY);
     }
