@@ -11,7 +11,6 @@ Esta guía te ayudará a construir y ejecutar Yape Hub como una **imagen nativa 
 
 ## 🏗️ Construcción de la Imagen Nativa
 
-
 ### Paso 1: Construir el Binario Nativo
 
 Ejecuta el siguiente comando (toma 3-5 minutos):
