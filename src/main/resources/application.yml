@@ -14,7 +14,7 @@ quarkus:
     remove-unused-beans: false
     unremovable-types: "org.sky.util.jwt.JwtGenerator,org.sky.util.jwt.JwtValidator,org.sky.util.jwt.JwtExtractor"
 
-# Custom JWT Configuration (común)
+
 jwt:
   secret: "yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing"
   access-token:
@@ -22,13 +22,11 @@ jwt:
   refresh-token:
     duration: "PT24H"
 
-# Application Configuration (común)
 yapechamo:
   app:
     name: "YapeChamo"
     version: "1.0.0"
 
-# WebSocket Configuration (común)
 websocket:
   session:
     max-text-message-buffer-size: 4096
