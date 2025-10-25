@@ -1,69 +1,46 @@
 # ============================================
-# DOCKER-COMPOSE PARA YAPE-HUB
+# EJEMPLO PARA MICROSERVICIOS
 # ============================================
-# 
-# Copia este archivo como docker-compose.yml
-# en la raíz de tu proyecto yape-hub
+#
+# INSTRUCCIONES:
+# 1. Ve a tu microservicio
+# 2. Crea/edita .github/workflows/ci-cd.yml
+# 3. Copia este código completo
+# 4. Guarda y haz commit
 #
 # ============================================
 
-version: '3.8'
+name: Smart CI/CD Pipeline
 
-services:
-  app:
-    image: ${DOCKER_IMAGE}
-    container_name: ${APP_NAME}
-    ports:
-      - "8080:8080"  # Cambia si tu app usa otro puerto
-    environment:
-      - QUARKUS_HTTP_HOST=0.0.0.0
-      - QUARKUS_HTTP_PORT=8080
-      - QUARKUS_PROFILE=prod
-      
-      # Variables de base de datos
-      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME}
-      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
-      - QUARKUS_DATASOURCE_JDBC_URL=${DB_JDBC_URL:-jdbc:postgresql://localhost:5432/yape_hub}
-      - QUARKUS_DATASOURCE_DB_KIND=postgresql
-      
-      # Configuración JPA
-      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate
-      - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
-      
-      # Logging
-      - QUARKUS_LOG_LEVEL=INFO
-      - QUARKUS_LOG_CONSOLE_ENABLE=true
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
 
-    restart: unless-stopped
-    
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/q/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    
-    networks:
-      - yape-network
+jobs:
+  smart-pipeline:
+    uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
+    secrets:
+      # PRODUCCIÓN (obligatorios)
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
-networks:
-  yape-network:
-    driver: bridge
+      # REGISTRY (opcionales)
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
-# ============================================
-# VARIABLES REQUERIDAS:
-# ============================================
-#
-# ${DOCKER_IMAGE} - Se pasa automáticamente desde el workflow
-# ${APP_NAME} - Se pasa automáticamente (yape-hub)
-# ${DB_USERNAME} - Desde secrets.DB_USERNAME
-# ${DB_PASSWORD} - Desde secrets.DB_PASSWORD
-# ${DB_JDBC_URL} - Opcional, usa default si no se proporciona
-#
-# ============================================
+      # DESARROLLO (opcionales - usa producción si no existen)
+      DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
+      DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
+      DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+      DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+      DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
+      DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+
+      # CALIDAD (opcional)
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
