@@ -85,7 +85,7 @@ dependencies {
 }
 
 group = 'org.sky'
-version = '1.0.0-SNAPSHOT'
+version = 'v1.0.0'
 
 
 compileTestJava {
