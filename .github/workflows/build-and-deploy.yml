@@ -17,6 +17,7 @@ on:
   pull_request:
     branches: [main, develop]
 
+
 jobs:
   smart-pipeline:
     uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main

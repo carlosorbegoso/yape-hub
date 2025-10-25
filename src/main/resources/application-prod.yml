@@ -10,7 +10,7 @@ quarkus:
     username: ${DB_USERNAME:yapechamo}
     password: ${DB_PASSWORD:yapechamo123}
     reactive:
-      url: ${DATABASE_URL:postgresql://localhost:5432/yapechamo}
+      url: ${DATABASE_URL:postgresql://167.172.117.133:5432/yapechamo}
       max-size: ${DB_POOL_MAX_SIZE:20}
       idle-timeout: ${DB_IDLE_TIMEOUT:10M}
       postgresql:
