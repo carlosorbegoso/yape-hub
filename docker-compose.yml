@@ -29,7 +29,7 @@ services:
       - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
       # Configuración JPA
-      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate
+      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=update
       - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
 
       # Logging
