@@ -25,7 +25,7 @@ public class JwtValidator {
             return jwtParser.parse(token);
           } catch (ParseException e) {
             log.warnf("Invalid JWT token: %s", e.getMessage());
-            throw new SecurityException("Invalid JWT token: " + e.getMessage());
+            throw new SecurityException("Invalid JWT token");
           }
         });
   }
