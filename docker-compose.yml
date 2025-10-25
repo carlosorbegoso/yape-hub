@@ -7,8 +7,6 @@
 #
 # ============================================
 
-version: '3.8'
-
 services:
   app:
     image: ${DOCKER_IMAGE}
@@ -25,6 +23,10 @@ services:
       - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD:-yapechamo123}
       - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL:-postgresql://167.172.117.133:5432/yapechamo}
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
+      
+      # Configuración SSL para PostgreSQL
+      - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=${DB_SSL_MODE:-disable}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
 
       # Configuración JPA
       - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate
@@ -32,7 +34,6 @@ services:
 
       # Logging
       - QUARKUS_LOG_LEVEL=INFO
-      - QUARKUS_LOG_CONSOLE_ENABLE=true
 
     restart: unless-stopped
 

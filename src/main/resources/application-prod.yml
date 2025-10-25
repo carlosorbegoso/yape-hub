@@ -15,7 +15,7 @@
         max-size: ${DB_POOL_MAX_SIZE:20}
         idle-timeout: ${DB_IDLE_TIMEOUT:10M}
         postgresql:
-          ssl-mode: ${DB_SSL_MODE:require}
+          ssl-mode: ${DB_SSL_MODE:disable}
 
     hibernate-orm:
       database:
