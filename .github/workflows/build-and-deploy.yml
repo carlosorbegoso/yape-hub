@@ -1,12 +1,12 @@
 # ============================================
-# COPIA ESTE ARCHIVO COMPLETO
+# EJEMPLO PARA MICROSERVICIOS
 # ============================================
-# 
+#
+# INSTRUCCIONES:
 # 1. Ve a tu microservicio
-# 2. Abre .github/workflows/build-and-deploy.yml (o como se llame)
-# 3. BORRA todo el contenido
-# 4. PEGA este código completo
-# 5. Guarda y haz commit
+# 2. Crea/edita .github/workflows/ci-cd.yml
+# 3. Copia este código completo
+# 4. Guarda y haz commit
 #
 # ============================================
 
@@ -22,61 +22,25 @@ jobs:
   smart-pipeline:
     uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
     secrets:
-      # PRODUCCIÓN (los mismos secrets que ya tienes)
+      # PRODUCCIÓN (obligatorios)
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      
-      # REGISTRY (los mismos que ya tienes)
+
+      # REGISTRY (opcionales)
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
-      
-      # DESARROLLO (nuevos - opcionales)
-      # Si no los configuras, usará los de producción
+
+      # DESARROLLO (opcionales - usa producción si no existen)
       DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
       DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
       DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
       DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
       DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
       DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
-      
-      # CALIDAD (nuevo - opcional)
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-# ============================================
-# COMPORTAMIENTO AUTOMÁTICO:
-# ============================================
-#
-# 📋 PULL REQUEST (cualquier rama):
-#   ✅ Tests básicos únicamente
-#   ⏱️ Tiempo: 3-5 minutos
-#   🚫 Sin build, sin deploy
-#
-# 🚀 PUSH A MAIN (producción):
-#   ✅ Build + Push + Deploy
-#   ⏱️ Tiempo: 5-8 minutos  
-#   🚫 Sin tests (máxima velocidad)
-#
-# 🔧 PUSH A DEVELOP/FEATURE (desarrollo):
-#   ✅ Tests + Quality + Security + Build + Deploy
-#   ⏱️ Tiempo: 15-20 minutos
-#   📊 Pipeline completo con análisis
-#
-# ============================================
-# SECRETS NECESARIOS:
-# ============================================
-#
-# MÍNIMOS (los que ya tienes):
-# - SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH
-# - DB_USERNAME, DB_PASSWORD
-# - GHCR_USERNAME, GHCR_PAT
-#
-# OPCIONALES (para entornos separados):
-# - DEV_SSH_HOST, DEV_SSH_USER, DEV_SSH_PRIVATE_KEY, DEV_DEPLOY_PATH
-# - DEV_DB_USERNAME, DEV_DB_PASSWORD
-# - SONAR_TOKEN (para análisis de calidad)
-#
-# ============================================
+      # CALIDAD (opcional)
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
