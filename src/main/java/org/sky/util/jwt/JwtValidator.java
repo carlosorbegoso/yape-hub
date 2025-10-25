@@ -24,20 +24,21 @@ public class JwtValidator {
           try {
             return jwtParser.parse(token);
           } catch (ParseException e) {
-            throw new RuntimeException(e);
+            log.warnf("Invalid JWT token: %s", e.getMessage());
+            throw new SecurityException("Invalid JWT token: " + e.getMessage());
           }
-        })
-        .onFailure().invoke(e -> log.warnf("Invalid JWT token: %s", e.getMessage()))
-        .onFailure().recoverWithNull();
+        });
   }
 
   public Uni<Boolean> isValidAccessToken(String token) {
     return parseToken(token)
-        .map(jwt -> jwt != null && "access".equals(jwt.getClaim("type")));
+        .map(jwt -> "access".equals(jwt.getClaim("type")))
+        .onFailure().recoverWithItem(false);
   }
 
   public Uni<Boolean> isValidRefreshToken(String token) {
     return parseToken(token)
-        .map(jwt -> jwt != null && "refresh".equals(jwt.getClaim("type")));
+        .map(jwt -> "refresh".equals(jwt.getClaim("type")))
+        .onFailure().recoverWithItem(false);
   }
 }

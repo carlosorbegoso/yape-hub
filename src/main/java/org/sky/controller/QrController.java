@@ -62,7 +62,6 @@ public class QrController {
     
     @POST
     @Path("/generate-affiliation-code-protected")
-    @PermitAll
     @Operation(summary = "Generate affiliation code (protected)",
                description = "Generate a new affiliation code for sellers with JWT validation (ADMIN ONLY)")
     @APIResponses(value = {
@@ -105,10 +104,7 @@ public class QrController {
                         return Response.status(400).entity(response).build();
                     }
                 })
-                .onFailure().recoverWithItem(throwable -> {
-                    log.error("❌ Error en el endpoint, manejando excepción");
-                    return securityService.handleSecurityException(throwable);
-                });
+                .onFailure().recoverWithItem(org.sky.util.ControllerErrorHandler::handleControllerError);
     }
     
     @POST

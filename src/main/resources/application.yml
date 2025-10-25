@@ -7,7 +7,7 @@ quarkus:
     db-kind: postgresql
 
   smallrye-jwt:
-    enabled: true
+    enabled: false
 
   arc:
     fail-on-intercepted-private-method: false

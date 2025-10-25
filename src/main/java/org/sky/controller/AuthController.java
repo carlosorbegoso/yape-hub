@@ -25,8 +25,6 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.sky.util.jwt.JwtExtractor;
 
-import java.time.Instant;
-
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -189,21 +187,12 @@ public class AuthController {
   @Operation(summary = "User logout", description = "Logout user and invalidate session")
   public Uni<Response> logout() {
     return jwtExtractor.extractUserId(jwt)
-        .onItem().ifNull().failWith(() -> new RuntimeException("UserId not found in token"))
+        .onItem().ifNull().failWith(() -> new SecurityException("Invalid token: UserId not found in token"))
         .chain(userId ->
             authService.logout(userId)
                 .map(result -> Response.ok(result).build())
         )
-        .onFailure().recoverWithItem(throwable ->
-            Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ErrorResponse(
-                    "Invalid token",
-                    "INVALID_TOKEN",
-                    java.util.Map.of("error", "UserId not found in token"),
-                    Instant.now()
-                ))
-                .build()
-        );
+        .onFailure().recoverWithItem(org.sky.util.ControllerErrorHandler::handleControllerError);
   }
 
 

@@ -39,6 +39,8 @@ mp:
   jwt:
     verify:
       issuer: "http://localhost:8080"
+      # Para desarrollo, usar clave simétrica
+      algorithm: "HS256"
 
 # Custom JWT Configuration
 jwt:
