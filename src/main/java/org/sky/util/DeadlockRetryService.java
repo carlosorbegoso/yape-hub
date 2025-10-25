@@ -24,15 +24,7 @@ public class DeadlockRetryService {
         return executeWithRetry(operation, operationName, MAX_RETRIES, INITIAL_DELAY);
     }
     
-    /**
-     * Ejecuta una operación con reintentos automáticos en caso de deadlock
-     * 
-     * @param operation Operación a ejecutar
-     * @param operationName Nombre de la operación para logging
-     * @param maxRetries Número máximo de reintentos
-     * @param initialDelay Delay inicial entre reintentos
-     * @return Uni con el resultado de la operación
-     */
+
     public <T> Uni<T> executeWithRetry(Supplier<Uni<T>> operation, String operationName, int maxRetries, Duration initialDelay) {
         return executeWithRetryInternal(operation, operationName, maxRetries, initialDelay, 0);
     }
