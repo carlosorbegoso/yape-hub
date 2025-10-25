@@ -14,9 +14,6 @@ public class ControllerErrorHandler {
     
     private static final Logger log = Logger.getLogger(ControllerErrorHandler.class);
 
-    /**
-     * Handles controller errors and creates appropriate HTTP responses
-     */
     public static Response handleControllerError(Throwable throwable) {
         log.error("🚨 Controller error: " + throwable.getMessage());
         
