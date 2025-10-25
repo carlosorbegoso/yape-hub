@@ -21,8 +21,7 @@ public class ControllerErrorHandler {
                 .entity(ErrorResponse.create(validationException.getMessage(), validationException.getErrorCode()))
                 .build();
         }
-        
-        // Manejar SecurityException como 401
+
         if (throwable instanceof SecurityException) {
             return Response.status(Response.Status.UNAUTHORIZED)
                 .entity(ErrorResponse.create("Authentication failed: " + throwable.getMessage(), "UNAUTHORIZED"))
