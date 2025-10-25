@@ -1,14 +1,3 @@
-# ============================================
-# EJEMPLO PARA MICROSERVICIOS
-# ===========
-# INSTRUCCIONES:
-# 1. Ve a tu microservicio
-# 2. Crea/edita .github/workflows/ci-cd.yml
-# 3. Copia este código completo
-# 4. Guarda y haz commit
-
-
-
 name: Smart CI/CD Pipeline
 
 on:
