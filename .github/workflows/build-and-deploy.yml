@@ -12,13 +12,13 @@ jobs:
     uses: carlosorbegoso/workflow-templates/.github/workflows/quarkus-native-build-deploy.yml@main
     with:
       use_ghcr: true
-      push_to_registry: true  # ← CAMBIO PRINCIPAL
+      push_to_registry: true  # ← CAMBIAR ESTO DE false A true
     secrets:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}  # Opcional
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}            # Opcional
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
