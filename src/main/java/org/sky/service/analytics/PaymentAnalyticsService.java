@@ -37,20 +37,42 @@ public class PaymentAnalyticsService {
         return paymentNotificationRepository.findPaymentsForStatsByAdminId(
                 adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
             .map(payments -> {
+                // DEBUG: Verificar qué status tienen las transacciones
+                Map<String, Long> statusCount = payments.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.status != null ? p.status : "NULL", 
+                        java.util.stream.Collectors.counting()
+                    ));
+                log.info("🔍 Status de transacciones encontradas: " + statusCount);
+                
+                // DEBUG: Verificar montos por status
+                Map<String, Double> statusAmounts = payments.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.status != null ? p.status : "NULL",
+                        java.util.stream.Collectors.summingDouble(p -> p.amount != null ? p.amount : 0.0)
+                    ));
+                log.info("💰 Montos por status: " + statusAmounts);
+                
                 double totalSales = calculateTotalSales(payments);
                 long totalTransactions = payments.size();
-                double averageTransactionValue = calculateAverageTransactionValue(payments);
                 long confirmedTransactions = getConfirmedTransactionsCount(payments);
                 long pendingTransactions = getPendingTransactionsCount(payments);
                 long rejectedTransactions = getRejectedTransactionsCount(payments);
-                
+                // Sum all payments regardless of status (useful to show total activity)
+                double allSales = payments.stream().mapToDouble(p -> p.amount == null ? 0.0 : p.amount.doubleValue()).sum();
+
+                // Log detallado para depuración: muestra por qué totalSales puede ser 0
+                log.infof("🔎 PaymentAnalytics: fetched=%d, confirmed=%d, pending=%d, rejected=%d, totalSales=%.2f, allSales=%.2f",
+                    totalTransactions, confirmedTransactions, pendingTransactions, rejectedTransactions, totalSales, allSales);
+
                 return new PaymentMetrics(
                     totalSales,
                     totalTransactions,
-                    averageTransactionValue,
+                    calculateAverageTransactionValue(payments),
                     confirmedTransactions,
                     pendingTransactions,
-                    rejectedTransactions
+                    rejectedTransactions,
+                    allSales
                 );
             });
     }
@@ -179,7 +201,7 @@ public class PaymentAnalyticsService {
      */
     private double calculateTotalSales(List<PaymentNotificationEntity> payments) {
         return payments.stream()
-            .filter(p -> "CONFIRMED".equals(p.status))
+            .filter(p -> "CLAIMED".equals(p.status))
             .mapToDouble(p -> p.amount)
             .sum();
     }
@@ -202,7 +224,7 @@ public class PaymentAnalyticsService {
      */
     private long getConfirmedTransactionsCount(List<PaymentNotificationEntity> payments) {
         return payments.stream()
-            .filter(p -> "CONFIRMED".equals(p.status))
+            .filter(p -> "CLAIMED".equals(p.status))
             .count();
     }
     
@@ -233,6 +255,7 @@ public class PaymentAnalyticsService {
         double averageTransactionValue,
         long confirmedTransactions,
         long pendingTransactions,
-        long rejectedTransactions
+        long rejectedTransactions,
+        double allSales
     ) {}
 }

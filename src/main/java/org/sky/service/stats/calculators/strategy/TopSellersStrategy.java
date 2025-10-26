@@ -65,7 +65,8 @@ public class TopSellersStrategy implements CalculationStrategy<List<TopSellerDat
         stream.filter(payment -> isValidPayment(payment, adminId))
               .forEach(payment -> {
                   try {
-                      // Usar adminId como sellerId si confirmedBy es null
+                      // Para top sellers, usar confirmedBy como identificador del seller
+                      // Si confirmedBy es null, usar adminId como fallback
                       Long sellerId = payment.confirmedBy != null ? payment.confirmedBy : adminId;
                       if (sellerId != null) {
                           double amount = getValidAmount(payment.amount);
@@ -73,14 +74,20 @@ public class TopSellersStrategy implements CalculationStrategy<List<TopSellerDat
                           sellerTransactions.merge(sellerId, 1L, Long::sum);
                       }
                   } catch (Exception e) {
-                      log.warn("⚠️ Error procesando pago: " + e.getMessage());
+                      log.warn("⚠️ Error procesando pago ID " + payment.id + ": " + e.getMessage());
                   }
               });
+        
+        log.info("🔍 TopSellers procesados: " + sellerSales.size() + " sellers únicos encontrados");
+        sellerSales.forEach((sellerId, sales) -> 
+            log.debug("  Seller " + sellerId + ": $" + sales + " (" + sellerTransactions.get(sellerId) + " transacciones)")
+        );
     }
     
     private boolean isValidPayment(PaymentNotificationEntity payment, Long adminId) {
         return payment.amount != null && 
-               payment.amount > 0;
+               payment.amount > 0 &&
+               "CLAIMED".equals(payment.status);
     }
     
     private double getValidAmount(Double amount) {
@@ -90,8 +97,13 @@ public class TopSellersStrategy implements CalculationStrategy<List<TopSellerDat
     private List<TopSellerData> generateTopSellersData(Map<Long, Double> sellerSales,
                                                      Map<Long, Long> sellerTransactions) {
         
+        if (sellerSales.isEmpty()) {
+            log.info("📊 No hay datos de sellers para generar top sellers");
+            return List.of();
+        }
+        
         List<TopSellerData> result = sellerSales.entrySet().parallelStream()
-            .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+            .filter(entry -> entry.getKey() != null && entry.getValue() != null && entry.getValue() > 0)
             .map(entry -> {
                 Long sellerId = entry.getKey();
                 Double sales = entry.getValue();
@@ -99,9 +111,9 @@ public class TopSellersStrategy implements CalculationStrategy<List<TopSellerDat
                 return new TopSellerData(
                     0, // rank se asignará después
                     sellerId,
-                    "Seller " + sellerId,
-                    "Branch " + sellerId,
-                    sales,
+                    "Usuario " + sellerId, // Cambiar nombre para ser más descriptivo
+                    "Sucursal " + sellerId,
+                    Math.round(sales * 100.0) / 100.0, // Redondear a 2 decimales
                     transactions
                 );
             })
@@ -122,6 +134,7 @@ public class TopSellersStrategy implements CalculationStrategy<List<TopSellerDat
             ));
         }
         
+        log.info("✅ TopSellers generados: " + result.size() + " sellers en el ranking");
         return result;
     }
 }

@@ -4,14 +4,18 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 
 @RegisterForReflection
 public record OverviewMetrics(
-    Double totalSales,
+    Double confirmedSales,
     Long totalTransactions,
     Double averageTransactionValue,
     Double salesGrowth,
     Double transactionGrowth,
-    Double averageGrowth
+    Double averageGrowth,
+    Double allSales,
+    Long confirmedTransactions,
+    Long pendingTransactions,
+    Long rejectedTransactions
 ) {
     public static OverviewMetrics empty() {
-        return new OverviewMetrics(0.0, 0L, 0.0, 0.0, 0.0, 0.0);
+        return new OverviewMetrics(0.0, 0L, 0.0, 0.0, 0.0, 0.0, 0.0, 0L, 0L, 0L);
     }
 }

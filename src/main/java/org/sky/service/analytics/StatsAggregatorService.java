@@ -162,7 +162,11 @@ public class StatsAggregatorService {
             paymentMetrics.totalSales(), 
             paymentMetrics.totalTransactions(), 
             paymentMetrics.averageTransactionValue(), 
-            0.0, 0.0, 0.0
+            0.0, 0.0, 0.0,
+            paymentMetrics.allSales(),
+            paymentMetrics.confirmedTransactions(),
+            paymentMetrics.pendingTransactions(),
+            paymentMetrics.rejectedTransactions()
         );
         
         // Generar métricas de performance usando FinancialAnalyticsService
@@ -263,3 +267,4 @@ public class StatsAggregatorService {
         );
     }
 }
+

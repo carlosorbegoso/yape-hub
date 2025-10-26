@@ -21,7 +21,7 @@ quarkus:
     database:
       generation: update
     log:
-      sql: true
+      sql: false
 
   smallrye-openapi:
     servers: "http://localhost:8080"
