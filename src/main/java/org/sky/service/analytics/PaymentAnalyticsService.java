@@ -78,6 +78,45 @@ public class PaymentAnalyticsService {
     }
     
     /**
+     * Calcula métricas de pagos y retorna tanto las métricas como los pagos
+     */
+    @WithSession
+    public Uni<PaymentMetricsWithData> calculatePaymentMetricsWithData(Long adminId, LocalDate startDate, LocalDate endDate) {
+        log.info("📊 Calculando métricas de pagos con datos para adminId: " + adminId);
+        
+        return paymentNotificationRepository.findPaymentsForStatsByAdminId(
+                adminId, startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+            .map(payments -> {
+                // DEBUG: Verificar qué status tienen las transacciones
+                Map<String, Long> statusCount = payments.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.status != null ? p.status : "NULL", 
+                        java.util.stream.Collectors.counting()
+                    ));
+                log.info("🔍 Status de transacciones encontradas: " + statusCount);
+                
+                double totalSales = calculateTotalSales(payments);
+                long totalTransactions = payments.size();
+                long confirmedTransactions = getConfirmedTransactionsCount(payments);
+                long pendingTransactions = getPendingTransactionsCount(payments);
+                long rejectedTransactions = getRejectedTransactionsCount(payments);
+                double allSales = payments.stream().mapToDouble(p -> p.amount == null ? 0.0 : p.amount.doubleValue()).sum();
+
+                PaymentMetrics metrics = new PaymentMetrics(
+                    totalSales,
+                    totalTransactions,
+                    calculateAverageTransactionValue(payments),
+                    confirmedTransactions,
+                    pendingTransactions,
+                    rejectedTransactions,
+                    allSales
+                );
+
+                return new PaymentMetricsWithData(metrics, payments);
+            });
+    }
+    
+    /**
      * Genera reporte de transparencia de pagos
      */
     @WithTransaction
@@ -257,5 +296,13 @@ public class PaymentAnalyticsService {
         long pendingTransactions,
         long rejectedTransactions,
         double allSales
+    ) {}
+    
+    /**
+     * Record para métricas de pagos con los datos originales
+     */
+    public record PaymentMetricsWithData(
+        PaymentMetrics metrics,
+        List<PaymentNotificationEntity> payments
     ) {}
 }

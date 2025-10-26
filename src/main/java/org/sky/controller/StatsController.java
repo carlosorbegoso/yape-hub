@@ -103,10 +103,9 @@ public class StatsController {
                                                 if (stats.get("topSellers") != null) {
                                                     result.put("topSellers", stats.get("topSellers"));
                                                 }
-                                                // URLs para datos detallados
+                                                // URLs para datos detallados (topSellers ya incluido en respuesta directa)
                                                 result.put("urls", Map.of(
                                                     "dailySales", "/api/stats/daily-sales?adminId=" + adminId + "&startDate=" + startDateStr + "&endDate=" + endDateStr,
-                                                    "topSellers", "/api/stats/top-sellers?adminId=" + adminId + "&startDate=" + startDateStr + "&endDate=" + endDateStr,
                                                     "monthlySales", "/api/stats/monthly-sales?adminId=" + adminId + "&startDate=" + startDateStr + "&endDate=" + endDateStr,
                                                     "weeklySales", "/api/stats/weekly-sales?adminId=" + adminId + "&startDate=" + startDateStr + "&endDate=" + endDateStr,
                                                     "hourlySales", "/api/stats/hourly-sales?adminId=" + adminId + "&startDate=" + startDateStr + "&endDate=" + endDateStr,

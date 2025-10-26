@@ -53,13 +53,13 @@ public class StatsAggregatorService {
                                                            String granularity, Double confidence, Integer days) {
         log.info("📊 StatsAggregatorService.getAnalyticsSummary() - AdminId: " + adminId);
         
-        return paymentAnalyticsService.calculatePaymentMetrics(adminId, startDate, endDate)
-            .chain(paymentMetrics -> {
+        return paymentAnalyticsService.calculatePaymentMetricsWithData(adminId, startDate, endDate)
+            .chain(metricsWithData -> {
                 return statisticsCalculator.calculateAllStatsInParallel(
-                    List.of(), // Payments ya procesados en PaymentAnalyticsService
+                    metricsWithData.payments(), // Pasar los pagos reales
                     startDate, endDate, adminId
                 ).map(result -> buildCompleteAnalyticsResponse(
-                    paymentMetrics, result, endDate, confidence
+                    metricsWithData.metrics(), result, endDate, confidence
                 ));
             })
             .onFailure().recoverWithItem(throwable -> {
@@ -75,13 +75,16 @@ public class StatsAggregatorService {
     public Uni<AdminAnalyticsResponse> getAdminAnalytics(Long adminId, LocalDate startDate, LocalDate endDate) {
         log.info("📊 StatsAggregatorService.getAdminAnalytics() - Obteniendo datos reales para adminId: " + adminId);
         
-        return paymentAnalyticsService.calculatePaymentMetrics(adminId, startDate, endDate)
-            .chain(paymentMetrics -> {
+        // Usar el nuevo método que retorna métricas y pagos juntos
+        return paymentAnalyticsService.calculatePaymentMetricsWithData(adminId, startDate, endDate)
+            .chain(metricsWithData -> {
+                log.info("🔍 StatsAggregator: Obtenidos " + metricsWithData.payments().size() + " pagos para cálculos");
+                
                 return statisticsCalculator.calculateAllStatsInParallel(
-                    List.of(), // Payments ya procesados
+                    metricsWithData.payments(), // Pasar los pagos reales
                     startDate, endDate, adminId
                 ).map(result -> buildCompleteAnalyticsResponse(
-                    paymentMetrics, result, endDate, null
+                    metricsWithData.metrics(), result, endDate, null
                 ));
             })
             .onFailure().recoverWithItem(throwable -> {
