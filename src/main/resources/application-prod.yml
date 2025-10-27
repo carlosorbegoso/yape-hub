@@ -41,7 +41,6 @@ jwt:
   refresh-token:
     duration: P30D
 
-
 mp:
   jwt:
     verify:
