@@ -6,7 +6,7 @@ on:
       - main
       - master
       # Comentar/descomentar estas líneas para habilitar/deshabilitar otros ambientes
-      # - develop
+      - develop
       # - 'feature/**'
       # - 'hotfix/**'
       # - 'release/**'
