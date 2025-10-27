@@ -34,15 +34,10 @@ quarkus:
     password: ${EMAIL_PASSWORD:}
     start-tls: required
 
-# MicroProfile JWT Configuration
-mp:
-  jwt:
-    verify:
-      issuer: "http://localhost:8080"
-      algorithm: "HS256"
-
+# Custom JWT Configuration (consistente con producción)
 jwt:
   issuer: "http://localhost:8080"
+  secret: "yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing"
 
 yapechamo:
   app:

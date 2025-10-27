@@ -19,6 +19,7 @@ quarkus:
 
 
 jwt:
+  issuer: "http://localhost:8080"
   secret: "yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing"
   access-token:
     duration: "PT1H"
