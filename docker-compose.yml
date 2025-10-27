@@ -15,10 +15,10 @@ services:
       - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL}
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
-      - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=require  # ✅ REQUIRE en producción
+      - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=allow
 
       # JPA/Hibernate - IMPORTANTE
-      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate  # ✅ VALIDATE, no UPDATE
+      - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate
       - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
 
       # SmallRye JWT - CONFIGURACIÓN CORRECTA
@@ -38,29 +38,29 @@ services:
       - QUARKUS_MAILER_PASSWORD=${EMAIL_PASSWORD}
       - QUARKUS_MAILER_START_TLS=true
 
-      # Logging - SIN DEBUG en producción
-      - QUARKUS_LOG_LEVEL=INFO
-      - QUARKUS_LOG_CATEGORY_\"org.hibernate.sql\".LEVEL=WARN
+      # Logging - Optimizado para servidor pequeño
+      - QUARKUS_LOG_LEVEL=WARN
+      - QUARKUS_LOG_CATEGORY_\"org.hibernate.sql\".LEVEL=ERROR
 
-    # Recursos limitados - AJUSTA SEGÚN TU SERVIDOR
+    # Recursos para servidor pequeño (1 CPU)
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
+          cpus: '0.8'    # 80% de 1 CPU
+          memory: 768M   # 768MB máximo
         reservations:
-          cpus: '1'
-          memory: 1G
+          cpus: '0.1'    # 10% CPU reservado
+          memory: 256M   # 256MB reservado
 
     restart: unless-stopped
 
-    # Healthcheck mejorado
+    # Healthcheck optimizado para servidor pequeño
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/q/health/ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      interval: 60s      # Menos frecuente
+      timeout: 15s       # Más tiempo
+      retries: 2         # Menos reintentos
+      start_period: 90s  # Más tiempo de inicio
 
     networks:
       - yape-network
