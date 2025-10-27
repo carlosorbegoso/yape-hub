@@ -22,7 +22,6 @@ jobs:
       # REGISTRY (opcionales)
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
-      
 
       DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
       DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
