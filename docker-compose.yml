@@ -9,8 +9,8 @@
 
 services:
   app:
-    image: ${DOCKER_IMAGE}
-    container_name: ${APP_NAME}
+    image: yape-hub:latest  # Cambia esto por tu imagen real
+    container_name: yape-hub
     ports:
       - "8080:8080"  # Cambia si tu app usa otro puerto
     environment:
@@ -34,6 +34,7 @@ services:
 
       # JWT Configuration
       - JWT_SECRET=${JWT_SECRET:-yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
+      - JWT_SECRET_BASE64=${JWT_SECRET_BASE64:-eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc=}
       - JWT_ISSUER=${JWT_ISSUER:-https://api.yapechamo.com}
 
       # Logging
