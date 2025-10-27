@@ -1,49 +1,58 @@
-"%prod":
-  quarkus:
-    http:
-      port: ${PORT:8080}
-      cors:
-        origins: ${CORS_ORIGINS:https://yapechamo.com,https://www.yapechamo.com}
-        headers: "accept,authorization,content-type,x-requested-with"
-        methods: "GET,POST,PUT,DELETE,OPTIONS"
-    
-    smallrye-jwt:
-      enabled: false
-    
-    datasource:
-      username: ${DB_USERNAME:yapehubuser}
-      password: ${DB_PASSWORD:yapechamo123}
-      reactive:
-        url: ${DATABASE_URL:postgresql://167.172.117.133:5432/yapehubbd}
-        max-size: ${DB_POOL_MAX_SIZE:20}
-        idle-timeout: ${DB_IDLE_TIMEOUT:10M}
-        postgresql:
-          ssl-mode: ${DB_SSL_MODE:disable}
+quarkus:
+  http:
+    port: 8080
+    cors:
+      origins: "${CORS_ORIGINS:https://yapeapp.com,https://www.yapeapp.com}"
+      headers: "accept,authorization,content-type,x-requested-with"
+      methods: "GET,POST,PUT,DELETE,OPTIONS"
 
-    hibernate-orm:
-      database:
-        generation: ${DB_GENERATION:validate}
-      log:
-        sql: false
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    reactive:
+      url: ${DB_URL}
+      max-size: 20
+      idle-timeout: 10M
+      postgresql:
+        ssl-mode: require
 
-    smallrye-openapi:
-      servers: ${API_SERVERS:https://api.yapechamo.com}
+  hibernate-orm:
+    database:
+      generation: validate
+    log:
+      sql: false
 
-    mailer:
-      from: ${MAILER_FROM:noreply@yapechamo.com}
-      host: ${MAILER_HOST:smtp.gmail.com}
-      port: ${MAILER_PORT:587}
-      username: ${MAILER_USERNAME}
-      password: ${MAILER_PASSWORD}
-      start-tls: required
-      auth: true
+  smallrye-openapi:
+    servers: "https://api.yapeapp.com"
 
-  # Custom JWT Configuration (solo lo que necesitas)
+  mailer:
+    from: noreply@yapeapp.com
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${EMAIL_USERNAME}
+    password: ${EMAIL_PASSWORD}
+    start-tls: required
+
+
+jwt:
+  issuer: "https://api.yapeapp.com"
+  access-token:
+    duration: PT15M
+  refresh-token:
+    duration: P30D
+
+
+mp:
   jwt:
-    issuer: ${JWT_ISSUER}
-    secret: ${JWT_SECRET}
+    verify:
+      issuer: "https://api.yapeapp.com"
 
-  # Application Configuration
-  yapechamo:
-    app:
-      environment: "production"
+smallrye:
+  jwt:
+    sign:
+      key-secret: "${JWT_SECRET}"
+      algorithm: HS256
+
+yapechamo:
+  app:
+    environment: "production"
