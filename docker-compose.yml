@@ -32,6 +32,10 @@ services:
       - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=update
       - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
 
+      # JWT Configuration
+      - JWT_SECRET=${JWT_SECRET:-yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
+      - JWT_ISSUER=${JWT_ISSUER:-https://api.yapechamo.com}
+
       # Logging
       - QUARKUS_LOG_LEVEL=INFO
 
