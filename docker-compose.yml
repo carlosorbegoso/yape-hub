@@ -1,75 +1,69 @@
-# ============================================
-# DOCKER-COMPOSE PARA YAPE-HUB
-# ============================================
-#
-# Copia este archivo como docker-compose.yml
-# en la raíz de tu proyecto yape-hub
-#
-# ============================================
+version: '3.8'
 
 services:
   app:
-    image: yape-hub:latest  # Cambia esto por tu imagen real
+    image: ghcr.io/carlosorbegoso/yape-hub:${APP_VERSION:-main-ac86d68}
     container_name: yape-hub
+    
     ports:
-      - "8080:8080"  # Cambia si tu app usa otro puerto
+      - "8080:8080"
+    
     environment:
+      # Servidor
       - QUARKUS_HTTP_HOST=0.0.0.0
       - QUARKUS_HTTP_PORT=8080
       - QUARKUS_PROFILE=prod
-
-      # Variables de base de datos
-      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME:-yapehubuser}
-      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD:-yapechamo123}
-      - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL:-postgresql://167.172.117.133:5432/yapehubbd}
-      - QUARKUS_DATASOURCE_DB_KIND=postgresql
       
-      # Configuración SSL para PostgreSQL
+      # Base de datos
+      - QUARKUS_DATASOURCE_USERNAME=${DB_USERNAME}
+      - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL}
+      - QUARKUS_DATASOURCE_DB_KIND=postgresql
       - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=${DB_SSL_MODE:-disable}
-      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
-
-      # Configuración JPA
+      
+      # JPA/Hibernate
       - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=update
       - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
-
-      # JWT Configuration
-      - JWT_SECRET=${JWT_SECRET:-yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
-      - JWT_SECRET_BASE64=${JWT_SECRET_BASE64:-eWFwZWNoYW1vLXNlY3JldC1rZXktMjAyNC12ZXJ5LWxvbmctc2VjcmV0LWtleS1mb3Itand0LXNpZ25pbmc=}
-      - JWT_ISSUER=${JWT_ISSUER:-https://api.yapechamo.com}
-
+      
+      # JWT - CRÍTICAS PARA PRODUCCIÓN
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - MP_JWT_VERIFY_KEY=${JWT_SECRET}
+      - SMALLRYE_JWT_SIGN_KEY=${JWT_SECRET}
+      
       # Logging
       - QUARKUS_LOG_LEVEL=INFO
-
+    
+    # Recursos limitados
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
     restart: unless-stopped
-
+    
+    # Healthcheck mejorado
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/q/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/q/health/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-
+    
+    # Logging
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
+    
     networks:
       - yape-network
 
 networks:
   yape-network:
     driver: bridge
-
-# ============================================
-# VARIABLES REQUERIDAS:
-# ============================================
-#
-# ${DOCKER_IMAGE} - Se pasa automáticamente desde el workflow
-# ${APP_NAME} - Se pasa automáticamente (yape-hub)
-# ${DB_USERNAME} - Desde secrets.DB_USERNAME
-# ${DB_PASSWORD} - Desde secrets.DB_PASSWORD
-# ${DB_JDBC_URL} - Opcional, usa default si no se proporciona
-#
-# ============================================
