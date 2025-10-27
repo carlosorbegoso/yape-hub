@@ -30,5 +30,4 @@ jobs:
       DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
       DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
       DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
-
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
