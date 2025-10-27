@@ -38,20 +38,7 @@
       start-tls: required
       auth: true
 
-  # MicroProfile JWT Configuration
-  mp:
-    jwt:
-      verify:
-        issuer: ${JWT_ISSUER}
-        key: ${MP_JWT_VERIFY_KEY}
-
-  # SmallRye JWT Configuration for signing
-  smallrye:
-    jwt:
-      sign:
-        key: ${SMALLRYE_JWT_SIGN_KEY}
-
-  # Custom JWT Configuration
+  # Custom JWT Configuration (solo lo que necesitas)
   jwt:
     issuer: ${JWT_ISSUER}
     secret: ${JWT_SECRET}

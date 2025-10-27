@@ -23,11 +23,9 @@ services:
       - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=update
       - QUARKUS_JPA_HIBERNATE_LOG_SQL=false
 
-      # JWT - CRÍTICAS PARA PRODUCCIÓN
+      # JWT - Solo las variables necesarias
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ISSUER=${JWT_ISSUER}
-      - MP_JWT_VERIFY_KEY=${JWT_SECRET}
-      - SMALLRYE_JWT_SIGN_KEY=${JWT_SECRET}
 
       # Logging
       - QUARKUS_LOG_LEVEL=INFO
