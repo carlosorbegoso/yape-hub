@@ -23,7 +23,7 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
       
-      # DESARROLLO (opcionales - usa producción si no existen)
+
       DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
       DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
       DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
