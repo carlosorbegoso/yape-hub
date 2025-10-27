@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     image: ghcr.io/carlosorbegoso/yape-hub:${APP_VERSION:-main}
@@ -17,7 +15,7 @@ services:
       - QUARKUS_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - QUARKUS_DATASOURCE_REACTIVE_URL=${DATABASE_URL}
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
-      - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=allow  # ✅ REQUIRE en producción
+      - QUARKUS_DATASOURCE_REACTIVE_POSTGRESQL_SSL_MODE=require  # ✅ REQUIRE en producción
 
       # JPA/Hibernate - IMPORTANTE
       - QUARKUS_JPA_HIBERNATE_DATABASE_GENERATION=validate  # ✅ VALIDATE, no UPDATE
