@@ -42,19 +42,19 @@
   mp:
     jwt:
       verify:
-        issuer: ${JWT_ISSUER:https://api.yapechamo.com}
-        key: ${JWT_SECRET:yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
+        issuer: ${JWT_ISSUER}
+        key: ${MP_JWT_VERIFY_KEY}
 
   # SmallRye JWT Configuration for signing
   smallrye:
     jwt:
       sign:
-        key: ${JWT_SECRET:yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
+        key: ${SMALLRYE_JWT_SIGN_KEY}
 
   # Custom JWT Configuration
   jwt:
-    issuer: ${JWT_ISSUER:https://api.yapechamo.com}
-    secret: ${JWT_SECRET:yapechamo-secret-key-2024-very-long-secret-key-for-jwt-signing}
+    issuer: ${JWT_ISSUER}
+    secret: ${JWT_SECRET}
 
   # Application Configuration
   yapechamo:
