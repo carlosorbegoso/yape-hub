@@ -1,14 +1,42 @@
-name: Smart CI/CD Pipeline
+name: Quarkus Service CI/CD
 
 on:
   push:
-    branches: [main, develop, feature/*]
+    branches:
+      - main
+      - master
+      - develop
+      - 'feature/**'
+      - 'hotfix/**'
+      - 'release/**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
-    branches: [main, develop]
-
+    branches:
+      - main
+      - master
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:  # Permite ejecución manual
+    inputs:
+      environment:
+        description: 'Entorno de deploy'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - development
+          - production
 
 jobs:
-  smart-pipeline:
+  adaptive-pipeline:
+    name: Adaptive CI/CD Pipeline
     uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
     secrets:
       # PRODUCCIÓN (obligatorios)
@@ -16,17 +44,38 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+      # BASE DE DATOS (obligatorios)
       DB_USERNAME: ${{ secrets.DB_USERNAME }}
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # JWT/AUTH (obligatorios)
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+
+      # EMAIL/SMTP (obligatorios)
+      MAILER_FROM: ${{ secrets.MAILER_FROM }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+
+      # CORS (obligatorio)
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+
       # REGISTRY (opcionales)
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_PAT: ${{ secrets.GHCR_PAT }}
 
+      # DESARROLLO (opcionales - usa producción si no existen)
       DEV_SSH_HOST: ${{ secrets.DEV_SSH_HOST }}
       DEV_SSH_USER: ${{ secrets.DEV_SSH_USER }}
       DEV_SSH_PRIVATE_KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
       DEV_DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
       DEV_DB_USERNAME: ${{ secrets.DEV_DB_USERNAME }}
       DEV_DB_PASSWORD: ${{ secrets.DEV_DB_PASSWORD }}
+      DEV_DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+
+      # CALIDAD (opcional)
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
