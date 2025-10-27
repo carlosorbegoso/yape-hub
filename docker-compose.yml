@@ -65,8 +65,6 @@ services:
     networks:
       - yape-network
 
-
-
 networks:
   yape-network:
     driver: bridge
