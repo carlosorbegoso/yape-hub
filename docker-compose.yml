@@ -4,6 +4,8 @@ services:
     container_name: yape-hub
     ports:
       - "8080:8080"
+    env_file:
+      - ~/.env  # ← Leer .env de la raíz para compartir entre apps
     environment:
       # Servidor
       - QUARKUS_HTTP_HOST=0.0.0.0
