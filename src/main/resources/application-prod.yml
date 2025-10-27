@@ -5,7 +5,6 @@ quarkus:
       origins: "${CORS_ORIGINS:https://yapeapp.com,https://www.yapeapp.com}"
       headers: "accept,authorization,content-type,x-requested-with"
       methods: "GET,POST,PUT,DELETE,OPTIONS"
-
   datasource:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
