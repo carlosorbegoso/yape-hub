@@ -42,7 +42,6 @@ public class JwtGenerator {
         if (role == UserRole.SELLER && sellerId != null) {
             builder.claim("sellerId", sellerId);
         }
-
         return builder.sign();
     }
 
