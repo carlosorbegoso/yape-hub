@@ -13,7 +13,7 @@ quarkus:
       max-size: 20
       idle-timeout: 10M
       postgresql:
-        ssl-mode: require
+        ssl-mode: disable
 
 
   hibernate-orm:
