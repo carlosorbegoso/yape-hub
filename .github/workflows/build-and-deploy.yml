@@ -39,10 +39,6 @@ on:
 jobs:
   adaptive-pipeline:
     name: Adaptive CI/CD Pipeline
-    # 🎯 CONTROL DE AMBIENTES: Cambiar esta condición para controlar cuándo ejecutar
-    # Solo producción: if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    # Solo desarrollo: if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/feature/')
-    # Todos los ambientes: if: always() (o quitar la línea if)
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     uses: carlosorbegoso/workflow-templates/.github/workflows/smart-pipeline.yml@main
     secrets:
