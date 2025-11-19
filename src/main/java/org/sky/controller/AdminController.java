@@ -13,6 +13,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 
+import java.util.concurrent.Semaphore;
+
 @Path("/api/admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
